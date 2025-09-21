@@ -34,6 +34,7 @@ class Helm:
 
     @function
     def container(self) -> dagger.Container:
+        '''Creates container with configured helm'''
         if self.container_:
             return self.container_
         self.container_ = (
@@ -62,7 +63,7 @@ class Helm:
         password: Annotated[dagger.Secret, Doc('Registry password')],
         address: Annotated[str | None, Doc('Registry host')] = 'docker.io',
     ) -> Self:
-        '''Authenticate with registry'''
+        '''Function for helm registry authentication'''
         container: dagger.Container = self.container()
         cmd = [
             'sh',
@@ -84,6 +85,7 @@ class Helm:
         source: Annotated[dagger.Directory, Doc('Helm chart host path')],
         strict: Annotated[bool | None, Doc('Fail on lint warnings')] = False
     ) -> str:
+        '''Functions for helm chart linting'''
         container: dagger.Container = self.container()
         cmd: list[str] = ['lint', '.']
         if strict:
@@ -104,6 +106,7 @@ class Helm:
         values: Annotated[dagger.File | None, Doc('Values.yaml file')] = None,
         release_name: Annotated[str, Doc('Release name')] = 'ci-release',
     ) -> str:
+        '''Templates helm chart'''
         await self.lint(source=source, strict=True)
         container: dagger.Container = self.container()
         container = (
@@ -173,6 +176,7 @@ class Helm:
         ] = '',
         dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> str:
+        '''Function for helm chart publishing'''
         if username and password:
             self = self.auth_in_registry(
                 username=username,

@@ -1,16 +1,9 @@
-'''A generated module for Helm functions
+'''This Daggerverse module provides tooling for working with Helm charts in automated pipelines.
 
-This module has been generated via dagger init and serves as a reference to
-basic module structure as you get started with Dagger.
-
-Two functions have been pre-created. You can modify, delete, or add to them,
-as needed. They demonstrate usage of arguments and return types using simple
-echo and grep commands. The functions can be called from the dagger CLI or
-from one of the SDKs.
-
-The first line in this comment block is a short description line and the
-rest is a long description with more detail on the module's purpose or usage,
-if appropriate. All modules should have a short description.
+It includes functions to lint, render, package, and push Helm charts,
+making it easy to integrate chart validation and distribution into CI/CD workflows.
+This module is designed to streamline Helm chart development and delivery,
+ensuring charts are consistently validated, packaged, and distributed within automated builds.
 '''
 
 from .main import Helm as Helm   # noqa F401
