@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limit-range
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: {{ .Values.ranges.default_cpu_limits }}
+      memory: {{ .Values.ranges.default_memory_limits }}
+    defaultRequest:
+      cpu: {{ .Values.ranges.default_cpu_requests }}
+      memory: {{ .Values.ranges.default_memory_requests }}
+    max:
+      cpu: {{ .Values.ranges.max_cpu_per_container }}
+      memory: {{ .Values.ranges.max_memory_per_container }}
+    min:
+      cpu: 5m
+      memory: 16Mi
+  - type: Pod
+    max:
+      cpu: {{ .Values.ranges.max_cpu_per_pod }}
+      memory: {{ .Values.ranges.max_memory_per_pod }}
