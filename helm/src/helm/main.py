@@ -10,6 +10,7 @@ class Helm:
     '''
     Dagger-ci helm module
     '''
+    source: dagger.Directory
     image_registry: str
     image_repository: str
     image_tag: str
@@ -19,6 +20,7 @@ class Helm:
     @classmethod
     async def create(
         cls,
+        source: Annotated[dagger.Directory, Doc('Helm chart host path')],
         image_registry: Annotated[str | None, Doc('Helm image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Helm image repositroy')] = 'alpine/helm',
         image_tag: Annotated[str | None, Doc('Helm image tag')] = '3.18.6',
@@ -26,6 +28,7 @@ class Helm:
     ):
         '''Constructor'''
         return cls(
+            source=source,
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
@@ -53,6 +56,9 @@ class Helm:
                 permissions=0o600,
                 expand=True,
             )
+            .with_env_variable('HELM_CHART_PATH', '/tmp/helm/chart')
+            .with_directory('$HELM_CHART_PATH', self.source, owner=self.user, expand=True)
+            .with_workdir('$HELM_CHART_PATH', expand=True)
             .with_entrypoint(['/usr/bin/helm'])
         )
         return self.container_
@@ -81,21 +87,30 @@ class Helm:
         return self
 
     @function
+    def with_dependency_update(
+        self,
+    ) -> Self:
+        '''Functions which runs helm dependency update'''
+        container: dagger.Container = self.container()
+        cmd: list[str] = ['dependency', 'update', '.']
+        self.container_ = container.with_exec(cmd, use_entrypoint=True)
+        return self
+
+    @function
     async def lint(
         self,
-        source: Annotated[dagger.Directory, Doc('Helm chart host path')],
-        strict: Annotated[bool | None, Doc('Fail on lint warnings')] = False
+        strict: Annotated[bool | None, Doc('Fail on lint warnings')] = False,
+        errors_only: Annotated[bool | None, Doc('Print only warnings and errors')] = False,
     ) -> str:
         '''Functions for helm chart linting'''
         container: dagger.Container = self.container()
         cmd: list[str] = ['lint', '.']
         if strict:
             cmd.extend(['--strict'])
+        if errors_only:
+            cmd.extend(['--quiet'])
         return (
             await container
-            .with_env_variable('HELM_CHART_PATH', '/tmp/chart')
-            .with_directory('$HELM_CHART_PATH', source, expand=True)
-            .with_workdir('$HELM_CHART_PATH', expand=True)
             .with_exec(cmd, use_entrypoint=True)
             .stdout()
         )
@@ -103,60 +118,41 @@ class Helm:
     @function
     async def template(
         self,
-        source: Annotated[dagger.Directory, Doc('Helm chart directory')],
         values: Annotated[dagger.File | None, Doc('Values.yaml file')] = None,
         release_name: Annotated[str, Doc('Release name')] = 'ci-release',
-        dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> str:
         '''Templates helm chart'''
-        await self.lint(source=source, strict=True)
-        chart_yaml = await source.file('Chart.yaml').contents()
+        await self.lint(strict=True)
+        chart_yaml = await self.source.file('Chart.yaml').contents()
         if yaml.safe_load(chart_yaml).get('type') == 'library':
             print('Warning: helm template is not acceptable for library charts (type: library)')
             return ''
         container: dagger.Container = self.container()
-        container = (
-            container.with_env_variable('HELM_CHART_PATH', '/tmp/chart')
-            .with_directory('$HELM_CHART_PATH', source, expand=True)
-            .with_workdir('$HELM_CHART_PATH', expand=True)
-        )
         cmd: list[str] = ['template', release_name, '.']
         if values:
             container = container.with_file('values.yaml', values)
             cmd.extend(['-f values.yaml'])
-        if dependency_update:
-            cmd.extend(['--dependency-update'])
         return await container.with_exec(cmd, use_entrypoint=True).stdout()
 
     @function
     async def package(
         self,
-        source: Annotated[dagger.Directory, Doc('Chart directory')],
         app_version: Annotated[
             str | None, Doc('Set the appVersion on the chart to this version')
         ] = '',
         version: Annotated[
             str | None, Doc('Set the version on the chart to this semver version')
         ] = '',
-        dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> dagger.File:
         '''Packages a chart into a versioned chart archive file'''
-        await self.template(source=source)
+        await self.template()
         container: dagger.Container = self.container()
-        container = (
-            container.with_env_variable('HELM_CHART_PATH', '/tmp/chart')
-            .with_env_variable('HELM_CHART_DEST_PATH', '/tmp/dest')
-            .with_directory('$HELM_CHART_PATH', source, owner=self.user, expand=True)
-            .with_workdir('$HELM_CHART_PATH', expand=True)
-        )
-
+        container = container.with_env_variable('HELM_CHART_DEST_PATH', '/tmp/helm/')
         cmd = ['package', '.', '--destination', '$HELM_CHART_DEST_PATH']
         if app_version:
             cmd.extend(['--app-version', app_version])
         if version:
             cmd.extend(['--version', version])
-        if dependency_update:
-            cmd.extend(['--dependency-update'])
 
         dest_dir: dagger.Directory = await container.with_exec(
             cmd, use_entrypoint=True, expand=True
@@ -168,7 +164,6 @@ class Helm:
     @function
     async def push(
         self,
-        source: Annotated[dagger.Directory, Doc('Chart directory')],
         oci_url: Annotated[str, Doc('Oci package address without package name and url')],
         version: Annotated[
             str | None, Doc('Set the version on the chart to this semver version')
@@ -179,14 +174,11 @@ class Helm:
         app_version: Annotated[
             str | None, Doc('Set the appVersion on the chart to this version')
         ] = '',
-        dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> str:
         '''Function for helm chart publishing'''
         chart: dagger.File = await self.package(
-            source=source,
             app_version=app_version,
             version=version,
-            dependency_update=dependency_update,
         )
         cmd = ['push', '$HELM_CHART', f'oci://{oci_url}']
         if insecure:
