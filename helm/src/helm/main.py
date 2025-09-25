@@ -1,5 +1,6 @@
 from typing import Annotated, Self
 
+import yaml
 import dagger
 from dagger import Doc, dag, function, object_type
 
@@ -108,6 +109,10 @@ class Helm:
     ) -> str:
         '''Templates helm chart'''
         await self.lint(source=source, strict=True)
+        chart_yaml = await source.file('Chart.yaml').contents()
+        if yaml.safe_load(chart_yaml).get('type') == 'library':
+            print('Warning: helm template is not acceptable for library charts (type: library)')
+            return ''
         container: dagger.Container = self.container()
         container = (
             container.with_env_variable('HELM_CHART_PATH', '/tmp/chart')
