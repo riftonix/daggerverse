@@ -58,7 +58,7 @@ class Helm:
         return self.container_
 
     @function
-    def auth_in_registry(
+    def with_registry_login(
         self,
         username: Annotated[str, Doc('Registry username')],
         password: Annotated[dagger.Secret, Doc('Registry password')],
@@ -106,6 +106,7 @@ class Helm:
         source: Annotated[dagger.Directory, Doc('Helm chart directory')],
         values: Annotated[dagger.File | None, Doc('Values.yaml file')] = None,
         release_name: Annotated[str, Doc('Release name')] = 'ci-release',
+        dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> str:
         '''Templates helm chart'''
         await self.lint(source=source, strict=True)
@@ -123,6 +124,8 @@ class Helm:
         if values:
             container = container.with_file('values.yaml', values)
             cmd.extend(['-f values.yaml'])
+        if dependency_update:
+            cmd.extend(['--dependency-update'])
         return await container.with_exec(cmd, use_entrypoint=True).stdout()
 
     @function
@@ -166,13 +169,10 @@ class Helm:
     async def push(
         self,
         source: Annotated[dagger.Directory, Doc('Chart directory')],
-        registry: Annotated[str, Doc('Registry host')],
-        repository: Annotated[str | None, Doc('Repository path')] = '',
+        oci_url: Annotated[str, Doc('Oci package address without package name and url')],
         version: Annotated[
             str | None, Doc('Set the version on the chart to this semver version')
         ] = '',
-        username: Annotated[str | None, Doc('Registry username')] = '',
-        password: Annotated[dagger.Secret | None, Doc('Registry password')] = None,
         insecure: Annotated[
             bool | None, Doc('Use insecure HTTP connections for the chart upload')
         ] = False,
@@ -182,19 +182,13 @@ class Helm:
         dependency_update: Annotated[bool | None, Doc('Update dependencies')] = False,
     ) -> str:
         '''Function for helm chart publishing'''
-        if username and password:
-            self = self.auth_in_registry(
-                username=username,
-                password=password,
-                address=registry,
-            )
         chart: dagger.File = await self.package(
             source=source,
             app_version=app_version,
             version=version,
             dependency_update=dependency_update,
         )
-        cmd = ['push', '$HELM_CHART', f'oci://{registry}/{repository}']
+        cmd = ['push', '$HELM_CHART', f'oci://{oci_url}']
         if insecure:
             cmd.extend(['--plain-http'])
         container: dagger.Container = self.container()
