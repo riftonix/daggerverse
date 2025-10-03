@@ -14,7 +14,7 @@ class Helm:
     image_registry: str
     image_repository: str
     image_tag: str
-    user: str
+    container_user: str
     container_: dagger.Container | None
 
     @classmethod
@@ -24,7 +24,7 @@ class Helm:
         image_registry: Annotated[str | None, Doc('Helm image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Helm image repositroy')] = 'alpine/helm',
         image_tag: Annotated[str | None, Doc('Helm image tag')] = '3.18.6',
-        user: Annotated[str | None, Doc('Helm image user')] = '65532',
+        container_user: Annotated[str | None, Doc('Helm image user')] = '65532',
     ):
         '''Constructor'''
         return cls(
@@ -32,7 +32,7 @@ class Helm:
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
-            user=user,
+            container_user=container_user,
             container_=None,
         )
 
@@ -43,7 +43,7 @@ class Helm:
             return self.container_
         self.container_ = (
             dag.container().from_(address=f'{self.image_registry}/{self.image_repository}:{self.image_tag}')
-            .with_user(self.user)
+            .with_user(self.container_user)
             .with_exec(['mkdir', '-p', '-m', '770', '/tmp/helm/registry'])
             .with_env_variable(
                 'HELM_REGISTRY_CONFIG',
@@ -52,12 +52,12 @@ class Helm:
             .with_new_file(
                 '$HELM_REGISTRY_CONFIG',
                 contents='{}',
-                owner=self.user,
+                owner=self.container_user,
                 permissions=0o600,
                 expand=True,
             )
             .with_env_variable('HELM_CHART_PATH', '/tmp/helm/chart')
-            .with_directory('$HELM_CHART_PATH', self.source, owner=self.user, expand=True)
+            .with_directory('$HELM_CHART_PATH', self.source, owner=self.container_user, expand=True)
             .with_workdir('$HELM_CHART_PATH', expand=True)
             .with_entrypoint(['/usr/bin/helm'])
         )
@@ -186,7 +186,7 @@ class Helm:
         container: dagger.Container = self.container()
         container = (
             container.with_env_variable('HELM_CHART', '/tmp/chart.tgz')
-            .with_file('$HELM_CHART', chart, owner=self.user, expand=True)
+            .with_file('$HELM_CHART', chart, owner=self.container_user, expand=True)
             .with_exec(cmd, use_entrypoint=True, expand=True)
         )
 
