@@ -7,8 +7,8 @@
   "dependencies": [
     {
       "name": "helm",
-      "source": "github.com/riftonix/daggerverse/helm@helm/v1.2.0",
-      "pin": "30449b5a430647598e5faf7b22167e94f70a6da7"
+      "source": "github.com/riftonix/daggerverse/helm@helm/v1.3.0",
+      "pin": "74ec781e0f44c6ae127127c5e48086db04435fc4"
     }
   ]
 }

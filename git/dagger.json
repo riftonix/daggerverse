@@ -1,0 +1,7 @@
+{
+  "name": "git",
+  "engineVersion": "v0.19.9",
+  "sdk": {
+    "source": "python"
+  }
+}

@@ -1,0 +1,9 @@
+ranges:
+  default_cpu_requests: 25m
+  default_memory_requests: 64Mi
+  default_cpu_limits: 250m
+  default_memory_limits: 512Mi
+  max_cpu_per_container: 16000m
+  max_memory_per_container: 32Gi
+  max_cpu_per_pod: 16000m
+  max_memory_per_pod: 32Gi
