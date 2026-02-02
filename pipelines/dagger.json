@@ -12,8 +12,8 @@
     },
     {
       "name": "git",
-      "source": "github.com/riftonix/daggerverse/git@git/v0.1.0",
-      "pin": "359166fabf6f48ad465903ee2556548f7c60e163"
+      "source": "github.com/riftonix/daggerverse/git@git/v0.2.0",
+      "pin": "4e89f1f5067e7ef4d3758764622ab4d616f1e882"
     }
   ]
 }
