@@ -1,0 +1,14 @@
+{
+  "name": "pipelines",
+  "engineVersion": "v0.19.9",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "helm",
+      "source": "github.com/riftonix/daggerverse/helm@helm/v1.2.0",
+      "pin": "30449b5a430647598e5faf7b22167e94f70a6da7"
+    }
+  ]
+}
