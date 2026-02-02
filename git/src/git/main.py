@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import dagger
-from dagger import Doc, dag, function, object_type
+from dagger import Doc, dag, function, object_type, DefaultPath
 
 
 @object_type
@@ -16,7 +16,7 @@ class Git:
     @classmethod
     async def create(
         cls,
-        source: Annotated[dagger.Directory, Doc('Git repository directory (must include .git)')],
+        source: Annotated[dagger.Directory, DefaultPath('./'), Doc('Git repository directory (must include .git)')],
         image_registry: Annotated[str | None, Doc('Git image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Git image repositroy')] = 'alpine/git',
         image_tag: Annotated[str | None, Doc('Git image tag')] = '2.52.0',
@@ -45,12 +45,17 @@ class Git:
             .with_exec(['mkdir', '-p', '-m', '770', '$GIT_REPO_PATH'], expand=True)
             .with_directory('$GIT_REPO_PATH', self.source, owner=self.container_user, expand=True)
             .with_workdir('$GIT_REPO_PATH', expand=True)
+            .with_exec([
+                'sh',
+                '-c',
+                'git status --porcelain >/dev/null 2>&1 || (echo "Path $GIT_REPO_PATH is not a git repo" >&2; exit 1)',
+            ], expand=True)
             .with_exec(['git', 'config', '--local', 'safe.directory', '$GIT_REPO_PATH'], expand=True)
         )
         return self.container_
 
     @function
-    async def get_changed_dirs(
+    async def get_changed_paths(
         self,
         target_branch: Annotated[str, Doc('Target branch or ref to diff against')] = 'master',
         diff_path: Annotated[str | None, Doc('Path to scope the diff (relative to repo root)')] = '.',
