@@ -53,9 +53,9 @@ class Git:
     async def get_changed_dirs(
         self,
         target_branch: Annotated[str, Doc('Target branch or ref to diff against')] = 'master',
-        diff_dir: Annotated[str | None, Doc('Subdirectory to scope the diff')] = '.',
+        diff_path: Annotated[str | None, Doc('Path to scope the diff (relative to repo root)')] = '.',
     ) -> list[str]:
-        '''Return changed paths inside diff_dir between target_branch and HEAD'''
+        '''Return changed paths inside diff_path between target_branch and HEAD'''
         container = self.container()
 
         diff_output = await container.with_exec(
@@ -64,7 +64,7 @@ class Git:
                 '-c',
                 (
                     'git diff --name-only --diff-filter=ACMRTUXB '
-                    f'{target_branch} -- "{diff_dir}"'
+                    f'{target_branch} -- "{diff_path}"'
                 ),
             ]
         ).stdout()
@@ -73,7 +73,7 @@ class Git:
             [
                 'sh',
                 '-c',
-                f'git ls-files --others --exclude-standard -- "{diff_dir}"',
+                f'git ls-files --others --exclude-standard -- "{diff_path}"',
             ]
         ).stdout()
 
@@ -83,15 +83,18 @@ class Git:
             if line.strip()
         ]
 
-        normalized_diff_dir = (diff_dir or '.').rstrip('/')
-        if normalized_diff_dir in ('.', './'):
+        normalized_diff_path = (diff_path or '.').rstrip('/')
+        if normalized_diff_path in ('.', './'):
             relative_paths = raw_paths
         else:
-            prefix = f'{normalized_diff_dir}/'
+            prefix = f'{normalized_diff_path}/'
             relative_paths = [
                 path[len(prefix):] if path.startswith(prefix) else path
                 for path in raw_paths
             ]
 
         top_level_dirs = [path.split('/', 1)[0] for path in relative_paths]
-        return sorted(set(top_level_dirs))
+        if normalized_diff_path in ('.', './'):
+            return sorted(set(top_level_dirs))
+
+        return sorted({f'{normalized_diff_path}/{path}' for path in top_level_dirs})
