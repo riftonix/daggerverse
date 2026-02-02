@@ -9,6 +9,11 @@
       "name": "helm",
       "source": "github.com/riftonix/daggerverse/helm@helm/v1.3.0",
       "pin": "74ec781e0f44c6ae127127c5e48086db04435fc4"
+    },
+    {
+      "name": "git",
+      "source": "github.com/riftonix/daggerverse/git@git/v0.1.0",
+      "pin": "359166fabf6f48ad465903ee2556548f7c60e163"
     }
   ]
 }

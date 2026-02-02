@@ -1,6 +1,6 @@
 {{/*
    * Generate kubernetes.io/dockerconfigjson string.
-   */}}
+*/}}
 {{- define "ns-configurator.dockerconfigjson" }}
 {{- $auths := dict }}
 {{- range .registries }}

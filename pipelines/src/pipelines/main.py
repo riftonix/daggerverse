@@ -57,3 +57,33 @@ class Pipelines:
             app_version=app_version or '',
             insecure=insecure,
         )
+
+    @function
+    async def helm_verify_changed(
+        self,
+        source: Annotated[dagger.Directory, Doc('Repository root directory')],
+        target_branch: Annotated[str, Doc('Target branch or ref to diff against')] = 'master',
+        diff_dir: Annotated[str | None, Doc('Subdirectory to scope the diff')] = '.',
+        values: Annotated[dagger.File | None, Doc('Optional values.yaml file')] = None,
+        release_name: Annotated[str, Doc('Helm release name for templating')] = 'ci-release',
+    ) -> list[str]:
+        '''Run helm_verify for each directory returned by git.get_changed_dirs'''
+        git = dag.git(source=source)
+        changed_dirs = await git.get_changed_dirs(
+            target_branch=target_branch,
+            diff_dir=diff_dir,
+        )
+        normalized_diff_dir = (diff_dir or '.').rstrip('/')
+        outputs: list[str] = []
+        for changed_dir in changed_dirs:
+            if normalized_diff_dir in ('.', './'):
+                chart_dir = changed_dir
+            else:
+                chart_dir = f"{normalized_diff_dir}/{changed_dir}"
+            result = await self.helm_verify(
+                source=source.directory(chart_dir),
+                values=values,
+                release_name=release_name,
+            )
+            outputs.append(f"{chart_dir}:\n{result}")
+        return outputs
