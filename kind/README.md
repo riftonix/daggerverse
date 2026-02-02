@@ -38,6 +38,16 @@ async def main():
 asyncio.run(main())
 ```
 
+## Usage (CLI)
+
+Check installed kind version:
+
+```bash
+dagger -m ./kind call container \
+  | with-exec --args=kind,version \
+  | stdout
+```
+
 Notes:
 - This module does not create a cluster by itself; it only provides the CLI. You can use `ctr.with_exec([...])` to run `kind create cluster` with appropriate Docker-in-Docker privileges when integrating into a larger pipeline.
 

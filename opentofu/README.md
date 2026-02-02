@@ -46,6 +46,14 @@ async def main():
 asyncio.run(main())
 ```
 
+## Usage (CLI)
+
+Run fmt/init/validate:
+
+```bash
+dagger -m ./opentofu call lint --source=./path/to/iac
+```
+
 Notes:
 - Ensure that your IaC directory contains the necessary provider and backend configuration for `init` to succeed.
 - You can override `container_image` to a version-pinned image for reproducibility.

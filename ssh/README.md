@@ -65,6 +65,25 @@ async def main():
 asyncio.run(main())
 ```
 
+## Usage (CLI)
+
+Run a remote command (password auth):
+
+```bash
+dagger -m ./ssh call exec \
+  --destination=example.com \
+  --ssh-user=root \
+  --ssh-port=22 \
+  --insecure-ssh-password=hunter2 \
+  --ssh-cmd="uname -a"
+```
+
+Add a private key:
+
+```bash
+dagger -m ./ssh call with-private-key --source=./id_rsa
+```
+
 Security notes:
 - Avoid logging real passwords. Prefer Dagger secrets or key-based auth where possible.
 - The module disables strict host key checking; consider overriding if you require stronger host verification.

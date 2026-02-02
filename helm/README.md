@@ -91,6 +91,40 @@ async def main():
 asyncio.run(main())
 ```
 
+## Usage (CLI)
+
+Lint chart:
+
+```bash
+dagger -m ./helm call lint --source=./charts/mychart --strict=true
+```
+
+Render templates:
+
+```bash
+dagger -m ./helm call template --source=./charts/mychart --release-name=ci-release
+```
+
+Package chart:
+
+```bash
+dagger -m ./helm call package --source=./charts/mychart --version=0.1.0 --app-version=1.0.0
+```
+
+Push to OCI (with registry credentials):
+
+```bash
+REGISTRY_PASSWORD=secret \
+dagger -m ./helm call push \
+  --source=./charts/mychart \
+  --oci-url=registry.example.com/mycharts \
+  --version=0.1.0 \
+  --app-version=1.0.0 \
+  --insecure=false \
+  --password=env://REGISTRY_PASSWORD \
+  --username=myuser
+```
+
 Notes:
 - The module sets and uses `HELM_CHART_PATH=/tmp/helm/chart` and `HELM_REGISTRY_CONFIG=/tmp/helm/registry/config.json` inside the container.
 - When passing a values file to `template`, it is mounted as `values.yaml` and the command line includes `-f values.yaml`.
