@@ -9,7 +9,7 @@ class Ssh:
     image_registry: str
     image_repository: str
     image_tag: str
-    container_user: str
+    user_id: str
     container_: dagger.Container | None
 
     @classmethod
@@ -18,14 +18,14 @@ class Ssh:
         image_registry: Annotated[str | None, Doc('Helm image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Helm image repositroy')] = 'kroniak/ssh-client',
         image_tag: Annotated[str | None, Doc('Helm image tag')] = '3.21',
-        container_user: Annotated[str | None, Doc('Helm image user')] = '65532',
+        user_id: Annotated[str | None, Doc('Helm image user')] = '65532',
     ):
         '''Constructor'''
         return cls(
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
-            container_user=container_user,
+            user_id=user_id,
             container_=None,
         )
 
@@ -40,16 +40,16 @@ class Ssh:
             dag.container().from_(address=f'{self.image_registry}/{self.image_repository}:{self.image_tag}')
             .with_exec(['apk', 'add', '--no-cache', 'sshpass'])
             .with_exec([
-                'adduser', '-D', '-u', self.container_user,
-                '-h', f'/home/{self.container_user}',
-                self.container_user
+                'adduser', '-D', '-u', self.user_id,
+                '-h', f'/home/{self.user_id}',
+                self.user_id
             ])
-            .with_user(self.container_user)
-            .with_env_variable('HOME', f'/home/{self.container_user}')
+            .with_user(self.user_id)
+            .with_env_variable('HOME', f'/home/{self.user_id}')
             .with_new_file(
                 path='$HOME/.ssh/config',
                 contents='"Host *\n\tStrictHostKeyChecking no\n\n"',
-                owner=self.container_user,
+                owner=self.user_id,
                 permissions=600,
                 expand=True
             )
@@ -67,7 +67,7 @@ class Ssh:
         container: dagger.Container = self.container()
         container = (
             container.with_env_variable('SSH_PRIVATE_KEY_PATH', '$HOME/.ssh/id_rsa', expand=True)
-            .with_file('$SSH_PRIVATE_KEY_PATH', source=source, owner=self.container_user, permissions=600, expand=True)
+            .with_file('$SSH_PRIVATE_KEY_PATH', source=source, owner=self.user_id, permissions=600, expand=True)
             .with_exec(['ls', '-lah', '$HOME/.ssh'], expand=True)
         )
         return await container.stdout()

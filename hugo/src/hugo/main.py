@@ -10,7 +10,7 @@ class Hugo:
     image_registry: str
     image_repository: str
     image_tag: str
-    container_user: str
+    user_id: str
     container_: dagger.Container | None
 
     @classmethod
@@ -18,13 +18,13 @@ class Hugo:
         cls,
         source: Annotated[
             dagger.Directory,
-            DefaultPath('./'),
+            DefaultPath('.'),
             Doc('Hugo site directory'),
         ],
         image_registry: Annotated[str | None, Doc('Hugo image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Hugo image repository')] = 'hugomods/hugo',
         image_tag: Annotated[str | None, Doc('Hugo image tag')] = 'exts-0.154.2',
-        container_user: Annotated[str | None, Doc('Hugo image user')] = '65532',
+        user_id: Annotated[str | None, Doc('Hugo image user')] = '65532',
     ):
         '''Constructor'''
         return cls(
@@ -32,7 +32,7 @@ class Hugo:
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
-            container_user=container_user,
+            user_id=user_id,
             container_=None,
         )
 
@@ -44,11 +44,11 @@ class Hugo:
         self.container_ = (
             dag.container()
             .from_(address=f'{self.image_registry}/{self.image_repository}:{self.image_tag}')
-            .with_user(self.container_user)
+            .with_user(self.user_id)
             .with_env_variable('NPM_CONFIG_CACHE', '/tmp/npm-cache')
             .with_env_variable('NPM_CONFIG_USERCONFIG', '/tmp/.npmrc')
             .with_exec(['mkdir', '-p', '-m', '770', '/tmp/hugo/site'])
-            .with_directory('/tmp/hugo/site', self.source, owner=self.container_user)
+            .with_directory('/tmp/hugo/site', self.source, owner=self.user_id)
             .with_workdir('/tmp/hugo/site')
             .with_exposed_port(1313)
         )

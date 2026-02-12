@@ -14,7 +14,7 @@ class Helm:
     image_registry: str
     image_repository: str
     image_tag: str
-    container_user: str
+    user_id: str
     container_: dagger.Container | None
 
     @classmethod
@@ -24,7 +24,7 @@ class Helm:
         image_registry: Annotated[str | None, Doc('Helm image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Helm image repositroy')] = 'alpine/helm',
         image_tag: Annotated[str | None, Doc('Helm image tag')] = '3.18.6',
-        container_user: Annotated[str | None, Doc('Helm image user')] = '65532',
+        user_id: Annotated[str | None, Doc('Helm image user')] = '65532',
     ):
         '''Constructor'''
         return cls(
@@ -32,7 +32,7 @@ class Helm:
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
-            container_user=container_user,
+            user_id=user_id,
             container_=None,
         )
 
@@ -43,21 +43,25 @@ class Helm:
             return self.container_
         self.container_ = (
             dag.container().from_(address=f'{self.image_registry}/{self.image_repository}:{self.image_tag}')
-            .with_user(self.container_user)
+            .with_user(self.user_id)
             .with_exec(['mkdir', '-p', '-m', '770', '/tmp/helm/registry'])
             .with_env_variable(
                 'HELM_REGISTRY_CONFIG',
                 '/tmp/helm/registry/config.json',
             )
+            .with_env_variable(
+                'HELM_CACHE_HOME',
+                '/tmp/helm/registry',
+            )
             .with_new_file(
                 '$HELM_REGISTRY_CONFIG',
                 contents='{}',
-                owner=self.container_user,
+                owner=self.user_id,
                 permissions=0o600,
                 expand=True,
             )
             .with_env_variable('HELM_CHART_PATH', '/tmp/helm/chart')
-            .with_directory('$HELM_CHART_PATH', self.source, owner=self.container_user, expand=True)
+            .with_directory('$HELM_CHART_PATH', self.source, owner=self.user_id, expand=True)
             .with_workdir('$HELM_CHART_PATH', expand=True)
             .with_entrypoint(['/usr/bin/helm'])
         )
@@ -186,8 +190,38 @@ class Helm:
         container: dagger.Container = self.container()
         container = (
             container.with_env_variable('HELM_CHART', '/tmp/chart.tgz')
-            .with_file('$HELM_CHART', chart, owner=self.container_user, expand=True)
+            .with_file('$HELM_CHART', chart, owner=self.user_id, expand=True)
             .with_exec(cmd, use_entrypoint=True, expand=True)
         )
 
         return await container.stdout()
+
+    @function
+    async def get_chart_version(self) -> str:
+        '''Return chart metadata from `helm show chart` as YAML string'''
+        container: dagger.Container = self.container()
+        cmd = ['show', 'chart', '.']
+        chart_yaml = await container.with_exec(cmd, use_entrypoint=True).stdout()
+        metadata = yaml.safe_load(chart_yaml) or {}
+        chart_version = str(metadata.get('version', '')).strip()
+        return chart_version
+
+    @function
+    async def is_already_published(
+        self,
+        oci_chart_url: Annotated[str, Doc('Oci package address with chart name')],
+        version: Annotated[str, Doc('Chart version to check')],
+        insecure: Annotated[
+            bool | None, Doc('Use insecure HTTP connections for the registry')
+        ] = False,
+    ) -> bool:
+        '''Check if chart version exists in OCI registry'''
+        cmd = ['show', 'chart', f'oci://{oci_chart_url}', '--version', version]
+        if insecure:
+            cmd.extend(['--plain-http'])
+        container: dagger.Container = self.container()
+        try:
+            await container.with_exec(cmd, use_entrypoint=True).stdout()
+            return True
+        except dagger.ExecError:
+            return False

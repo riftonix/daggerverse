@@ -11,7 +11,7 @@ class Kind:
     image_registry: str
     image_repository: str
     image_tag: str
-    user: str
+    user_id: str
     container_: dagger.Container | None
 
     @classmethod
@@ -20,14 +20,14 @@ class Kind:
         image_registry: Annotated[str | None, Doc('Helm image registry')] = 'docker.io',
         image_repository: Annotated[str | None, Doc('Helm image repositroy')] = 'docker',
         image_tag: Annotated[str | None, Doc('Helm image tag')] = '28.5.0-rc.1-dind',
-        user: Annotated[str | None, Doc('Helm image user')] = '65532',
+        user_id: Annotated[str | None, Doc('Helm image user_id')] = '65532',
     ):
         '''Constructor'''
         return cls(
             image_registry=image_registry,
             image_repository=image_repository,
             image_tag=image_tag,
-            user=user,
+            user_id=user_id,
             container_=None,
         )
 

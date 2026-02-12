@@ -51,6 +51,9 @@ All functions are exposed via the Dagger module and return either a configured c
   - Packages the chart and pushes it to `oci://<oci_url>` using `helm push`.
   - If `insecure` is true, `--plain-http` is used.
 
+- has_version(oci_url: str, version: str, insecure: bool = False) -> bool
+  - Checks if a chart version exists in OCI registry using `helm show chart`.
+
 ## Usage (Python SDK)
 
 Example: lint, template, package and push a chart.
@@ -123,6 +126,15 @@ dagger -m ./helm call push \
   --insecure=false \
   --password=env://REGISTRY_PASSWORD \
   --username=myuser
+```
+
+Check chart version in OCI:
+
+```bash
+dagger -m ./helm call has-version \
+  --source=./charts/mychart \
+  --oci-url=registry.example.com/mycharts/mychart \
+  --version=0.1.0
 ```
 
 Notes:

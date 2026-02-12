@@ -23,4 +23,15 @@ dagger call --progress=plain --source=./tests/charts/ns-configurator \
   with-dependency-update \
   push \
     --oci-url ghcr.io/riftonix/daggerverse/helm/tests/charts \
-    --version "0.0.11" \
+    --version "0.0.11"
+
+dagger call --progress=plain --source=./tests/charts/ns-configurator get_chart_version
+
+dagger call --progress=plain --source=./tests/charts/ns-configurator \
+  with-registry-login \
+    --address ghcr.io \
+    --username rift0nix \
+    --password env:GITHUB_TOKEN \
+  is-already-published \
+    --oci-chart-url ghcr.io/riftonix/daggerverse/helm/tests/charts/ns-configurator \
+    --version "0.0.11"
