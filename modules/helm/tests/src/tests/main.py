@@ -1,11 +1,17 @@
 """Dagger-native tests for the Helm module."""
 
+from typing import Annotated
 from unittest import TestCase
 
 import yaml
-from dagger import Directory, dag, function, object_type
+from dagger import Directory, Doc, Service, dag, function, object_type
 
 FIXTURE_CHART_PATH = "charts/ns-configurator"
+FIXTURE_CHART_NAME = "ns-configurator"
+FIXTURE_CHART_VERSION = "1.0.0"
+LOCAL_REGISTRY_HOST = "registry"
+LOCAL_REGISTRY_PORT = 5000
+LOCAL_REGISTRY_NAMESPACE = "charts"
 
 
 @object_type
@@ -23,6 +29,7 @@ class Tests:
         await self.lint()
         await self.template()
         await self.package()
+        await self.push()
 
     @function
     async def lint(self) -> str:
@@ -66,6 +73,68 @@ class Tests:
         test_case.assertEqual("ns-configurator-1.0.0.tgz", await chart_archive.name())
         test_case.assertGreater(await chart_archive.size(), 0)
 
+    @function
+    async def push(
+        self,
+        registry_image_registry: Annotated[str, Doc("Registry image registry")] = "docker.io",
+        registry_image_repository: Annotated[str, Doc("Registry image repository")] = "registry",
+        registry_image_tag: Annotated[str, Doc("Registry image tag")] = "2",
+    ) -> None:
+        """Package and push the fixture chart to a local OCI registry service."""
+        registry_service = self._local_registry(
+            image_registry=registry_image_registry,
+            image_repository=registry_image_repository,
+            image_tag=registry_image_tag,
+        )
+        helm = dag.helm(source=self._fixture_chart()).with_dependency_update()
+        helm_with_registry = helm.with_container(self._with_local_registry(helm.container(), registry_service))
+        pushed = await helm_with_registry.push(
+            oci_url=self._registry_namespace_url(),
+            insecure=True,
+        )
+        published = await helm_with_registry.is_already_published(
+            oci_chart_url=f"{self._registry_namespace_url()}/{FIXTURE_CHART_NAME}",
+            version=FIXTURE_CHART_VERSION,
+            insecure=True,
+        )
+
+        test_case = TestCase()
+        test_case.assertEqual("ns-configurator-1.0.0.tgz", pushed)
+        test_case.assertTrue(published)
+
     def _fixture_chart(self) -> Directory:
         """Return the fixture chart directory."""
         return dag.current_module().source().directory(FIXTURE_CHART_PATH)
+
+    def _local_registry(
+        self,
+        image_registry: str,
+        image_repository: str,
+        image_tag: str,
+    ) -> Service:
+        """Return an ephemeral local OCI registry service."""
+        image = f"{image_registry}/{image_repository}:{image_tag}"
+        return dag.container().from_(image).with_exposed_port(LOCAL_REGISTRY_PORT).as_service(use_entrypoint=True)
+
+    def _with_local_registry(self, container, registry_service: Service):
+        """Bind the local registry service to a Helm container."""
+        for env_name in (
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "FTP_PROXY",
+            "ALL_PROXY",
+            "http_proxy",
+            "https_proxy",
+            "ftp_proxy",
+            "all_proxy",
+        ):
+            container = container.with_env_variable(env_name, "")
+        return (
+            container.with_service_binding(LOCAL_REGISTRY_HOST, registry_service)
+            .with_env_variable("NO_PROXY", f"{LOCAL_REGISTRY_HOST},{LOCAL_REGISTRY_HOST}:{LOCAL_REGISTRY_PORT}")
+            .with_env_variable("no_proxy", f"{LOCAL_REGISTRY_HOST},{LOCAL_REGISTRY_HOST}:{LOCAL_REGISTRY_PORT}")
+        )
+
+    def _registry_namespace_url(self) -> str:
+        """Return local registry namespace URL without chart name."""
+        return f"{LOCAL_REGISTRY_HOST}:{LOCAL_REGISTRY_PORT}/{LOCAL_REGISTRY_NAMESPACE}"

@@ -7,8 +7,8 @@
 - [x] 1.3. Add a test function that runs Helm lint against the existing fixture chart.
 - [x] 1.4. Add a test function that runs Helm template against the existing fixture chart.
 - [x] 1.5. Add a test function that packages the existing fixture chart.
-- [ ] 1.6. Add a test function that pushes the existing fixture chart to a local OCI registry service.
-- [ ] 1.7. Add a test function that checks the pushed fixture chart version with `is_already_published`.
+- [x] 1.6. Add a test function that pushes the existing fixture chart to a local OCI registry service.
+- [x] 1.7. Add a test function that checks the pushed fixture chart version with `is_already_published`.
 - [x] 1.8. Add an aggregate test function for CI, for example `all`.
 
 ## 2. Dagger Version Alignment

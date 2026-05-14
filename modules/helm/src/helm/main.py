@@ -99,6 +99,15 @@ class Helm:
         return self
 
     @function
+    def with_container(
+        self,
+        container: Annotated[dagger.Container, Doc("Custom Helm container")],
+    ) -> Self:
+        """Return Helm configured to use a custom container."""
+        self.container_ = container
+        return self
+
+    @function
     async def lint(
         self,
         strict: Annotated[bool | None, Doc("Fail on lint warnings")] = False,
@@ -178,7 +187,8 @@ class Helm:
             .with_exec(cmd, use_entrypoint=True, expand=True)
         )
 
-        return await container.stdout()
+        await container.sync()
+        return await chart.name()
 
     @function
     async def get_chart_version(self) -> str:
