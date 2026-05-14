@@ -13,9 +13,9 @@
 
 ## 2. Dagger Version Alignment
 
-- [ ] 2.1. Update affected Dagger module metadata from engine version `v0.19.10` to `v0.20.6`.
-- [ ] 2.2. Regenerate affected SDK artifacts and lockfiles for Dagger `0.20.6`.
-- [ ] 2.3. Validate the Helm module still works with Dagger `0.20.6`.
+- [x] 2.1. Update affected Dagger module metadata from engine version `v0.19.10` to `v0.20.6`.
+- [x] 2.2. Regenerate affected SDK artifacts and lockfiles for Dagger `0.20.6`.
+- [x] 2.3. Validate the Helm module still works with Dagger `0.20.6`.
 
 ## 3. GitHub Pull Request CI
 
