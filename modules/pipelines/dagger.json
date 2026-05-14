@@ -1,0 +1,17 @@
+{
+  "name": "pipelines",
+  "engineVersion": "v0.19.10",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "helm",
+      "source": "../helm"
+    },
+    {
+      "name": "git",
+      "source": "../git"
+    }
+  ]
+}
