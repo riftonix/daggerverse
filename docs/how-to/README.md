@@ -5,4 +5,5 @@ How-to guides describe practical tasks. Use them when you know what you want to 
 Available guides:
 
 - [Use modules from this repository](use-modules.md)
+- [Run module checks](run-module-checks.md)
 - [Run Helm checks through pipelines](run-helm-checks-through-pipelines.md)

@@ -26,12 +26,12 @@
 
 ## 4. Legacy Test Cleanup
 
-- [ ] 4.1. Keep `modules/helm/tests/test.sh` until the Dagger-native tests and CI are implemented and validated.
-- [ ] 4.2. Remove `modules/helm/tests/test.sh` after the Dagger-native Helm test module is the canonical test path.
+- [x] 4.1. Keep `modules/helm/tests/test.sh` until the Dagger-native tests and CI are implemented and validated.
+- [x] 4.2. Remove `modules/helm/tests/test.sh` after the Dagger-native Helm test module is the canonical test path.
 
 ## 5. Documentation And Specs
 
-- [ ] 5.1. Update repository documentation for CI usage, module test conventions, and the root `Makefile` command interface.
-- [ ] 5.2. Keep this OpenSpec change aligned with the implementation.
-- [ ] 5.3. After implementation, sync accepted behavior, including the root `Makefile` command interface, into `openspec/specs/daggerverse/spec.md`.
-- [ ] 5.4. Validate OpenSpec artifacts before archiving the change.
+- [x] 5.1. Update repository documentation for CI usage, module test conventions, and the root `Makefile` command interface.
+- [x] 5.2. Keep this OpenSpec change aligned with the implementation.
+- [x] 5.3. After implementation, sync accepted behavior, including the root `Makefile` command interface, into `openspec/specs/daggerverse/spec.md`.
+- [x] 5.4. Validate OpenSpec artifacts before archiving the change.

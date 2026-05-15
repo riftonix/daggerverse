@@ -77,7 +77,8 @@ The repository SHALL run the in-scope Dagger module tests in GitHub Actions for 
 #### Scenario: Pull request targets default branch
 
 - **WHEN** a pull request targets the repository default branch
-- **THEN** GitHub Actions SHALL run the Helm Dagger test module aggregate function through `make tests helm`
+- **THEN** GitHub Actions SHALL discover modules with Dagger test modules
+- **AND** GitHub Actions SHALL run each discovered module through `make tests <module-name>`
 - **AND** the workflow SHALL use Dagger CLI version `0.20.6`.
 
 #### Scenario: A module does not yet have Dagger tests
