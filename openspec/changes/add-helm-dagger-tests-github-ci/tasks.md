@@ -19,10 +19,10 @@
 
 ## 3. GitHub Pull Request CI
 
-- [ ] 3.1. Add a GitHub Actions workflow for pull requests targeting the repository default branch.
-- [ ] 3.2. Use `dagger/dagger-for-github` with Dagger CLI version `0.20.6`.
-- [ ] 3.3. Run the Helm test module aggregate function from CI through `make tests helm`.
-- [ ] 3.4. Ensure modules without Dagger test modules are skipped rather than failed.
+- [x] 3.1. Add a GitHub Actions workflow for pull requests targeting the repository default branch.
+- [x] 3.2. Use `dagger/dagger-for-github` with Dagger CLI version `0.20.6`.
+- [x] 3.3. Run the Helm test module aggregate function from CI through `make tests helm`.
+- [x] 3.4. Ensure modules without Dagger test modules are skipped rather than failed.
 
 ## 4. Legacy Test Cleanup
 
