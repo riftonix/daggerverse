@@ -7,9 +7,10 @@ This documentation separates learning material, task-oriented guides, reference 
 1. Start with [Get started with the Helm module](tutorials/get-started-with-helm.md) to run a real module call.
 2. Read [Use modules from this repository](how-to/use-modules.md) to understand local module paths and source directories.
 3. Read [Run module checks](how-to/run-module-checks.md) to run local test, lint, and format commands.
-4. Read [Run Helm checks through pipelines](how-to/run-helm-checks-through-pipelines.md) if you want CI-oriented orchestration.
-5. Use [Module reference](reference/modules.md) when you need available modules, responsibilities, and entry points.
-6. Read [Architecture](explanation/architecture.md) when you need the reasoning behind the repository layout and module dependencies.
+4. Read [Write Dagger CI modules and tests](how-to/write-dagger-ci-modules-and-tests.md) before adding or testing a module.
+5. Read [Run Helm checks through pipelines](how-to/run-helm-checks-through-pipelines.md) if you want CI-oriented orchestration.
+6. Use [Module reference](reference/modules.md) when you need available modules, responsibilities, and entry points.
+7. Read [Architecture](explanation/architecture.md) when you need the reasoning behind the repository layout and module dependencies.
 
 ## Documentation Structure
 
