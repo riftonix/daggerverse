@@ -9,6 +9,10 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - Changed path detection vs a target branch
 - Includes untracked files
 - Scope diff to a subdirectory (`diff_path`)
+- Local tag listing
+- Remote tag fetching
+- Tags pointing at `HEAD`
+- Short `HEAD` commit SHA lookup
 
 ## Defaults
 - image_registry: `docker.io`
@@ -31,17 +35,14 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - fetch_tags(remote: str = 'origin', prune: bool = False) -> str
   - Fetches tags from the remote repository.
 
-- list_tags(pattern: str | None = None) -> list[str]
+- get_tags(pattern: str | None = None) -> list[str]
   - Lists tags, optionally filtered by a glob pattern (e.g. `chartname/1.2.3`).
 
-- get_short_commit_sha(length: int = 7) -> str
+- get_short_commit_sha(length: int = 8) -> str
   - Returns the short SHA of the current `HEAD` commit.
 
-- create_and_push_tag(tag: str, message: str | None = None, remote: str = 'origin', user_name: str = 'dagger-ci', user_email: str = 'dagger-ci@example.local') -> str
-  - Creates a lightweight tag (or annotated if `message` provided) and pushes it to the remote.
-
-- get_tags_pointing_at_head() -> list[str]
-  - Returns tags that point at `HEAD` (useful for tag-triggered pipelines).
+- get_tags_pointing_at(ref: str = 'HEAD', remote: str = 'origin') -> list[str]
+  - Fetches tags and returns tags that point at `ref`.
 
 ## Usage (Python SDK)
 
@@ -78,19 +79,19 @@ dagger -m ./modules/git call get-changed-paths --source=. --target-branch=master
 List tags by pattern:
 
 ```bash
-dagger -m ./modules/git call list-tags --source=. --pattern="mychart/1.2.3"
+dagger -m ./modules/git call get-tags --source=. --pattern="mychart/1.2.3"
 ```
 
-Create and push a release tag:
+Fetch tags:
 
 ```bash
-dagger -m ./modules/git call create-and-push-tag --source=. --tag="mychart/1.2.3" --remote=origin
+dagger -m ./modules/git call fetch-tags --source=. --remote=origin
 ```
 
 Get tags pointing at HEAD:
 
 ```bash
-dagger -m ./modules/git call get-tags-pointing-at-head --source=.
+dagger -m ./modules/git call get-tags-pointing-at --source=. --ref=HEAD
 ```
 
 ## License
