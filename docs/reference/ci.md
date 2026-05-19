@@ -29,6 +29,8 @@ The test module should depend on its parent module through a local dependency an
 
 The test module should expose an aggregate function named `all` for CI.
 
+For practical implementation guidance, see [Write Dagger CI modules and tests](../how-to/write-dagger-ci-modules-and-tests.md).
+
 ## Command Interface
 
 The root `Makefile` is the canonical command interface for local and CI checks:
