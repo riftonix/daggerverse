@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 MODULES_DIR := modules
 MODULE_NAMES := $(notdir $(wildcard $(MODULES_DIR)/*))
-COMMAND_TARGETS := help lint format format-check openspec-validate tests check-module check-test-module
+COMMAND_TARGETS := help lint format format-check openspec-validate release check-release tests check-module check-test-module
 MODULE_ARG := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
 
 RUFF ?= ruff
@@ -21,7 +21,7 @@ else
 PY_TARGET := $(MODULES_DIR)
 endif
 
-.PHONY: help lint format format-check openspec-validate tests check-module check-test-module $(MODULE_NAMES)
+.PHONY: help lint format format-check openspec-validate release check-release tests check-module check-test-module $(MODULE_NAMES)
 
 help:
 	@printf '%s\n' \
@@ -33,6 +33,7 @@ help:
 		'  make format-check          Check Ruff formatting for all modules without cache' \
 		'  make format-check helm     Check Ruff formatting for one module without cache' \
 		'  make openspec-validate     Validate OpenSpec specs and changes strictly' \
+		'  make release modules/helm/v0.0.0' \
 		'  make tests helm            Run all Dagger tests for one module'
 
 check-module:
@@ -53,6 +54,38 @@ format-check: check-module
 openspec-validate:
 	$(OPENSPEC) validate --all --strict
 
+check-release:
+	@if [ -z '$(SELECTED_MODULE)' ]; then \
+		printf 'Usage: make release modules/<module>/vX.Y.Z\n' >&2; \
+		exit 2; \
+	fi
+	@branch=$$(git branch --show-current); \
+	if [ "$$branch" != master ]; then \
+		printf 'Releases must be created from master. Current branch: %s\n' "$$branch" >&2; \
+		exit 2; \
+	fi
+	@case '$(SELECTED_MODULE)' in \
+		modules/*/v[0-9]*.[0-9]*.[0-9]*) ;; \
+		*) \
+			printf 'Invalid release tag: %s\n' '$(SELECTED_MODULE)' >&2; \
+			printf 'Usage: make release modules/<module>/vX.Y.Z\n' >&2; \
+			exit 2; \
+			;; \
+	esac
+	@module=$$(printf '%s\n' '$(SELECTED_MODULE)' | cut -d/ -f2); \
+	if [ ! -f '$(MODULES_DIR)'/$$module/dagger.json ]; then \
+		printf 'Unknown module: %s\n' "$$module" >&2; \
+		exit 2; \
+	fi
+	@if git rev-parse -q --verify 'refs/tags/$(SELECTED_MODULE)' >/dev/null; then \
+		printf 'Release tag already exists: %s\n' '$(SELECTED_MODULE)' >&2; \
+		exit 2; \
+	fi
+
+release: check-release
+	git tag -a '$(SELECTED_MODULE)' -m 'Release $(SELECTED_MODULE)'
+	git push origin '$(SELECTED_MODULE)'
+
 check-test-module:
 	@if [ -z '$(SELECTED_MODULE)' ]; then \
 		printf 'Usage: make tests <module>\n' >&2; \
@@ -71,4 +104,7 @@ tests: check-test-module
 	cd $(TEST_TARGET) && $(DAGGER_ENV) dagger call --progress=plain all
 
 $(MODULE_NAMES):
+	@:
+
+modules/%:
 	@:
