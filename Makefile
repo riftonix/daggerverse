@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 MODULES_DIR := modules
 MODULE_NAMES := $(notdir $(wildcard $(MODULES_DIR)/*))
-COMMAND_TARGETS := help lint format format-check openspec-validate release check-release tests check-module check-test-module
+COMMAND_TARGETS := help lint format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module
 MODULE_ARG := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
 
 RUFF ?= ruff
@@ -21,7 +21,7 @@ else
 PY_TARGET := $(MODULES_DIR)
 endif
 
-.PHONY: help lint format format-check openspec-validate release check-release tests check-module check-test-module $(MODULE_NAMES)
+.PHONY: help lint format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module $(MODULE_NAMES)
 
 help:
 	@printf '%s\n' \
@@ -33,6 +33,7 @@ help:
 		'  make format-check          Check Ruff formatting for all modules without cache' \
 		'  make format-check helm     Check Ruff formatting for one module without cache' \
 		'  make openspec-validate     Validate OpenSpec specs and changes strictly' \
+		'  make check-dagger-version  Check Dagger module and CI versions are aligned' \
 		'  make release modules/helm/v0.0.0' \
 		'  make tests helm            Run all Dagger tests for one module'
 
@@ -53,6 +54,9 @@ format-check: check-module
 
 openspec-validate:
 	$(OPENSPEC) validate --all --strict
+
+check-dagger-version:
+	python3 scripts/check_dagger_version.py
 
 check-release:
 	@if [ -z '$(SELECTED_MODULE)' ]; then \

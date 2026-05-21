@@ -38,6 +38,9 @@ jobs:
       - name: Validate OpenSpec
         run: make openspec-validate
 
+      - name: Check Dagger version alignment
+        run: make check-dagger-version
+
   prepare-tests:
     name: Prepare tests
     runs-on: ubuntu-latest
