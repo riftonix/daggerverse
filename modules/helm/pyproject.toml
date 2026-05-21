@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "dagger-io",
-    "pyyaml==6.0.2"
+    "pyyaml==6.0.3"
 ]
 
 [build-system]
