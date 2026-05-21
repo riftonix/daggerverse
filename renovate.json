@@ -42,6 +42,10 @@
       "matchPackageNames": ["dagger"],
       "extractVersion": "^dagger-(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)-[0-9]+-x86_64\\.pkg\\.tar\\.zst$",
       "groupName": "Dagger CI"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "skipArtifactsUpdate": true
     }
   ]
 }
