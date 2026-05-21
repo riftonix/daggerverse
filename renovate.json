@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update Dagger engineVersion in module metadata",
+      "managerFilePatterns": ["/^modules/.*/dagger\\.json$/"],
+      "matchStrings": [
+        "\"engineVersion\"\\s*:\\s*\"v(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "depNameTemplate": "dagger",
+      "datasourceTemplate": "custom.manjaro-stable-extra",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update Dagger CLI version in GitHub Actions",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": [
+        "DAGGER_VERSION:\\s*(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
+      ],
+      "depNameTemplate": "dagger",
+      "datasourceTemplate": "custom.manjaro-stable-extra",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "customDatasources": {
+    "manjaro-stable-extra": {
+      "defaultRegistryUrlTemplate": "https://mirror.yandex.ru/mirrors/manjaro/stable/extra/x86_64/",
+      "format": "html"
+    }
+  },
+  "packageRules": [
+    {
+      "matchDatasources": ["custom.manjaro-stable-extra"],
+      "matchPackageNames": ["dagger"],
+      "extractVersion": "^dagger-(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)-[0-9]+-x86_64\\.pkg\\.tar\\.zst$",
+      "groupName": "Dagger CI"
+    }
+  ]
+}
