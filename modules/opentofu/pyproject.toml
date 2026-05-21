@@ -5,7 +5,7 @@ requires-python = ">=3.10"
 dependencies = ["dagger-io"]
 
 [build-system]
-requires = ["hatchling==1.25.0"]
+requires = ["hatchling==1.29.0"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
