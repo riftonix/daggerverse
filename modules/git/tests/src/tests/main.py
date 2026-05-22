@@ -31,6 +31,7 @@ class Tests:
         await self.get_tags()
         await self.tags_pointing_at()
         await self.compatibility_wrappers()
+        await self.merge_base_for_diverged_branches()
 
     @function
     async def short_commit_sha(
@@ -85,6 +86,22 @@ class Tests:
         test_case = TestCase()
         test_case.assertEqual(tags, legacy_tags)
 
+    @function
+    async def merge_base_for_diverged_branches(self) -> None:
+        """Return the shared commit for diverged base and head branches."""
+        repo = self._repo_with_diverged_branches()
+        git = dag.git(source=repo.directory("/work/repo"))
+
+        merge_base = await git.get_merge_base(base_ref="main", head_ref="feature")
+        expected_merge_base = await repo.with_exec(["git", "merge-base", "main", "feature"]).stdout()
+        main_sha = await repo.with_exec(["git", "rev-parse", "main"]).stdout()
+        feature_sha = await repo.with_exec(["git", "rev-parse", "feature"]).stdout()
+
+        test_case = TestCase()
+        test_case.assertEqual(expected_merge_base.strip(), merge_base)
+        test_case.assertNotEqual(main_sha.strip(), merge_base)
+        test_case.assertNotEqual(feature_sha.strip(), merge_base)
+
     def _repo_with_local_tag(self) -> dagger.Directory:
         """Return a git repo with a local tag."""
         return (
@@ -115,4 +132,22 @@ class Tests:
             .with_exec(["git", "tag", "-d", "v1.0.0"])
             .with_exec(["git", "remote", "add", "origin", ".remote/origin.git"])
             .directory("/work/repo")
+        )
+
+    def _repo_with_diverged_branches(self) -> dagger.Container:
+        """Return a git repo with base and feature branches diverged from one commit."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                ["sh", "-c", "printf 'feature\\n' > feature.txt && git add feature.txt && git commit -m feature"]
+            )
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(["sh", "-c", "printf 'main\\n' > main.txt && git add main.txt && git commit -m main"])
         )
