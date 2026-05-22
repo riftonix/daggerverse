@@ -140,6 +140,100 @@ class Git:
         return output.strip()
 
     @function
+    async def get_changed_files(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")],
+        paths: Annotated[list[str] | None, Doc("Optional path filters relative to the repository root")] = None,
+        diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
+    ) -> list[str]:
+        """Return changed file paths between two refs."""
+        cmd = [
+            "git",
+            "diff",
+            "--name-only",
+            "--find-renames",
+            "--find-copies",
+            "--find-copies-harder",
+            f"--diff-filter={diff_filter}",
+            base_ref,
+            head_ref,
+        ]
+        if paths:
+            cmd.append("--")
+            cmd.extend(paths)
+
+        output = await self.container().with_exec(cmd).stdout()
+        return [line.strip() for line in output.splitlines() if line.strip()]
+
+    @function
+    async def get_changed_dirs(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")],
+        paths: Annotated[list[str] | None, Doc("Optional path filters relative to the repository root")] = None,
+        depth: Annotated[int, Doc("Directory depth to return")] = 1,
+        diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
+    ) -> list[str]:
+        """Return unique changed directories between two refs."""
+        changed_files = await self.get_changed_files(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
+        scopes = [self._normalize_path(path) for path in paths or [] if self._normalize_path(path) != "."]
+
+        return sorted({self._changed_dir_for_file(path, scopes=scopes, depth=depth) for path in changed_files})
+
+    @function
+    async def has_changes(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")],
+        paths: Annotated[list[str] | None, Doc("Optional path filters relative to the repository root")] = None,
+        diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
+    ) -> bool:
+        """Return whether any files changed between two refs."""
+        changed_files = await self.get_changed_files(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
+        return bool(changed_files)
+
+    def _changed_dir_for_file(self, path: str, scopes: list[str], depth: int) -> str:
+        normalized_path = self._normalize_path(path)
+        if depth <= 0:
+            return "."
+
+        scope = self._matching_scope(normalized_path, scopes)
+        if scope:
+            relative_path = normalized_path.removeprefix(f"{scope}/")
+            relative_parts = relative_path.split("/")[:-1]
+            if not relative_parts:
+                return scope
+            return "/".join([scope, *relative_parts[:depth]])
+
+        parts = normalized_path.split("/")[:-1]
+        if not parts:
+            return "."
+        return "/".join(parts[:depth])
+
+    def _matching_scope(self, path: str, scopes: list[str]) -> str | None:
+        matching_scopes = [scope for scope in scopes if path == scope or path.startswith(f"{scope}/")]
+        if not matching_scopes:
+            return None
+        return max(matching_scopes, key=len)
+
+    def _normalize_path(self, path: str) -> str:
+        normalized = path.strip().strip("/")
+        if normalized in ("", "."):
+            return "."
+        return normalized.removeprefix("./")
+
+    @function
     async def fetch_tags(
         self,
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",

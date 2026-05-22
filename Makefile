@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 MODULES_DIR := modules
 MODULE_NAMES := $(notdir $(wildcard $(MODULES_DIR)/*))
-COMMAND_TARGETS := help lint format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module
+COMMAND_TARGETS := help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module
 MODULE_ARG := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
 
 RUFF ?= ruff
@@ -21,13 +21,15 @@ else
 PY_TARGET := $(MODULES_DIR)
 endif
 
-.PHONY: help lint format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module $(MODULE_NAMES)
+.PHONY: help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module $(MODULE_NAMES)
 
 help:
 	@printf '%s\n' \
 		'Targets:' \
-		'  make lint                  Run Ruff lint for all modules without cache' \
-		'  make lint helm             Run Ruff lint for one module without cache' \
+		'  make lint                  Run Ruff lint and fix all modules without cache' \
+		'  make lint helm             Run Ruff lint and fix one module without cache' \
+		'  make lint-check            Check Ruff lint for all modules without cache' \
+		'  make lint-check helm       Check Ruff lint for one module without cache' \
 		'  make format                Format all modules with Ruff without cache' \
 		'  make format helm           Format one module with Ruff without cache' \
 		'  make format-check          Check Ruff formatting for all modules without cache' \
@@ -44,6 +46,9 @@ check-module:
 	fi
 
 lint: check-module
+	$(RUFF) check --fix $(RUFF_FLAGS) $(PY_TARGET)
+
+lint-check: check-module
 	$(RUFF) check $(RUFF_FLAGS) $(PY_TARGET)
 
 format: check-module
