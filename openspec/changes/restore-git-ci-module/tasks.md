@@ -8,9 +8,9 @@
 ## 2. PR Diff And Changed Paths
 
 - [x] 2.1 Implement `get_merge_base(base_ref, head_ref)` and tests for diverged branches.
-- [ ] 2.2 Implement `get_changed_files(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for added, copied, modified, renamed, type-changed, unmerged, unknown, and broken files where practical.
-- [ ] 2.3 Implement `get_changed_dirs(base_ref, head_ref, paths=None, depth=1, diff_filter='ACMRTUXB')` and tests for root-scoped and subdirectory-scoped changes.
-- [ ] 2.4 Implement `has_changes(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for changed and unchanged paths.
+- [x] 2.2 Implement `get_changed_files(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for added, copied, modified, renamed, type-changed, unmerged, unknown, and broken files where practical.
+- [x] 2.3 Implement `get_changed_dirs(base_ref, head_ref, paths=None, depth=1, diff_filter='ACMRTUXB')` and tests for root-scoped and subdirectory-scoped changes.
+- [x] 2.4 Implement `has_changes(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for changed and unchanged paths.
 
 ## 3. Fetch Refs And Tags
 
@@ -66,4 +66,4 @@
 - [ ] 10.2 Update repository docs and module reference for Git CI use cases.
 - [ ] 10.3 Update `modules/pipelines` to use restored Git APIs and add tests for any changed pipeline behavior.
 - [ ] 10.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
-- [ ] 10.5 Run `make tests git`, `make lint git`, `make format-check git`, and `openspec validate --all --strict`.
+- [ ] 10.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.

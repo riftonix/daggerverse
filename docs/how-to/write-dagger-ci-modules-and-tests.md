@@ -232,7 +232,7 @@ Use the root `Makefile` for supported local checks:
 
 ```bash
 make tests <module>
-make lint <module>
+make lint-check <module>
 make format-check <module>
 ```
 
@@ -240,7 +240,7 @@ For Helm:
 
 ```bash
 make tests helm
-make lint helm
+make lint-check helm
 make format-check helm
 ```
 

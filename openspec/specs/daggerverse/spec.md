@@ -54,7 +54,7 @@ The repository SHALL expose supported local and CI workflows through the root `M
 #### Scenario: Run module maintenance commands
 - **WHEN** a user needs to run a supported maintenance command for modules
 - **THEN** the command SHOULD be available through the root `Makefile`
-- **AND** module-specific commands SHOULD accept a positional module name, such as `make lint <module-name>` or `make format <module-name>`
+- **AND** module-specific commands SHOULD accept a positional module name, such as `make lint-check <module-name>` or `make format-check <module-name>`
 
 ### Requirement: Dagger-native module tests
 

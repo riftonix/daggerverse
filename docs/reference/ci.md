@@ -37,8 +37,7 @@ The root `Makefile` is the canonical command interface for local and CI checks:
 
 ```bash
 make tests <module>
-make lint [module]
-make format [module]
+make lint-check [module]
 make format-check [module]
 ```
 

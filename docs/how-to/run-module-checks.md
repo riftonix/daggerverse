@@ -16,13 +16,13 @@ Modules without `modules/<name>/tests/dagger.json` do not have Dagger-native tes
 
 ## Run Lint And Format
 
-Run Ruff lint for all modules:
+Fix Ruff lint issues for all modules:
 
 ```bash
 make lint
 ```
 
-Run Ruff lint for one module:
+Fix Ruff lint issues for one module:
 
 ```bash
 make lint helm
@@ -32,6 +32,18 @@ Format all modules:
 
 ```bash
 make format
+```
+
+Check Ruff lint for all modules:
+
+```bash
+make lint-check
+```
+
+Check Ruff lint for one module:
+
+```bash
+make lint-check helm
 ```
 
 Check formatting for one module:
@@ -45,6 +57,8 @@ make format-check helm
 GitHub Actions uses the same command shape as local development. The pull request workflow discovers modules with Dagger test modules and runs:
 
 ```bash
+make lint-check
+make format-check
 make tests <module>
 ```
 
