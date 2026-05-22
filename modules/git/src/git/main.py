@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Self
 
 import dagger
 from dagger import DefaultPath, Doc, dag, function, object_type
@@ -234,20 +234,77 @@ class Git:
         return normalized.removeprefix("./")
 
     @function
-    async def fetch_tags(
+    async def with_fetched_tags(
         self,
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",
         prune: Annotated[bool | None, Doc("Prune deleted tags")] = False,
-    ) -> str:
+    ) -> Self:
         """Fetch tags from remote."""
         cmd = ["git", "fetch", "--tags", remote]
         if prune:
             cmd.insert(2, "--prune")
         self.container_ = self.container().with_exec(cmd)
-        stdout = await self.container_.stdout()
-        if stdout:
-            return stdout
-        return await self.container_.stderr()
+        return self
+
+    @function
+    async def with_fetched_refs(
+        self,
+        remote: Annotated[str, Doc("Remote name to fetch refs from")] = "origin",
+        refspecs: Annotated[list[str] | None, Doc("Optional refspecs to fetch")] = None,
+        depth: Annotated[int | None, Doc("Optional shallow fetch depth")] = None,
+        prune: Annotated[bool | None, Doc("Prune deleted remote-tracking refs")] = False,
+    ) -> Self:
+        """Fetch refs from remote and keep them available for later Git calls."""
+        cmd = ["git", "fetch"]
+        if prune:
+            cmd.append("--prune")
+        if depth is not None:
+            cmd.extend(["--depth", str(depth)])
+        cmd.append(remote)
+        if refspecs:
+            cmd.extend(refspecs)
+
+        self.container_ = self.container().with_exec(cmd)
+        return self
+
+    @function
+    async def with_unshallow(
+        self,
+        remote: Annotated[str, Doc("Remote name to fetch full history from")] = "origin",
+    ) -> Self:
+        """Ensure a shallow repository has full history for later Git calls."""
+        cmd = [
+            "sh",
+            "-c",
+            (
+                'if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then '
+                'git fetch --unshallow "$1"; '
+                "else "
+                'git fetch "$1"; '
+                "fi"
+            ),
+            "with-unshallow",
+            remote,
+        ]
+        self.container_ = self.container().with_exec(cmd)
+        return self
+
+    @function
+    async def ensure_ref(
+        self,
+        ref: Annotated[str, Doc("Git ref or SHA to resolve")],
+    ) -> str:
+        """Resolve a ref or fail with a clear missing-ref error."""
+        container = self.container()
+        cmd = [
+            "sh",
+            "-c",
+            'git rev-parse --verify --quiet "$1" || { printf "Git ref not found: %s\\n" "$1" >&2; exit 1; }',
+            "ensure-ref",
+            ref,
+        ]
+        output = await container.with_exec(cmd).stdout()
+        return output.strip()
 
     @function
     async def get_tags(
@@ -314,7 +371,7 @@ class Git:
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",
     ) -> list[str]:
         """Fetch tags and return tags that point at a ref."""
-        await self.fetch_tags(remote=remote)
+        await self.with_fetched_tags(remote=remote)
         container = self.container()
         output = await container.with_exec(["git", "tag", "--points-at", ref]).stdout()
         return [line.strip() for line in output.splitlines() if line.strip()]

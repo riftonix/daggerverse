@@ -12,7 +12,8 @@ The Git module SHALL expose provider-neutral Dagger functions for CI workflows u
 #### Scenario: Public function names use verbs
 
 - **WHEN** a public Git module function is added or renamed
-- **THEN** the function name SHALL start with an action verb such as `get`, `has`, `fetch`, `create`, `push`, `configure`, or `ensure`
+- **THEN** the function name SHALL start with an action verb such as `get`, `has`, `with`, `create`, `push`, or `ensure`
+- **AND** chainable state-transforming functions SHALL use `with_*` names and return an updated `Git` object
 
 ### Requirement: Git module has Dagger-native tests
 
@@ -35,15 +36,21 @@ The Git module SHALL provide fetch functions that make required refs and tags av
 
 #### Scenario: Fetch refs for CI diff
 
-- **WHEN** a caller calls `fetch_refs` with a remote and one or more refspecs
+- **WHEN** a caller calls `with_fetched_refs` with a remote and one or more refspecs
 - **THEN** the module SHALL fetch those refs into the repository
 - **AND** subsequent ref resolution and diff functions SHALL be able to use the fetched refs
 
 #### Scenario: Fetch tags for release checks
 
-- **WHEN** a caller calls `fetch_tags`
+- **WHEN** a caller calls `with_fetched_tags`
 - **THEN** the module SHALL fetch tags from the selected remote
 - **AND** tag listing and tag lookup functions SHALL include fetched remote tags
+
+#### Scenario: Unshallow repository for history-dependent CI checks
+
+- **WHEN** a caller calls `with_unshallow`
+- **THEN** the module SHALL ensure the repository has full history when the repository is shallow
+- **AND** the module SHALL leave already full-history repositories usable for subsequent Git functions
 
 #### Scenario: Ensure required ref exists
 
@@ -152,12 +159,12 @@ The Git module SHALL support portable Git authentication for hosts such as GitHu
 #### Scenario: Configure HTTPS token authentication
 
 - **WHEN** a caller provides an HTTPS token secret and remote host
-- **THEN** `configure_https_token_auth` SHALL configure Git operations for that host without exposing the token in returned output
+- **THEN** `with_https_token_auth` SHALL configure Git operations for that host without exposing the token in returned output
 
 #### Scenario: Configure SSH key authentication
 
 - **WHEN** a caller provides an SSH private key secret and known hosts data
-- **THEN** `configure_ssh_key_auth` SHALL configure Git SSH operations without exposing the key in returned output
+- **THEN** `with_ssh_key_auth` SHALL configure Git SSH operations without exposing the key in returned output
 
 ### Requirement: Git module documentation matches implementation
 

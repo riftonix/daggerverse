@@ -27,7 +27,12 @@ class Tests:
     ) -> None:
         """Run all Git module tests."""
         await self.short_commit_sha(source=source)
-        await self.fetch_tags()
+        await self.with_fetched_tags()
+        await self.with_fetched_refs_missing_branch()
+        await self.ensure_ref_resolves_existing_ref()
+        await self.ensure_ref_fails_for_missing_ref()
+        await self.with_unshallow_fetches_full_history()
+        await self.with_unshallow_keeps_full_repository_usable()
         await self.get_tags()
         await self.tags_pointing_at()
         await self.compatibility_wrappers()
@@ -55,15 +60,93 @@ class Tests:
         test_case.assertRegex(short_sha.strip(), r"^[0-9a-f]+$")
 
     @function
-    async def fetch_tags(self) -> None:
+    async def with_fetched_tags(self) -> None:
         """Fetch tags from a local bare remote into a repository without local tags."""
         git = dag.git(source=self._repo_with_remote_tag())
         test_case = TestCase()
 
-        test_case.assertEqual([], await git.list_tags(pattern="v1.0.0"))
-        fetch_output = await git.fetch_tags()
-        test_case.assertIn("[new tag]", fetch_output)
-        test_case.assertIn("v1.0.0", fetch_output)
+        test_case.assertEqual([], await git.get_tags(pattern="v1.0.0"))
+
+        fetched_git = git.with_fetched_tags()
+
+        test_case.assertEqual(["v1.0.0"], await fetched_git.get_tags(pattern="v1.0.0"))
+
+    @function
+    async def with_fetched_refs_missing_branch(self) -> None:
+        """Fetch a missing remote branch from a local bare remote."""
+        git = dag.git(source=self._repo_with_missing_remote_branch())
+        test_case = TestCase()
+
+        try:
+            await git.container().with_exec(["git", "rev-parse", "--verify", "origin/feature"]).stdout()
+        except dagger.ExecError:
+            pass
+        else:
+            test_case.fail("origin/feature should be missing before with_fetched_refs")
+
+        fetched_git = git.with_fetched_refs(refspecs=["refs/heads/feature:refs/remotes/origin/feature"])
+        changed_files = await fetched_git.get_changed_files(base_ref="main", head_ref="origin/feature")
+        fetched_ref = (
+            await fetched_git.container().with_exec(["git", "rev-parse", "--verify", "origin/feature"]).stdout()
+        )
+
+        test_case.assertRegex(fetched_ref.strip(), r"^[0-9a-f]+$")
+        test_case.assertEqual(["feature.txt"], changed_files)
+
+    @function
+    async def ensure_ref_resolves_existing_ref(self) -> None:
+        """Return the resolved object SHA for an existing ref."""
+        repo = self._repo_with_local_tag()
+        git = dag.git(source=repo)
+
+        resolved_ref = await git.ensure_ref(ref="HEAD")
+        expected_ref = (
+            await dag.git(source=repo).container().with_exec(["git", "rev-parse", "--verify", "HEAD"]).stdout()
+        )
+
+        test_case = TestCase()
+        test_case.assertEqual(expected_ref.strip(), resolved_ref)
+
+    @function
+    async def ensure_ref_fails_for_missing_ref(self) -> None:
+        """Fail with a clear error when a ref is missing."""
+        git = dag.git(source=self._repo_with_local_tag())
+        test_case = TestCase()
+
+        try:
+            await git.ensure_ref(ref="refs/heads/missing")
+        except dagger.ExecError as error:
+            test_case.assertIn("Git ref not found: refs/heads/missing", error.stderr)
+        else:
+            test_case.fail("ensure_ref should fail for a missing ref")
+
+    @function
+    async def with_unshallow_fetches_full_history(self) -> None:
+        """Turn a shallow repository into a full-history repository."""
+        git = dag.git(source=self._shallow_repo_with_remote_history())
+        test_case = TestCase()
+
+        is_shallow = await git.container().with_exec(["git", "rev-parse", "--is-shallow-repository"]).stdout()
+        test_case.assertEqual("true", is_shallow.strip())
+
+        full_git = git.with_unshallow()
+
+        is_shallow = await full_git.container().with_exec(["git", "rev-parse", "--is-shallow-repository"]).stdout()
+        commit_count = await full_git.container().with_exec(["git", "rev-list", "--count", "HEAD"]).stdout()
+
+        test_case.assertEqual("false", is_shallow.strip())
+        test_case.assertEqual("3", commit_count.strip())
+
+    @function
+    async def with_unshallow_keeps_full_repository_usable(self) -> None:
+        """Leave an already full-history repository usable after with_unshallow."""
+        git = dag.git(source=self._repo_with_remote_tag())
+
+        full_git = git.with_unshallow()
+        resolved_ref = await full_git.ensure_ref(ref="HEAD")
+
+        test_case = TestCase()
+        test_case.assertRegex(resolved_ref, r"^[0-9a-f]+$")
 
     @function
     async def get_tags(self) -> None:
@@ -233,6 +316,50 @@ class Tests:
             .with_exec(["git", "clone", "--bare", ".", ".remote/origin.git"])
             .with_exec(["git", "tag", "-d", "v1.0.0"])
             .with_exec(["git", "remote", "add", "origin", ".remote/origin.git"])
+            .directory("/work/repo")
+        )
+
+    def _repo_with_missing_remote_branch(self) -> dagger.Directory:
+        """Return a git repo whose local bare remote contains a missing branch."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                ["sh", "-c", "printf 'feature\\n' > feature.txt && git add feature.txt && git commit -m feature"]
+            )
+            .with_exec(["mkdir", "-p", ".remote"])
+            .with_exec(["git", "clone", "--bare", ".", ".remote/origin.git"])
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(["git", "branch", "-D", "feature"])
+            .with_exec(["git", "remote", "add", "origin", ".remote/origin.git"])
+            .directory("/work/repo")
+        )
+
+    def _shallow_repo_with_remote_history(self) -> dagger.Directory:
+        """Return a shallow clone with a local bare remote that has full history."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/source")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'one\\n' > history.txt && git add . && git commit -m one"])
+            .with_exec(["sh", "-c", "printf 'two\\n' > history.txt && git add . && git commit -m two"])
+            .with_exec(["sh", "-c", "printf 'three\\n' > history.txt && git add . && git commit -m three"])
+            .with_workdir("/work")
+            .with_exec(["git", "clone", "--bare", "/work/source", "/work/origin.git"])
+            .with_exec(["git", "clone", "--depth", "1", "file:///work/origin.git", "/work/repo"])
+            .with_exec(["mkdir", "-p", "/work/repo/.remote"])
+            .with_exec(["cp", "-a", "/work/origin.git", "/work/repo/.remote/origin.git"])
+            .with_workdir("/work/repo")
+            .with_exec(["git", "remote", "set-url", "origin", ".remote/origin.git"])
             .directory("/work/repo")
         )
 

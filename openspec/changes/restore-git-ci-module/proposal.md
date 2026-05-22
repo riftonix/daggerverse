@@ -8,14 +8,15 @@ Repository CI modules need a universal Git foundation that works for GitHub now 
 
 - Restore `modules/git` so documented functions are either implemented and tested or removed from the public contract.
 - Align the Git module with the repository Dagger version and Dagger-native test pattern.
-- Add Git primitives for fetching refs and tags, resolving commits, computing merge bases, and inspecting repository metadata.
+- Add Git primitives for fetching refs and tags, unshallowing repositories, resolving commits, computing merge bases, and inspecting repository metadata.
 - Add changed-file and changed-directory APIs with explicit base/head inputs.
 - Add changed-component APIs for monorepos, including shared-path behavior and a single-component mode.
 - Add tag and release helper APIs using verb-based function names, such as `get_latest_tag`, `has_tag`, `get_tags_pointing_at`, `create_tag`, and `push_tag`.
 - Add authentication configuration that is portable across Git hosts by using generic HTTPS token or SSH credentials.
 - Add Dagger-native tests for each feature as it is implemented.
+- Split the Git module implementation and Dagger-native tests into focused files after fetch refs/tags are complete, while keeping `Git` as the public facade and `all` as the aggregate test entrypoint.
 - Update README and repository documentation to match the actual Git module API.
-- **BREAKING**: Replace or deprecate ambiguous function names where needed so public functions consistently use verbs.
+- **BREAKING**: Replace ambiguous function names and remove compatibility-only wrappers where needed so public functions consistently use verbs, with `with_*` names for chainable state changes.
 
 ## Capabilities
 
