@@ -13,6 +13,7 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - Remote tag fetching
 - Tags pointing at `HEAD`
 - Short `HEAD` commit SHA lookup
+- Merge-base lookup for explicit refs
 
 ## Defaults
 - image_registry: `docker.io`
@@ -31,6 +32,9 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 
 - get_changed_paths(target_branch: str = 'master', diff_path: str = '.') -> list[str]
   - Returns top‑level paths (directories) that changed between `target_branch` and `HEAD`, including untracked.
+
+- get_merge_base(base_ref: str, head_ref: str) -> str
+  - Returns the merge-base commit shared by two refs.
 
 - fetch_tags(remote: str = 'origin', prune: bool = False) -> str
   - Fetches tags from the remote repository.
@@ -92,6 +96,12 @@ Get tags pointing at HEAD:
 
 ```bash
 dagger -m ./modules/git call get-tags-pointing-at --source=. --ref=HEAD
+```
+
+Get the merge base for two refs:
+
+```bash
+dagger -m ./modules/git call get-merge-base --source=. --base-ref=origin/main --head-ref=HEAD
 ```
 
 ## License

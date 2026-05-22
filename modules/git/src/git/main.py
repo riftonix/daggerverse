@@ -130,6 +130,16 @@ class Git:
         return sorted({f"{normalized_diff_path}/{path}" for path in top_level_dirs})
 
     @function
+    async def get_merge_base(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")],
+    ) -> str:
+        """Return the merge-base commit shared by two refs."""
+        output = await self.container().with_exec(["git", "merge-base", base_ref, head_ref]).stdout()
+        return output.strip()
+
+    @function
     async def fetch_tags(
         self,
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",

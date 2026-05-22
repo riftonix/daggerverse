@@ -7,7 +7,7 @@
 
 ## 2. PR Diff And Changed Paths
 
-- [ ] 2.1 Implement `get_merge_base(base_ref, head_ref)` and tests for diverged branches.
+- [x] 2.1 Implement `get_merge_base(base_ref, head_ref)` and tests for diverged branches.
 - [ ] 2.2 Implement `get_changed_files(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for added, copied, modified, renamed, type-changed, unmerged, unknown, and broken files where practical.
 - [ ] 2.3 Implement `get_changed_dirs(base_ref, head_ref, paths=None, depth=1, diff_filter='ACMRTUXB')` and tests for root-scoped and subdirectory-scoped changes.
 - [ ] 2.4 Implement `has_changes(base_ref, head_ref, paths=None, diff_filter='ACMRTUXB')` and tests for changed and unchanged paths.
