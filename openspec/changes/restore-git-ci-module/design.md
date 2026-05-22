@@ -42,6 +42,32 @@ Each implementation task must include both the feature and its Dagger-native tes
 
 Alternative considered: implement all behavior first, then test at the end. This was rejected because Git edge cases are easy to miss and the user explicitly wants each step covered immediately.
 
+### Structure Refactor After Fetch Refs And Tags
+
+After the fetch refs/tags task group is complete, split the Git module before adding larger merge-base, component, tag, auth, metadata, and files-at-ref surfaces.
+
+The public Dagger object should remain `Git` as a facade so callers keep one obvious module entrypoint. Implementation code should move into focused internal modules for container setup, refs, diffs, tags, components, auth, metadata, files-at-ref, and shared path utilities.
+
+The Dagger test module should keep a single aggregate `all` function, but the implementation should be split by topic with shared synthetic repository fixtures. This keeps the external test command stable while preventing one large test file from accumulating all scenarios.
+
+Backwards compatibility is not required during this refactor because there are no known external consumers yet. Compatibility-only wrappers may be removed, and in-repository callers/tests should use the final verb-based API directly.
+
+Alternative considered: keep `modules/git/src/git/main.py` and `modules/git/tests/src/tests/main.py` as single files until all features are implemented. This was rejected because the planned component, tag, auth, metadata, and files-at-ref behavior will make the files harder to review and maintain.
+
+### Chainable State Methods Use With
+
+Functions that modify the configured Git container state and return `Self` should use `with_*` names. This makes it clear that the returned object must be used for subsequent calls.
+
+Examples:
+
+- `with_fetched_refs(...)`
+- `with_fetched_tags(...)`
+- `with_unshallow(...)`
+- `with_https_token_auth(...)`
+- `with_ssh_key_auth(...)`
+
+Alternative considered: name these functions as imperative actions such as `fetch_refs` and `fetch_tags`. This was rejected because scalar-looking action names hide the Dagger state transition and make it easy to call a follow-up method on the old object.
+
 ### Synthetic Git Fixtures
 
 Tests should create deterministic local repositories inside Dagger containers or use checked-in fixture scripts/data that produce repositories with branches, merge bases, tags, untracked files, changed components, and shared-path changes.
@@ -76,7 +102,9 @@ Credentials must use `dagger.Secret` and must not be returned in stdout, logs, o
 
 1. Add a Dagger-native Git test module and cover current behavior before changing APIs.
 2. Restore or remove documented-but-missing functions so README and implementation match.
-3. Add new verb-based APIs with tests.
-4. Update dependent modules, especially `modules/pipelines`, to use the restored API.
-5. Update docs after each API group is implemented.
-6. Remove the legacy shell test once the Dagger-native test module is authoritative.
+3. Add fetch refs/tags helpers with tests.
+4. Split the Git module implementation and tests into focused files while keeping the public `Git` facade and aggregate test entrypoint.
+5. Add the remaining verb-based APIs with tests.
+6. Update dependent modules, especially `modules/pipelines`, to use the restored API.
+7. Update docs after each API group is implemented.
+8. Remove the legacy shell test once the Dagger-native test module is authoritative.

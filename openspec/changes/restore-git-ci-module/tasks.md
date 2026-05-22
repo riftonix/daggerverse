@@ -14,56 +14,63 @@
 
 ## 3. Fetch Refs And Tags
 
-- [ ] 3.1 Implement `fetch_refs(remote='origin', refspecs=None, depth=None, prune=False)` and tests that fetch a missing branch from a local bare remote.
-- [ ] 3.2 Implement `fetch_tags(remote='origin', prune=False)` and tests that list tags unavailable before fetch.
-- [ ] 3.3 Implement `ensure_ref(ref)` and tests that verify both successful resolution and clear failure for a missing ref.
-- [ ] 3.4 Implement `unshallow(remote='origin')` or an equivalent full-history fetch helper and tests for shallow-repository behavior if Dagger fixture support is practical.
+- [x] 3.1 Implement `with_fetched_refs(remote='origin', refspecs=None, depth=None, prune=False)` and tests that fetch a missing branch from a local bare remote.
+- [x] 3.2 Implement `with_fetched_tags(remote='origin', prune=False)` and tests that list tags unavailable before fetch.
+- [x] 3.3 Implement `ensure_ref(ref)` and tests that verify both successful resolution and clear failure for a missing ref.
+- [x] 3.4 Implement `with_unshallow(remote='origin')` and tests for shallow-repository behavior.
 
-## 4. Merge-Base Workflows
+## 4. Git Module Structure
 
-- [ ] 4.1 Implement `get_changed_files_since_merge_base(base_ref, head_ref='HEAD', paths=None, diff_filter='ACMRTUXB')` with tests for pull request style branches.
-- [ ] 4.2 Implement `get_changed_dirs_since_merge_base(base_ref, head_ref='HEAD', paths=None, depth=1, diff_filter='ACMRTUXB')` with tests for monorepo path scopes.
-- [ ] 4.3 Update higher-level pipeline code to use merge-base diff helpers where appropriate and cover the integration with tests.
+- [ ] 4.1 Split `modules/git/src/git/main.py` so `Git` remains the public Dagger facade and implementation helpers move into focused modules for container setup, refs, diffs, tags, components, auth, metadata, files-at-ref, and path utilities.
+- [ ] 4.2 Remove compatibility-only public wrappers and update in-repository callers/tests to use the final verb-based API directly; backwards compatibility is not required while there are no external consumers.
+- [ ] 4.3 Split `modules/git/tests/src/tests/main.py` into focused test files and shared synthetic repository fixtures while keeping a single aggregate Dagger `all` entrypoint.
+- [ ] 4.4 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict` after the structure refactor.
 
-## 5. Component Discovery For Monorepos And Single-Component Repos
+## 5. Merge-Base Workflows
 
-- [ ] 5.1 Implement `get_components(component_roots)` and tests for explicit roots and glob-like component root patterns.
-- [ ] 5.2 Implement `get_changed_components(base_ref, head_ref, component_roots, shared_paths=None, single_component=False)` and tests for changed component roots.
-- [ ] 5.3 Add shared-path behavior so a shared path change returns all discovered components, with tests.
-- [ ] 5.4 Add single-component behavior that returns `['.']` when matching files changed, with tests.
-- [ ] 5.5 Document component discovery examples for monorepos and single-component repositories.
+- [ ] 5.1 Implement `get_changed_files_since_merge_base(base_ref, head_ref='HEAD', paths=None, diff_filter='ACMRTUXB')` with tests for pull request style branches.
+- [ ] 5.2 Implement `get_changed_dirs_since_merge_base(base_ref, head_ref='HEAD', paths=None, depth=1, diff_filter='ACMRTUXB')` with tests for monorepo path scopes.
+- [ ] 5.3 Update higher-level pipeline code to use merge-base diff helpers where appropriate and cover the integration with tests.
 
-## 6. Tags And Versions
+## 6. Component Discovery For Monorepos And Single-Component Repos
 
-- [ ] 6.1 Implement `get_tags(pattern='*', sort='version')` as the verb-based replacement for `list_tags`, with tests.
-- [ ] 6.2 Implement `has_tag(tag)` and tests for existing and missing tags.
-- [ ] 6.3 Implement `get_latest_tag(pattern='*', semver=True)` and tests for semver and non-semver tag sets.
-- [ ] 6.4 Implement `get_tags_pointing_at(ref='HEAD')` and tests for HEAD and non-HEAD refs.
-- [ ] 6.5 Implement `create_tag(tag, message=None, user_name='dagger-ci', user_email='dagger-ci@example.local')` and tests for lightweight and annotated tags.
-- [ ] 6.6 Implement `push_tag(tag, remote='origin')` and tests that push to a local bare remote.
+- [ ] 6.1 Implement `get_components(component_roots)` and tests for explicit roots and glob-like component root patterns.
+- [ ] 6.2 Implement `get_changed_components(base_ref, head_ref, component_roots, shared_paths=None, single_component=False)` and tests for changed component roots.
+- [ ] 6.3 Add shared-path behavior so a shared path change returns all discovered components, with tests.
+- [ ] 6.4 Add single-component behavior that returns `['.']` when matching files changed, with tests.
+- [ ] 6.5 Document component discovery examples for monorepos and single-component repositories.
 
-## 7. Portable Authentication
+## 7. Tags And Versions
 
-- [ ] 7.1 Implement `configure_https_token_auth(host, token, username=None)` using `dagger.Secret`, and tests that verify configuration without exposing the token.
-- [ ] 7.2 Implement `configure_ssh_key_auth(private_key, known_hosts, host=None)` using `dagger.Secret`, and tests that verify file permissions and non-disclosure of key material.
-- [ ] 7.3 Update tag push and fetch documentation to show generic Git host usage for GitHub, GitLab, and Bitbucket.
+- [ ] 7.1 Implement `get_tags(pattern='*', sort='version')` as the verb-based replacement for `list_tags`, with tests.
+- [ ] 7.2 Implement `has_tag(tag)` and tests for existing and missing tags.
+- [ ] 7.3 Implement `get_latest_tag(pattern='*', semver=True)` and tests for semver and non-semver tag sets.
+- [ ] 7.4 Implement `get_tags_pointing_at(ref='HEAD')` and tests for HEAD and non-HEAD refs.
+- [ ] 7.5 Implement `create_tag(tag, message=None, user_name='dagger-ci', user_email='dagger-ci@example.local')` and tests for lightweight and annotated tags.
+- [ ] 7.6 Implement `push_tag(tag, remote='origin')` and tests that push to a local bare remote.
 
-## 8. Repository Metadata
+## 8. Portable Authentication
 
-- [ ] 8.1 Implement `get_head_sha()` and tests for full SHA output.
-- [ ] 8.2 Implement `get_current_branch()` and `get_current_ref()` with tests for branch and detached HEAD states.
-- [ ] 8.3 Implement `get_remote_url(remote='origin')` and `get_default_branch(remote='origin')` with tests against a local bare remote.
-- [ ] 8.4 Implement `get_status_porcelain()` and `has_clean_worktree()` with tests for clean and dirty worktrees.
+- [ ] 8.1 Implement `with_https_token_auth(host, token, username=None)` using `dagger.Secret`, and tests that verify configuration without exposing the token.
+- [ ] 8.2 Implement `with_ssh_key_auth(private_key, known_hosts, host=None)` using `dagger.Secret`, and tests that verify file permissions and non-disclosure of key material.
+- [ ] 8.3 Update tag push and fetch documentation to show generic Git host usage for GitHub, GitLab, and Bitbucket.
 
-## 9. Files At Ref
+## 9. Repository Metadata
 
-- [ ] 9.1 Implement `has_file_at_ref(ref, path)` and tests for existing and missing files.
-- [ ] 9.2 Implement `get_file_contents_at_ref(ref, path)` and tests for reading a file from a non-HEAD ref.
+- [ ] 9.1 Implement `get_head_sha()` and tests for full SHA output.
+- [ ] 9.2 Implement `get_current_branch()` and `get_current_ref()` with tests for branch and detached HEAD states.
+- [ ] 9.3 Implement `get_remote_url(remote='origin')` and `get_default_branch(remote='origin')` with tests against a local bare remote.
+- [ ] 9.4 Implement `get_status_porcelain()` and `has_clean_worktree()` with tests for clean and dirty worktrees.
 
-## 10. Documentation And Integration
+## 10. Files At Ref
 
-- [ ] 10.1 Update `modules/git/README.md` so every documented function exists and every example uses verb-based names.
-- [ ] 10.2 Update repository docs and module reference for Git CI use cases.
-- [ ] 10.3 Update `modules/pipelines` to use restored Git APIs and add tests for any changed pipeline behavior.
-- [ ] 10.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
-- [ ] 10.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.
+- [ ] 10.1 Implement `has_file_at_ref(ref, path)` and tests for existing and missing files.
+- [ ] 10.2 Implement `get_file_contents_at_ref(ref, path)` and tests for reading a file from a non-HEAD ref.
+
+## 11. Documentation And Integration
+
+- [ ] 11.1 Update `modules/git/README.md` so every documented function exists and every example uses verb-based names.
+- [ ] 11.2 Update repository docs and module reference for Git CI use cases.
+- [ ] 11.3 Update `modules/pipelines` to use restored Git APIs and add tests for any changed pipeline behavior.
+- [ ] 11.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
+- [ ] 11.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.

@@ -36,8 +36,17 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - get_merge_base(base_ref: str, head_ref: str) -> str
   - Returns the merge-base commit shared by two refs.
 
-- fetch_tags(remote: str = 'origin', prune: bool = False) -> str
-  - Fetches tags from the remote repository.
+- with_fetched_refs(remote: str = 'origin', refspecs: list[str] | None = None, depth: int | None = None, prune: bool = False) -> Git
+  - Fetches refs from the remote repository and returns the updated Git instance.
+
+- with_fetched_tags(remote: str = 'origin', prune: bool = False) -> Git
+  - Fetches tags from the remote repository and returns the updated Git instance.
+
+- with_unshallow(remote: str = 'origin') -> Git
+  - Ensures a shallow repository has full history and returns the updated Git instance.
+
+- ensure_ref(ref: str) -> str
+  - Resolves a ref to a SHA or fails with a clear missing-ref error.
 
 - get_tags(pattern: str | None = None) -> list[str]
   - Lists tags, optionally filtered by a glob pattern (e.g. `chartname/1.2.3`).
@@ -89,7 +98,7 @@ dagger -m ./modules/git call get-tags --source=. --pattern="mychart/1.2.3"
 Fetch tags:
 
 ```bash
-dagger -m ./modules/git call fetch-tags --source=. --remote=origin
+dagger -m ./modules/git call with-fetched-tags --source=. --remote=origin
 ```
 
 Get tags pointing at HEAD:
