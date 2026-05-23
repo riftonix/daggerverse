@@ -1,7 +1,14 @@
 from typing import Annotated, Self
 
 import dagger
-from dagger import DefaultPath, Doc, dag, function, object_type
+from dagger import DefaultPath, Doc, function, object_type
+
+from .auth import Auth
+from .cli import GitCli
+from .diffs import Diffs
+from .metadata import Metadata
+from .refs import Refs
+from .tags import Tags
 
 
 @object_type
@@ -12,6 +19,16 @@ class Git:
     image_tag: str
     user_id: str
     container_: dagger.Container | None
+
+    def _git(self) -> GitCli:
+        return GitCli(
+            source=self.source,
+            image_registry=self.image_registry,
+            image_repository=self.image_repository,
+            image_tag=self.image_tag,
+            user_id=self.user_id,
+            container_=self.container_,
+        )
 
     @classmethod
     async def create(
@@ -35,59 +52,15 @@ class Git:
     @function
     def container(self) -> dagger.Container:
         """Creates container with configured git"""
-        if self.container_:
-            return self.container_
-        self.container_ = (
-            dag.container()
-            .from_(address=f"{self.image_registry}/{self.image_repository}:{self.image_tag}")
-            .with_env_variable("USER_ID", self.user_id)
-            .with_env_variable("USER_NAME", "git")
-            .with_user("0")
-            .with_exec(
-                [
-                    "sh",
-                    "-c",
-                    (
-                        'getent passwd "$USER_ID" >/dev/null 2>&1 || '
-                        'printf "$USER_NAME:x:%s:%s:$USER_NAME:/home/$USER_NAME:/sbin/nologin\\n" '  # noqa E501
-                        '"$USER_ID" "$USER_ID" >> /etc/passwd; '
-                        'getent group "$USER_ID" >/dev/null 2>&1 || '
-                        'echo "$USER_NAME:x:$USER_ID:" >> /etc/group; '
-                        'install -d -m 700 -o "$USER_ID" -g "$USER_ID" '
-                        '"/home/$USER_NAME"'
-                    ),
-                ],
-                expand=True,
-            )
-            .with_user(self.user_id)
-            .with_env_variable("HOME", "/home/git")
-            .with_env_variable("GIT_REPO_PATH", "/tmp/git/repo")
-            .with_exec(["mkdir", "-p", "-m", "770", "$GIT_REPO_PATH"], expand=True)
-            .with_directory("$GIT_REPO_PATH", self.source, owner=self.user_id, expand=True)
-            .with_workdir("$GIT_REPO_PATH", expand=True)
-            .with_exec(
-                [
-                    "sh",
-                    "-c",
-                    'git status --porcelain >/dev/null 2>&1 || (echo "Path $GIT_REPO_PATH is not a git repo" >&2; exit 1)',
-                ],
-                expand=True,
-            )
-            .with_exec(["git", "config", "--local", "safe.directory", "$GIT_REPO_PATH"], expand=True)
-        )
-        return self.container_
+        git = self._git()
+        container = git.container()
+        self.container_ = git.container_
+        return container
 
     @function
     async def with_ssh_private_key(self, source: Annotated[dagger.File, Doc("Private key file")]) -> str:
         """Add ssh private key to container"""
-
-        container: dagger.Container = self.container()
-        container = (
-            container.with_env_variable("SSH_PRIVATE_KEY_PATH", "$HOME/.ssh/id_rsa", expand=True)
-            .with_file("$SSH_PRIVATE_KEY_PATH", source=source, owner=self.user_id, permissions=600, expand=True)
-            .with_exec(["ls", "-lah", "$HOME/.ssh"], expand=True)
-        )
-        return await container.stdout()
+        return await Auth(self._git()).with_ssh_private_key(source=source)
 
     @function
     async def get_changed_paths(
@@ -96,38 +69,7 @@ class Git:
         diff_path: Annotated[str | None, Doc("Path to scope the diff (relative to repo root)")] = ".",
     ) -> list[str]:
         """Return changed paths inside diff_path between target_branch and HEAD"""
-        container = self.container()
-
-        diff_output = await container.with_exec(
-            [
-                "sh",
-                "-c",
-                (f'git diff --name-only --diff-filter=ACMRTUXB {target_branch} -- "{diff_path}"'),
-            ]
-        ).stdout()
-
-        untracked_output = await container.with_exec(
-            [
-                "sh",
-                "-c",
-                f'git ls-files --others --exclude-standard -- "{diff_path}"',
-            ]
-        ).stdout()
-
-        raw_paths = [line.strip() for line in (diff_output + "\n" + untracked_output).splitlines() if line.strip()]
-
-        normalized_diff_path = (diff_path or ".").rstrip("/")
-        if normalized_diff_path in (".", "./"):
-            relative_paths = raw_paths
-        else:
-            prefix = f"{normalized_diff_path}/"
-            relative_paths = [path[len(prefix) :] if path.startswith(prefix) else path for path in raw_paths]
-
-        top_level_dirs = [path.split("/", 1)[0] for path in relative_paths]
-        if normalized_diff_path in (".", "./"):
-            return sorted(set(top_level_dirs))
-
-        return sorted({f"{normalized_diff_path}/{path}" for path in top_level_dirs})
+        return await Diffs(self._git()).get_changed_paths(target_branch=target_branch, diff_path=diff_path)
 
     @function
     async def get_merge_base(
@@ -136,8 +78,7 @@ class Git:
         head_ref: Annotated[str, Doc("Head Git ref or SHA")],
     ) -> str:
         """Return the merge-base commit shared by two refs."""
-        output = await self.container().with_exec(["git", "merge-base", base_ref, head_ref]).stdout()
-        return output.strip()
+        return await Refs(self._git()).get_merge_base(base_ref=base_ref, head_ref=head_ref)
 
     @function
     async def get_changed_files(
@@ -148,23 +89,12 @@ class Git:
         diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
     ) -> list[str]:
         """Return changed file paths between two refs."""
-        cmd = [
-            "git",
-            "diff",
-            "--name-only",
-            "--find-renames",
-            "--find-copies",
-            "--find-copies-harder",
-            f"--diff-filter={diff_filter}",
-            base_ref,
-            head_ref,
-        ]
-        if paths:
-            cmd.append("--")
-            cmd.extend(paths)
-
-        output = await self.container().with_exec(cmd).stdout()
-        return [line.strip() for line in output.splitlines() if line.strip()]
+        return await Diffs(self._git()).get_changed_files(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
 
     @function
     async def get_changed_dirs(
@@ -176,15 +106,13 @@ class Git:
         diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
     ) -> list[str]:
         """Return unique changed directories between two refs."""
-        changed_files = await self.get_changed_files(
+        return await Diffs(self._git()).get_changed_dirs(
             base_ref=base_ref,
             head_ref=head_ref,
             paths=paths,
+            depth=depth,
             diff_filter=diff_filter,
         )
-        scopes = [self._normalize_path(path) for path in paths or [] if self._normalize_path(path) != "."]
-
-        return sorted({self._changed_dir_for_file(path, scopes=scopes, depth=depth) for path in changed_files})
 
     @function
     async def has_changes(
@@ -195,43 +123,12 @@ class Git:
         diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
     ) -> bool:
         """Return whether any files changed between two refs."""
-        changed_files = await self.get_changed_files(
+        return await Diffs(self._git()).has_changes(
             base_ref=base_ref,
             head_ref=head_ref,
             paths=paths,
             diff_filter=diff_filter,
         )
-        return bool(changed_files)
-
-    def _changed_dir_for_file(self, path: str, scopes: list[str], depth: int) -> str:
-        normalized_path = self._normalize_path(path)
-        if depth <= 0:
-            return "."
-
-        scope = self._matching_scope(normalized_path, scopes)
-        if scope:
-            relative_path = normalized_path.removeprefix(f"{scope}/")
-            relative_parts = relative_path.split("/")[:-1]
-            if not relative_parts:
-                return scope
-            return "/".join([scope, *relative_parts[:depth]])
-
-        parts = normalized_path.split("/")[:-1]
-        if not parts:
-            return "."
-        return "/".join(parts[:depth])
-
-    def _matching_scope(self, path: str, scopes: list[str]) -> str | None:
-        matching_scopes = [scope for scope in scopes if path == scope or path.startswith(f"{scope}/")]
-        if not matching_scopes:
-            return None
-        return max(matching_scopes, key=len)
-
-    def _normalize_path(self, path: str) -> str:
-        normalized = path.strip().strip("/")
-        if normalized in ("", "."):
-            return "."
-        return normalized.removeprefix("./")
 
     @function
     async def with_fetched_tags(
@@ -240,10 +137,7 @@ class Git:
         prune: Annotated[bool | None, Doc("Prune deleted tags")] = False,
     ) -> Self:
         """Fetch tags from remote."""
-        cmd = ["git", "fetch", "--tags", remote]
-        if prune:
-            cmd.insert(2, "--prune")
-        self.container_ = self.container().with_exec(cmd)
+        self.container_ = Tags(self._git()).with_fetched_tags(remote=remote, prune=prune).container_
         return self
 
     @function
@@ -255,16 +149,16 @@ class Git:
         prune: Annotated[bool | None, Doc("Prune deleted remote-tracking refs")] = False,
     ) -> Self:
         """Fetch refs from remote and keep them available for later Git calls."""
-        cmd = ["git", "fetch"]
-        if prune:
-            cmd.append("--prune")
-        if depth is not None:
-            cmd.extend(["--depth", str(depth)])
-        cmd.append(remote)
-        if refspecs:
-            cmd.extend(refspecs)
-
-        self.container_ = self.container().with_exec(cmd)
+        self.container_ = (
+            Refs(self._git())
+            .with_fetched_refs(
+                remote=remote,
+                refspecs=refspecs,
+                depth=depth,
+                prune=prune,
+            )
+            .container_
+        )
         return self
 
     @function
@@ -273,20 +167,7 @@ class Git:
         remote: Annotated[str, Doc("Remote name to fetch full history from")] = "origin",
     ) -> Self:
         """Ensure a shallow repository has full history for later Git calls."""
-        cmd = [
-            "sh",
-            "-c",
-            (
-                'if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then '
-                'git fetch --unshallow "$1"; '
-                "else "
-                'git fetch "$1"; '
-                "fi"
-            ),
-            "with-unshallow",
-            remote,
-        ]
-        self.container_ = self.container().with_exec(cmd)
+        self.container_ = Refs(self._git()).with_unshallow(remote=remote).container_
         return self
 
     @function
@@ -295,16 +176,7 @@ class Git:
         ref: Annotated[str, Doc("Git ref or SHA to resolve")],
     ) -> str:
         """Resolve a ref or fail with a clear missing-ref error."""
-        container = self.container()
-        cmd = [
-            "sh",
-            "-c",
-            'git rev-parse --verify --quiet "$1" || { printf "Git ref not found: %s\\n" "$1" >&2; exit 1; }',
-            "ensure-ref",
-            ref,
-        ]
-        output = await container.with_exec(cmd).stdout()
-        return output.strip()
+        return await Refs(self._git()).ensure_ref(ref=ref)
 
     @function
     async def get_tags(
@@ -312,17 +184,7 @@ class Git:
         pattern: Annotated[str, Doc("Optional tag filter pattern (glob)")] = "*",
     ) -> list[str]:
         """Return tags in the repository, optionally filtered by glob pattern."""
-        container = self.container()
-        output = await container.with_exec(["git", "tag", "--list", pattern, "--sort=version:refname"]).stdout()
-        return [line.strip() for line in output.splitlines() if line.strip()]
-
-    @function
-    async def list_tags(
-        self,
-        pattern: Annotated[str, Doc("Optional tag filter pattern (glob)")] = "*",
-    ) -> list[str]:
-        """Compatibility wrapper for get_tags."""
-        return await self.get_tags(pattern=pattern)
+        return await Tags(self._git()).get_tags(pattern=pattern)
 
     @function
     async def get_short_commit_sha(
@@ -330,39 +192,7 @@ class Git:
         length: Annotated[int | None, Doc("Length of the short SHA")] = 8,
     ) -> str:
         """Return short commit SHA for HEAD"""
-        container = self.container()
-        return await container.with_exec(["git", "rev-parse", f"--short={length}", "HEAD"]).stdout()
-
-    # @function
-    # async def create_and_push_tag(
-    #     self,
-    #     tag: Annotated[str, Doc('Tag name to create')],
-    #     message: Annotated[str | None, Doc('Annotated tag message (optional)')] = None,
-    #     remote: Annotated[str, Doc('Remote name to push the tag to')] = 'origin',
-    #     user_name: Annotated[str, Doc('Git user.name for annotated tags')] = 'dagger-ci',
-    #     user_email: Annotated[str, Doc('Git user.email for annotated tags')] = 'dagger-ci@example.local',
-    # ) -> str:
-    #     '''Create a tag and push it to the remote'''
-    #     container = self.container()
-    #     if message:
-    #         container = container.with_exec(
-    #             [
-    #                 'git',
-    #                 '-c',
-    #                 f'user.name={user_name}',
-    #                 '-c',
-    #                 f'user.email={user_email}',
-    #                 'tag',
-    #                 '-a',
-    #                 tag,
-    #                 '-m',
-    #                 message,
-    #             ]
-    #         )
-    #     else:
-    #         container = container.with_exec(['git', 'tag', tag])
-
-    #     return await container.with_exec(['git', 'push', remote, tag]).stdout()
+        return await Metadata(self._git()).get_short_commit_sha(length=length)
 
     @function
     async def get_tags_pointing_at(
@@ -371,7 +201,4 @@ class Git:
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",
     ) -> list[str]:
         """Fetch tags and return tags that point at a ref."""
-        await self.with_fetched_tags(remote=remote)
-        container = self.container()
-        output = await container.with_exec(["git", "tag", "--points-at", ref]).stdout()
-        return [line.strip() for line in output.splitlines() if line.strip()]
+        return await Tags(self._git()).get_tags_pointing_at(ref=ref, remote=remote)
