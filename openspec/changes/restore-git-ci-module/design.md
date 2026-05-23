@@ -48,6 +48,8 @@ After the fetch refs/tags task group is complete, split the Git module before ad
 
 The public Dagger object should remain `Git` as a facade so callers keep one obvious module entrypoint. Implementation code should move into focused internal modules for container setup, refs, diffs, tags, components, auth, metadata, files-at-ref, and shared path utilities.
 
+The split should follow the same object-oriented shape used by the downloaded Python Dagger module examples such as `apko`: keep the public facade thin, move reusable container state into an internal `GitCli`/repository class, and group behavior behind focused topic classes such as `Refs`, `Diffs`, `Tags`, `Auth`, and `Metadata`. These topic classes are internal implementation objects unless a later design explicitly exposes them as Dagger API objects; adding them must not broaden the public Git module contract beyond the `Git` facade.
+
 The Dagger test module should keep a single aggregate `all` function, but the implementation should be split by topic with shared synthetic repository fixtures. This keeps the external test command stable while preventing one large test file from accumulating all scenarios.
 
 Backwards compatibility is not required during this refactor because there are no known external consumers yet. Compatibility-only wrappers may be removed, and in-repository callers/tests should use the final verb-based API directly.

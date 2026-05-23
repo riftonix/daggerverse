@@ -21,10 +21,10 @@
 
 ## 4. Git Module Structure
 
-- [ ] 4.1 Split `modules/git/src/git/main.py` so `Git` remains the public Dagger facade and implementation helpers move into focused modules for container setup, refs, diffs, tags, components, auth, metadata, files-at-ref, and path utilities.
-- [ ] 4.2 Remove compatibility-only public wrappers and update in-repository callers/tests to use the final verb-based API directly; backwards compatibility is not required while there are no external consumers.
-- [ ] 4.3 Split `modules/git/tests/src/tests/main.py` into focused test files and shared synthetic repository fixtures while keeping a single aggregate Dagger `all` entrypoint.
-- [ ] 4.4 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict` after the structure refactor.
+- [x] 4.1 Split `modules/git/src/git/main.py` so `Git` remains the public Dagger facade and implementation helpers move into focused internal classes/modules for Git CLI container state, refs, diffs, tags, components, auth, metadata, files-at-ref, and path utilities.
+- [x] 4.2 Remove compatibility-only public wrappers and update in-repository callers/tests to use the final verb-based API directly; backwards compatibility is not required while there are no external consumers.
+- [x] 4.3 Split `modules/git/tests/src/tests/main.py` into focused test files and shared synthetic repository fixtures while keeping a single aggregate Dagger `all` entrypoint.
+- [x] 4.4 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict` after the structure refactor.
 
 ## 5. Merge-Base Workflows
 
