@@ -7,7 +7,7 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 
 @object_type
 class Pipelines:
-    async def _get_changed_paths(
+    async def _get_changed_chart_paths(
         self,
         source: dagger.Directory,
         target_branch: str,
@@ -17,9 +17,9 @@ class Pipelines:
         changed_paths: list[str] = []
         for diff_path in diff_paths or []:
             changed_paths.extend(
-                await git.get_changed_paths(
-                    target_branch=target_branch,
-                    diff_path=diff_path,
+                await git.get_changed_dirs_since_merge_base(
+                    base_ref=target_branch,
+                    paths=[diff_path],
                 )
             )
         return sorted(set(changed_paths))
@@ -40,6 +40,13 @@ class Pipelines:
             image_tag=image_tag,
             user_id=user_id,
         )
+
+    async def _get_chart_metadata(self, source: dagger.Directory, chart_path: str) -> dict:
+        chart_yaml = await source.file(f"{chart_path}/Chart.yaml").contents()
+        metadata = yaml.safe_load(chart_yaml) or {}
+        if not isinstance(metadata, dict):
+            return {}
+        return metadata
 
     @function
     async def helm_verify(
@@ -88,7 +95,7 @@ class Pipelines:
     ) -> list[str]:
         """Verify changed charts/libs and optionally publish feature versions"""
         diff_paths = [path for path in (charts_path, libs_path) if path]
-        chart_paths = await self._get_changed_paths(
+        chart_paths = await self._get_changed_chart_paths(
             source=source,
             target_branch=target_branch,
             diff_paths=diff_paths,
@@ -99,8 +106,7 @@ class Pipelines:
         outputs: list[str] = []
         for chart_path in chart_paths:
             chart_dir = source.directory(chart_path)
-            chart = await self._helm(source=chart_dir)
-            metadata = yaml.safe_load(await chart.get_chart_info()) or {}
+            metadata = await self._get_chart_metadata(source=source, chart_path=chart_path)
             chart_name = str(metadata.get("name", "")).strip()
             chart_version = str(metadata.get("version", "")).strip()
             if not chart_name or not chart_version:

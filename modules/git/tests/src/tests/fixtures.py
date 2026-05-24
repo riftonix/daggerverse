@@ -141,3 +141,96 @@ class SyntheticGitRepos:
                 ]
             )
         )
+
+    def repo_with_pull_request_branch(self) -> dagger.Container:
+        """Return a git repo shaped like a pull request branch from an older base."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p services/api docs && "
+                        "printf 'base\\n' > services/api/app.py && "
+                        "printf 'base\\n' > docs/guide.md && "
+                        "git add . && git commit -m base"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "printf 'feature\\n' > services/api/app.py && "
+                        "printf 'feature\\n' > services/api/feature.py && "
+                        "git add . && git commit -m feature"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf 'main\\n' > docs/main-only.md && git add . && git commit -m main",
+                ]
+            )
+            .with_exec(["git", "checkout", "feature"])
+        )
+
+    def repo_with_monorepo_pull_request_branch(self) -> dagger.Container:
+        """Return a monorepo-shaped pull request branch with base branch drift."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p services/api services/web packages/shared docs && "
+                        "printf 'base\\n' > services/api/app.py && "
+                        "printf 'base\\n' > services/web/app.py && "
+                        "printf 'base\\n' > packages/shared/lib.py && "
+                        "printf 'base\\n' > docs/guide.md && "
+                        "git add . && git commit -m base"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "printf 'feature\\n' > services/api/app.py && "
+                        "mkdir -p services/api/internal/jobs && "
+                        "printf 'feature\\n' > services/api/internal/jobs/worker.py && "
+                        "printf 'feature\\n' > services/web/ui.py && "
+                        "printf 'feature\\n' > packages/shared/new.py && "
+                        "git add . && git commit -m feature"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf 'main\\n' > docs/main-only.md && git add . && git commit -m main",
+                ]
+            )
+            .with_exec(["git", "checkout", "feature"])
+        )

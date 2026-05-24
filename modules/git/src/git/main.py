@@ -97,6 +97,22 @@ class Git:
         )
 
     @function
+    async def get_changed_files_since_merge_base(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")] = "HEAD",
+        paths: Annotated[list[str] | None, Doc("Optional path filters relative to the repository root")] = None,
+        diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
+    ) -> list[str]:
+        """Return changed file paths from the merge base of base_ref and head_ref to head_ref."""
+        return await Diffs(self._git()).get_changed_files_since_merge_base(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
+
+    @function
     async def get_changed_dirs(
         self,
         base_ref: Annotated[str, Doc("Base Git ref or SHA")],
@@ -107,6 +123,24 @@ class Git:
     ) -> list[str]:
         """Return unique changed directories between two refs."""
         return await Diffs(self._git()).get_changed_dirs(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            depth=depth,
+            diff_filter=diff_filter,
+        )
+
+    @function
+    async def get_changed_dirs_since_merge_base(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")] = "HEAD",
+        paths: Annotated[list[str] | None, Doc("Optional path filters relative to the repository root")] = None,
+        depth: Annotated[int, Doc("Directory depth to return")] = 1,
+        diff_filter: Annotated[str, Doc("Git diff-filter status letters")] = "ACMRTUXB",
+    ) -> list[str]:
+        """Return unique changed directories from the merge base of base_ref and head_ref to head_ref."""
+        return await Diffs(self._git()).get_changed_dirs_since_merge_base(
             base_ref=base_ref,
             head_ref=head_ref,
             paths=paths,

@@ -1,6 +1,6 @@
 # Use Modules From This Repository
 
-All Dagger modules live under `modules/`.
+Reusable Dagger modules live under `modules/`. Ready-to-run CI jobs belong under `scenarios/`.
 
 Use this command shape from the repository root:
 
@@ -32,7 +32,7 @@ dagger -m ./modules/helm call lint --source=../my-project/charts/my-chart
 
 ## Use Local Module Dependencies
 
-The `pipelines` module depends on the local `helm` and `git` modules:
+Scenarios can depend on local modules. For example, a Helm CI scenario can depend on the local `helm` and `git` modules:
 
 ```json
 {
@@ -41,4 +41,4 @@ The `pipelines` module depends on the local `helm` and `git` modules:
 }
 ```
 
-This keeps local development self-contained after the repository layout move to `modules/`.
+This keeps local development self-contained while keeping reusable modules separate from concrete CI jobs.

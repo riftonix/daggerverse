@@ -76,6 +76,22 @@ class Diffs:
         output = await self.git.container().with_exec(cmd).stdout()
         return [line.strip() for line in output.splitlines() if line.strip()]
 
+    async def get_changed_files_since_merge_base(
+        self,
+        base_ref: str,
+        head_ref: str,
+        paths: list[str] | None,
+        diff_filter: str,
+    ) -> list[str]:
+        merge_base = (await self.git.container().with_exec(["git", "merge-base", base_ref, head_ref]).stdout()).strip()
+
+        return await self.get_changed_files(
+            base_ref=merge_base,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
+
     async def get_changed_dirs(
         self,
         base_ref: str,
@@ -85,6 +101,24 @@ class Diffs:
         diff_filter: str,
     ) -> list[str]:
         changed_files = await self.get_changed_files(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            paths=paths,
+            diff_filter=diff_filter,
+        )
+        scopes = [normalize_path(path) for path in paths or [] if normalize_path(path) != "."]
+
+        return sorted({changed_dir_for_file(path, scopes=scopes, depth=depth) for path in changed_files})
+
+    async def get_changed_dirs_since_merge_base(
+        self,
+        base_ref: str,
+        head_ref: str,
+        paths: list[str] | None,
+        depth: int,
+        diff_filter: str,
+    ) -> list[str]:
+        changed_files = await self.get_changed_files_since_merge_base(
             base_ref=base_ref,
             head_ref=head_ref,
             paths=paths,

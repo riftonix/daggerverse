@@ -5,4 +5,4 @@ MODULE_PATH=$(cd "${SCRIPT_PATH}/.." && pwd)
 cd "$MODULE_PATH" || exit
 
 dagger call helm-verify --progress="plain" --source="./tests/charts/ns-configurator"
-dagger call helm-verify-changed --progress="plain" --source="../.." --diff-path="modules/pipelines/tests/charts"
+dagger call helm-verify-changed-charts --progress="plain" --source="../.." --charts-path="modules/pipelines/tests/charts"

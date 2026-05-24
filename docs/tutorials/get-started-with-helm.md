@@ -28,12 +28,12 @@ dagger -m ./modules/helm call template --source=./modules/helm/tests/charts/ns-c
 
 The output should contain the rendered Kubernetes manifests for the sample chart.
 
-## Run The Pipeline Wrapper
+## Run The Transitional Pipeline Wrapper
 
-Run the higher-level pipelines module, which calls the Helm module internally:
+Run the current higher-level pipelines module, which calls the Helm module internally:
 
 ```bash
 dagger -m ./modules/pipelines call helm-verify --source=./modules/helm/tests/charts/ns-configurator
 ```
 
-Use this command shape when you want the same check that CI orchestration uses.
+Use this command shape when you want the same check that the current Helm CI orchestration uses. This wrapper is transitional and should be treated as a temporary implementation for a future `scenarios/` entrypoint.
