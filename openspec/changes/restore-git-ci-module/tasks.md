@@ -34,7 +34,7 @@
 
 ## 6. Component Discovery For Monorepos And Single-Component Repos
 
-- [ ] 6.1 Implement `get_components(component_roots)` and tests for explicit roots and glob-like component root patterns.
+- [x] 6.1 Implement `get_components(component_roots)` and tests for explicit roots and glob-like component root patterns.
 - [ ] 6.2 Implement `get_changed_components(base_ref, head_ref, component_roots, shared_paths=None, single_component=False)` and tests for changed component roots.
 - [ ] 6.3 Add shared-path behavior so a shared path change returns all discovered components, with tests.
 - [ ] 6.4 Add single-component behavior that returns `['.']` when matching files changed, with tests.

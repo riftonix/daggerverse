@@ -5,6 +5,7 @@ from typing import Annotated
 import dagger
 from dagger import DefaultPath, Doc, function, object_type
 
+from .components import ComponentTests
 from .diffs import DiffTests
 from .metadata import MetadataTests
 from .refs import RefTests
@@ -34,3 +35,4 @@ class Tests:
         await TagTests().all()
         await RefTests().all()
         await DiffTests().all()
+        await ComponentTests().all()

@@ -5,6 +5,7 @@ from dagger import DefaultPath, Doc, function, object_type
 
 from .auth import Auth
 from .cli import GitCli
+from .components import Components
 from .diffs import Diffs
 from .metadata import Metadata
 from .refs import Refs
@@ -163,6 +164,14 @@ class Git:
             paths=paths,
             diff_filter=diff_filter,
         )
+
+    @function
+    async def get_components(
+        self,
+        component_roots: Annotated[list[str], Doc("Component root directories or glob-like patterns")],
+    ) -> list[str]:
+        """Return discovered component roots in stable sorted order."""
+        return await Components(self._git()).get_components(component_roots=component_roots)
 
     @function
     async def with_fetched_tags(
