@@ -234,3 +234,31 @@ class SyntheticGitRepos:
             )
             .with_exec(["git", "checkout", "feature"])
         )
+
+    def repo_with_components(self) -> dagger.Container:
+        """Return a monorepo with explicit and pattern-discovered components."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p services/api services/web packages/shared docs "
+                        "environments/dev/apps/api environments/prod/apps/api && "
+                        "printf 'api\\n' > services/api/app.py && "
+                        "printf 'web\\n' > services/web/app.py && "
+                        "printf 'shared\\n' > packages/shared/lib.py && "
+                        "printf 'docs\\n' > docs/readme.md && "
+                        "printf 'dev\\n' > environments/dev/apps/api/config.yaml && "
+                        "printf 'prod\\n' > environments/prod/apps/api/config.yaml && "
+                        "git add . && git commit -m components"
+                    ),
+                ]
+            )
+        )
