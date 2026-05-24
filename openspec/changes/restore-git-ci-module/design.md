@@ -12,7 +12,7 @@ For CI usage, the module must handle both monorepos and single-component reposit
 - Use provider-neutral Git inputs: refs, SHAs, paths, remotes, and credentials.
 - Make every public function use a verb-based name.
 - Implement feature and Dagger-native tests in the same task step.
-- Keep the module usable from higher-level pipeline modules without shelling out to the Dagger CLI.
+- Keep the module usable from higher-level CI scenarios without shelling out to the Dagger CLI.
 - Align `modules/git` with Dagger `v0.20.6`.
 
 **Non-Goals:**
@@ -26,7 +26,7 @@ For CI usage, the module must handle both monorepos and single-component reposit
 
 ### Provider-Neutral API
 
-The module will accept explicit Git refs and SHAs instead of reading `GITHUB_*`, `CI_*`, or Bitbucket environment variables directly. CI provider adapters may be added later in pipeline modules, but the Git module remains a reusable primitive.
+The module will accept explicit Git refs and SHAs instead of reading `GITHUB_*`, `CI_*`, or Bitbucket environment variables directly. CI provider adapters may be added later in scenarios, but the Git module remains a reusable primitive.
 
 Examples:
 
@@ -86,6 +86,14 @@ The API should keep primitive functions and higher-level functions separate:
 
 This keeps `modules/git` universal while still supporting monorepo CI.
 
+### Scenarios Own Ready-To-Run CI Jobs
+
+Reusable tooling remains under `modules/`. Ready-to-run CI jobs that compose those modules for a concrete workflow belong under `scenarios/`.
+
+The current `modules/pipelines` code is transitional. It composes `helm` and `git` into Helm CI workflows, so it should be documented as a temporary wrapper for a future Helm-oriented scenario. The actual split, naming, and GitHub/GitLab job shape should be handled by a separate scenario proposal.
+
+Task 5.3 should not deepen the `modules/pipelines` API as a long-term module contract. Any interim changes there should be limited to keeping the existing Helm workflow working until the scenario move happens.
+
 ### Authentication Is Generic
 
 Authentication helpers should configure Git remotes with either HTTPS token credentials or SSH key material. They should not assume a single host.
@@ -107,6 +115,6 @@ Credentials must use `dagger.Secret` and must not be returned in stdout, logs, o
 3. Add fetch refs/tags helpers with tests.
 4. Split the Git module implementation and tests into focused files while keeping the public `Git` facade and aggregate test entrypoint.
 5. Add the remaining verb-based APIs with tests.
-6. Update dependent modules, especially `modules/pipelines`, to use the restored API.
+6. Update the transitional Helm pipeline code to use the restored API only where needed, and document that its final scenario shape belongs in a separate proposal.
 7. Update docs after each API group is implemented.
 8. Remove the legacy shell test once the Dagger-native test module is authoritative.

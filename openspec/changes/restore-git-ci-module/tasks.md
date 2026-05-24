@@ -28,9 +28,9 @@
 
 ## 5. Merge-Base Workflows
 
-- [ ] 5.1 Implement `get_changed_files_since_merge_base(base_ref, head_ref='HEAD', paths=None, diff_filter='ACMRTUXB')` with tests for pull request style branches.
-- [ ] 5.2 Implement `get_changed_dirs_since_merge_base(base_ref, head_ref='HEAD', paths=None, depth=1, diff_filter='ACMRTUXB')` with tests for monorepo path scopes.
-- [ ] 5.3 Update higher-level pipeline code to use merge-base diff helpers where appropriate and cover the integration with tests.
+- [x] 5.1 Implement `get_changed_files_since_merge_base(base_ref, head_ref='HEAD', paths=None, diff_filter='ACMRTUXB')` with tests for pull request style branches.
+- [x] 5.2 Implement `get_changed_dirs_since_merge_base(base_ref, head_ref='HEAD', paths=None, depth=1, diff_filter='ACMRTUXB')` with tests for monorepo path scopes.
+- [x] 5.3 Update the transitional Helm pipeline/scenario code to use merge-base diff helpers where appropriate and cover the integration with tests, without expanding `modules/pipelines` as a long-term public module contract.
 
 ## 6. Component Discovery For Monorepos And Single-Component Repos
 
@@ -71,6 +71,6 @@
 
 - [ ] 11.1 Update `modules/git/README.md` so every documented function exists and every example uses verb-based names.
 - [ ] 11.2 Update repository docs and module reference for Git CI use cases.
-- [ ] 11.3 Update `modules/pipelines` to use restored Git APIs and add tests for any changed pipeline behavior.
+- [ ] 11.3 Document that the current `modules/pipelines` implementation is a temporary Helm CI wrapper that should become a future `scenarios/` entrypoint in a separate proposal.
 - [ ] 11.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
 - [ ] 11.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.

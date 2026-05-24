@@ -1,6 +1,8 @@
-# Run Helm Checks Through Pipelines
+# Run Helm Checks Through The Transitional Pipeline
 
-Use the `pipelines` module when you want a CI-style wrapper around Helm checks.
+Use the current `pipelines` module when you want a CI-style wrapper around Helm checks.
+
+This module is transitional. Treat it as a temporary Helm CI wrapper for a future `scenarios/` entrypoint; final naming and layout should be defined in a separate proposal.
 
 ## Verify One Chart
 
@@ -12,16 +14,16 @@ The command runs Helm lint and template through the local Helm module dependency
 
 ## Verify Changed Chart Directories
 
-Use `helm-verify-changed` when the repository is a Git checkout and you want to check only changed directories under a path:
+Use `helm-verify-changed-charts` when the repository is a Git checkout and you want to check only changed chart directories under a path:
 
 ```bash
-dagger -m ./modules/pipelines call helm-verify-changed \
+dagger -m ./modules/pipelines call helm-verify-changed-charts \
   --source=. \
   --target-branch=master \
-  --diff-path=modules/helm/tests/charts
+  --charts-path=modules/helm/tests/charts
 ```
 
-The command asks the Git module for changed top-level paths inside `diff-path`, then verifies each returned chart directory.
+The command asks the Git module for changed chart directories, then verifies each returned chart directory. Pull request workflows should use merge-base diff behavior so base-branch drift does not trigger unrelated chart checks.
 
 ## Publish A Chart
 

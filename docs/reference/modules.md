@@ -40,15 +40,6 @@ Runs OpenTofu or Terraform-compatible formatting, initialization, and validation
 - Main source: `modules/opentofu/src/opentofu/main.py`
 - Typical command: `dagger -m ./modules/opentofu call lint --source=./iac`
 
-## pipelines
-
-Orchestrates CI workflows using local module dependencies.
-
-- Path: `modules/pipelines`
-- Main source: `modules/pipelines/src/pipelines/main.py`
-- Local dependencies: `../helm`, `../git`
-- Typical command: `dagger -m ./modules/pipelines call helm-verify --source=./charts/mychart`
-
 ## ssh
 
 Runs SSH client operations in a container.
@@ -56,3 +47,7 @@ Runs SSH client operations in a container.
 - Path: `modules/ssh`
 - Main source: `modules/ssh/src/ssh/main.py`
 - Typical command: `dagger -m ./modules/ssh call exec --destination=example.com`
+
+## Scenario Note
+
+Ready-to-run CI jobs are scenarios, not reusable modules. The current `modules/pipelines` implementation is transitional: it is a temporary Helm CI wrapper for a future scenario, with final naming and layout left to a separate proposal.

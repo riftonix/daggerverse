@@ -2,6 +2,8 @@
 
 CI orchestration on top of local `helm` and `git` modules.
 
+This module is transitional. Treat it as a temporary Helm CI wrapper for a future `scenarios/` entrypoint; final naming and layout should be defined in a separate proposal.
+
 For full repository documentation, see [../../docs/README.md](../../docs/README.md). For pipeline tasks, see [../../docs/how-to/run-helm-checks-through-pipelines.md](../../docs/how-to/run-helm-checks-through-pipelines.md).
 
 ## Features
@@ -19,7 +21,7 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
   - Packages and pushes a chart. If username/password are provided, performs `helm registry login`.
 
 - helm_verify_changed_charts(source: Directory, target_branch: str = 'master', charts_path: str | None = None, libs_path: str | None = None, values: File | None = None, release_name: str = 'ci-release') -> list[str]
-  - Computes changed top-level directories under `charts_path` and/or `libs_path`, then runs `helm_verify` for each changed chart.
+  - Computes changed chart directories under `charts_path` and/or `libs_path` since the merge base with `target_branch`, then runs `helm_verify` for each changed chart.
 
 ## Usage (CLI)
 

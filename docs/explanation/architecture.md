@@ -1,6 +1,6 @@
 # Architecture
 
-Daggerverse is a collection of small Dagger modules. Each module owns one tool or workflow boundary and can be called independently.
+Daggerverse is a collection of small reusable Dagger modules plus ready-to-run scenarios. Modules own reusable tool boundaries and can be called independently. Scenarios compose modules into concrete CI jobs.
 
 ## Module Boundary
 
@@ -14,9 +14,11 @@ Each module contains its own:
 - module-local README
 - optional test assets
 
-## Local Dependencies
+Ready-to-run CI jobs should not live under `modules/`. They belong under `scenarios/<name>` so reusable primitives and concrete CI workflows do not share the same namespace.
 
-The `pipelines` module composes lower-level modules instead of duplicating their behavior. It uses local dependencies for `helm` and `git`:
+## Scenario Boundary
+
+Scenarios compose lower-level modules instead of duplicating their behavior. For example, a Helm CI scenario can depend on local `helm` and `git` modules:
 
 ```json
 {
@@ -26,6 +28,8 @@ The `pipelines` module composes lower-level modules instead of duplicating their
 ```
 
 Local dependencies keep development and validation consistent with the repository layout.
+
+The current `modules/pipelines` directory is transitional. Treat it as a temporary Helm CI wrapper; the final `scenarios/` layout, naming, and provider-specific job shape should be defined in a separate proposal.
 
 ## Documentation Boundary
 

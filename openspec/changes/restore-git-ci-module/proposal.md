@@ -2,7 +2,7 @@
 
 `modules/git` is intended to support CI decisions, but its current implementation is incomplete: documented functions are commented out, tag lookup is not reliable in shallow checkouts, and changed-path detection is too narrow for pull request and release workflows.
 
-Repository CI modules need a universal Git foundation that works for GitHub now and can also support GitLab and Bitbucket later by operating on Git refs, commits, tags, and paths rather than provider-specific event payloads.
+Repository CI scenarios need a universal Git foundation that works for GitHub now and can also support GitLab and Bitbucket later by operating on Git refs, commits, tags, and paths rather than provider-specific event payloads.
 
 ## What Changes
 
@@ -15,6 +15,7 @@ Repository CI modules need a universal Git foundation that works for GitHub now 
 - Add authentication configuration that is portable across Git hosts by using generic HTTPS token or SSH credentials.
 - Add Dagger-native tests for each feature as it is implemented.
 - Split the Git module implementation and Dagger-native tests into focused files after fetch refs/tags are complete, while keeping `Git` as the public facade and `all` as the aggregate test entrypoint.
+- Treat ready-to-run CI jobs as future `scenarios/` rather than reusable `modules/`; document that the current Helm-oriented `modules/pipelines` code is temporary and should be addressed by a separate scenario proposal.
 - Update README and repository documentation to match the actual Git module API.
 - **BREAKING**: Replace ambiguous function names and remove compatibility-only wrappers where needed so public functions consistently use verbs, with `with_*` names for chainable state changes.
 
@@ -30,7 +31,7 @@ Repository CI modules need a universal Git foundation that works for GitHub now 
 
 ## Impact
 
-- Affected code: `modules/git`, `modules/git/tests`, `modules/pipelines`, root `Makefile`, and related docs.
+- Affected code: `modules/git`, `modules/git/tests`, transitional `modules/pipelines`, root `Makefile`, and related docs.
 - Affected APIs: Git module public Dagger functions for changed paths, refs, tags, metadata, and authentication.
 - Affected tests: replace shell smoke tests with a Dagger-native Git test module using synthetic Git repository fixtures.
-- Affected docs: `modules/git/README.md`, module reference, CI conventions, and Git CI usage guidance.
+- Affected docs: `modules/git/README.md`, repository layout/reference docs, scenario guidance, CI conventions, and Git CI usage guidance.
