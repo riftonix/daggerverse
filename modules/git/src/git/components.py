@@ -26,6 +26,31 @@ class Components:
 
         return sorted(components)
 
+    async def get_changed_components(
+        self,
+        base_ref: str,
+        head_ref: str,
+        component_roots: list[str],
+        shared_paths: list[str] | None,
+        single_component: bool | None,
+    ) -> list[str]:
+        _ = single_component
+        components = await self.get_components(component_roots=component_roots)
+        if not components:
+            return []
+
+        changed_files = await self._get_changed_files(base_ref=base_ref, head_ref=head_ref)
+        normalized_shared_paths = [normalize_path(path) for path in shared_paths or []]
+        if any(
+            path_matches_root(path, shared_path) for path in changed_files for shared_path in normalized_shared_paths
+        ):
+            return components
+
+        changed_components = {
+            component for component in components if any(path_matches_root(path, component) for path in changed_files)
+        }
+        return sorted(changed_components)
+
     async def _get_matching_directories(self, pattern: str) -> list[str]:
         output = await self.git.container().with_exec(["git", "ls-files", "-z", "--", pattern]).stdout()
         files = [path for path in output.split("\0") if path]
@@ -43,6 +68,21 @@ class Components:
             return True
         except dagger.ExecError:
             return False
+
+    async def _get_changed_files(self, base_ref: str, head_ref: str) -> list[str]:
+        cmd = [
+            "git",
+            "diff",
+            "--name-only",
+            "--find-renames",
+            "--find-copies",
+            "--find-copies-harder",
+            "--diff-filter=ACMRTUXB",
+            base_ref,
+            head_ref,
+        ]
+        output = await self.git.container().with_exec(cmd).stdout()
+        return [line.strip() for line in output.splitlines() if line.strip()]
 
 
 def has_glob_meta(pattern: str) -> bool:
@@ -65,3 +105,9 @@ def matching_component_root(path: str, pattern: str) -> str | None:
             return None
 
     return "/".join(path_parts[: len(pattern_parts)])
+
+
+def path_matches_root(path: str, root: str) -> bool:
+    normalized_path = normalize_path(path)
+    normalized_root = normalize_path(root)
+    return normalized_path == normalized_root or normalized_path.startswith(f"{normalized_root}/")
