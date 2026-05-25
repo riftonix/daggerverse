@@ -174,6 +174,24 @@ class Git:
         return await Components(self._git()).get_components(component_roots=component_roots)
 
     @function
+    async def get_changed_components(
+        self,
+        base_ref: Annotated[str, Doc("Base Git ref or SHA")],
+        head_ref: Annotated[str, Doc("Head Git ref or SHA")],
+        component_roots: Annotated[list[str], Doc("Component root directories or glob-like patterns")],
+        shared_paths: Annotated[list[str] | None, Doc("Paths that affect all components")] = None,
+        single_component: Annotated[bool | None, Doc("Treat repository as one component")] = False,
+    ) -> list[str]:
+        """Return discovered components whose files changed between two refs."""
+        return await Components(self._git()).get_changed_components(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            component_roots=component_roots,
+            shared_paths=shared_paths,
+            single_component=single_component,
+        )
+
+    @function
     async def with_fetched_tags(
         self,
         remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",

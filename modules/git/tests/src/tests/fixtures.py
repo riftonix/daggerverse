@@ -262,3 +262,74 @@ class SyntheticGitRepos:
                 ]
             )
         )
+
+    def repo_with_changed_components(self) -> dagger.Container:
+        """Return a monorepo with changed and unchanged component roots."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p services/api services/web packages/shared docs && "
+                        "printf 'api\\n' > services/api/app.py && "
+                        "printf 'web\\n' > services/web/app.py && "
+                        "printf 'shared\\n' > packages/shared/lib.py && "
+                        "printf 'docs\\n' > docs/readme.md && "
+                        "git add . && git commit -m base"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "printf 'api feature\\n' > services/api/app.py && "
+                        "printf 'shared feature\\n' > packages/shared/lib.py && "
+                        "printf 'docs feature\\n' > docs/readme.md && "
+                        "git add . && git commit -m feature"
+                    ),
+                ]
+            )
+        )
+
+    def repo_with_shared_path_change(self) -> dagger.Container:
+        """Return a monorepo where only a shared path changed."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p services/api services/web packages/shared shared && "
+                        "printf 'api\\n' > services/api/app.py && "
+                        "printf 'web\\n' > services/web/app.py && "
+                        "printf 'shared package\\n' > packages/shared/lib.py && "
+                        "printf 'shared config\\n' > shared/config.yaml && "
+                        "git add . && git commit -m base"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf 'shared config feature\\n' > shared/config.yaml && git add . && git commit -m feature",
+                ]
+            )
+        )
