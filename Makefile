@@ -2,15 +2,18 @@ SHELL := /bin/sh
 
 MODULES_DIR := modules
 MODULE_NAMES := $(notdir $(wildcard $(MODULES_DIR)/*))
-COMMAND_TARGETS := help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module
+COMMAND_TARGETS := help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module module
 MODULE_ARG := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
+COMPONENT_KIND := $(filter module,$(MAKECMDGOALS))
 
 RUFF ?= ruff
 RUFF_FLAGS ?= --no-cache
 OPENSPEC ?= openspec
 DAGGER_ENV ?= DAGGER_NO_NAG=1 DO_NOT_TRACK=1 DAGGER_NO_UPDATE_CHECK=1
 
-ifneq ($(strip $(MODULE_ARG)),)
+ifeq ($(COMPONENT_KIND),module)
+SELECTED_MODULE := $(firstword $(MODULE_ARG))
+else ifneq ($(strip $(MODULE_ARG)),)
 SELECTED_MODULE := $(firstword $(MODULE_ARG))
 endif
 
@@ -21,7 +24,7 @@ else
 PY_TARGET := $(MODULES_DIR)
 endif
 
-.PHONY: help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module $(MODULE_NAMES)
+.PHONY: help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module module $(MODULE_NAMES)
 
 help:
 	@printf '%s\n' \
@@ -37,7 +40,7 @@ help:
 		'  make openspec-validate     Validate OpenSpec specs and changes strictly' \
 		'  make check-dagger-version  Check Dagger module and CI versions are aligned' \
 		'  make release modules/helm/v0.0.0' \
-		'  make tests helm            Run all Dagger tests for one module'
+		'  make tests module helm     Run all Dagger tests for one module'
 
 check-module:
 	@if [ -n '$(SELECTED_MODULE)' ] && [ ! -d '$(PY_TARGET)' ]; then \
@@ -97,7 +100,7 @@ release: check-release
 
 check-test-module:
 	@if [ -z '$(SELECTED_MODULE)' ]; then \
-		printf 'Usage: make tests <module>\n' >&2; \
+		printf 'Usage: make tests module <module>\n' >&2; \
 		exit 2; \
 	fi
 	@if [ ! -d '$(PY_TARGET)' ]; then \
@@ -111,6 +114,9 @@ check-test-module:
 
 tests: check-test-module
 	cd $(TEST_TARGET) && $(DAGGER_ENV) dagger call --progress=plain all
+
+module:
+	@:
 
 $(MODULE_NAMES):
 	@:
