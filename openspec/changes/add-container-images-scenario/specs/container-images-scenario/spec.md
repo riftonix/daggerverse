@@ -8,6 +8,10 @@ The `scenarios/container-images` scenario SHALL verify container image contexts 
 - **THEN** the scenario SHALL build that image context through the Docker module
 - **AND** build failures SHALL fail the scenario function call
 
+#### Scenario: Verify with build options
+- **WHEN** a caller provides Dockerfile path, target, build arguments, or platforms
+- **THEN** the scenario SHALL pass those options to the Docker module build function
+
 #### Scenario: Verify multiple image contexts
 - **WHEN** a caller provides multiple image context paths
 - **THEN** the scenario SHALL verify each context through the Docker module
@@ -23,6 +27,11 @@ The `scenarios/container-images` scenario SHALL publish images using destination
 #### Scenario: Publish one image
 - **WHEN** a caller provides a source directory, context path, and image reference
 - **THEN** the scenario SHALL publish the built image to that image reference through the Docker module
+
+#### Scenario: Publish with build options and registry auth
+- **WHEN** a caller provides build options or registry credentials for publication
+- **THEN** the scenario SHALL pass build options and registry auth to the Docker module
+- **AND** the scenario SHALL NOT expose registry secrets in returned output
 
 #### Scenario: Publish multiple images
 - **WHEN** a caller provides multiple context path and image reference pairs
