@@ -69,6 +69,18 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - get_tags_pointing_at(ref: str = 'HEAD') -> list[str]
   - Returns tags that point at `ref`.
 
+- create_tag(tag: str, message: str | None = None, user_name: str = 'dagger-ci', user_email: str = 'dagger-ci@example.local') -> Git
+  - Creates a local lightweight tag when `message` is omitted, or an annotated tag when `message` is provided.
+
+- push_tag(tag: str, remote: str = 'origin') -> Git
+  - Pushes a local tag to the selected remote.
+
+- with_https_token_auth(host: str, token: Secret, username: str | None = None) -> Git
+  - Configures HTTPS token authentication for Git operations against a host without exposing the token in returned output.
+
+- with_ssh_key_auth(private_key: Secret, known_hosts: Secret, host: str | None = None) -> Git
+  - Configures SSH key authentication for Git operations using secret-mounted key material and known hosts data.
+
 ## Usage (Python SDK)
 
 ```python
@@ -123,6 +135,87 @@ Get the merge base for two refs:
 
 ```bash
 dagger -m ./modules/git call get-merge-base --source=. --base-ref=origin/main --head-ref=HEAD
+```
+
+## Tag Fetch And Push With Generic Git Hosts
+
+The Git module does not read GitHub, GitLab, or Bitbucket environment variables directly. Pass explicit remotes, refs, tags, hosts, and credentials from the surrounding CI adapter or scenario.
+
+Fetch tags from the configured remote before release checks:
+
+```bash
+dagger -m ./modules/git call with-fetched-tags --source=. --remote=origin get-tags
+```
+
+Create and push a release tag:
+
+```bash
+dagger -m ./modules/git call \
+  create-tag --source=. --tag=v1.2.3 --message="Release v1.2.3" \
+  push-tag --tag=v1.2.3 --remote=origin
+```
+
+### HTTPS Token Auth
+
+Use `with_https_token_auth` for GitHub, GitLab, and Bitbucket HTTPS remotes. The token is passed as a `dagger.Secret`; the module configures Git credential prompting without writing the token to Git config or returned output.
+
+Common host and username values:
+
+```text
+GitHub:    host=github.com        username=x-access-token
+GitLab:    host=gitlab.com        username=oauth2
+Bitbucket: host=bitbucket.org     username=x-token-auth
+```
+
+Python SDK example:
+
+```python
+token = dag.set_secret("GIT_TOKEN", token_value)
+git = dag.git(source=repo).with_https_token_auth(
+    host="github.com",
+    token=token,
+    username="x-access-token",
+)
+await git.with_fetched_tags(remote="origin").create_tag(
+    tag="v1.2.3",
+    message="Release v1.2.3",
+).push_tag(tag="v1.2.3")
+```
+
+Use the same shape for GitLab or Bitbucket by changing only `host` and `username`:
+
+```python
+gitlab_git = dag.git(source=repo).with_https_token_auth(
+    host="gitlab.com",
+    token=gitlab_token,
+    username="oauth2",
+)
+
+bitbucket_git = dag.git(source=repo).with_https_token_auth(
+    host="bitbucket.org",
+    token=bitbucket_token,
+    username="x-token-auth",
+)
+```
+
+### SSH Key Auth
+
+Use `with_ssh_key_auth` when the remote uses SSH URLs such as `git@github.com:org/repo.git`, `git@gitlab.com:org/repo.git`, or `git@bitbucket.org:workspace/repo.git`. Pass both the private key and `known_hosts` as `dagger.Secret` values.
+
+Python SDK example:
+
+```python
+private_key = dag.set_secret("GIT_SSH_KEY", private_key_value)
+known_hosts = dag.set_secret("GIT_KNOWN_HOSTS", known_hosts_value)
+git = dag.git(source=repo).with_ssh_key_auth(
+    private_key=private_key,
+    known_hosts=known_hosts,
+    host="git@github.com:org/repo.git",
+)
+await git.with_fetched_tags(remote="origin").create_tag(
+    tag="v1.2.3",
+    message="Release v1.2.3",
+).push_tag(tag="v1.2.3")
 ```
 
 ## Component Discovery Examples

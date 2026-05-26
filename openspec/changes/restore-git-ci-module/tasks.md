@@ -51,9 +51,9 @@
 
 ## 8. Portable Authentication
 
-- [ ] 8.1 Implement `with_https_token_auth(host, token, username=None)` using `dagger.Secret`, and tests that verify configuration without exposing the token.
-- [ ] 8.2 Implement `with_ssh_key_auth(private_key, known_hosts, host=None)` using `dagger.Secret`, and tests that verify file permissions and non-disclosure of key material.
-- [ ] 8.3 Update tag push and fetch documentation to show generic Git host usage for GitHub, GitLab, and Bitbucket.
+- [x] 8.1 Implement `with_https_token_auth(host, token, username=None)` using `dagger.Secret`, and tests that verify configuration without exposing the token.
+- [x] 8.2 Implement `with_ssh_key_auth(private_key, known_hosts, host=None)` using `dagger.Secret`, and tests that verify file permissions and non-disclosure of key material.
+- [x] 8.3 Update tag push and fetch documentation to show generic Git host usage for GitHub, GitLab, and Bitbucket.
 
 ## 9. Repository Metadata
 

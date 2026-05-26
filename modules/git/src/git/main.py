@@ -59,9 +59,42 @@ class Git:
         return container
 
     @function
-    async def with_ssh_private_key(self, source: Annotated[dagger.File, Doc("Private key file")]) -> str:
-        """Add ssh private key to container"""
-        return await Auth(self._git()).with_ssh_private_key(source=source)
+    async def with_https_token_auth(
+        self,
+        host: Annotated[str, Doc("HTTPS Git host to authenticate against")],
+        token: Annotated[dagger.Secret, Doc("HTTPS token secret")],
+        username: Annotated[str | None, Doc("Optional HTTPS username")] = None,
+    ) -> Self:
+        """Configure HTTPS token authentication for Git operations."""
+        self.container_ = (
+            Auth(self._git())
+            .with_https_token_auth(
+                host=host,
+                token=token,
+                username=username,
+            )
+            .container_
+        )
+        return self
+
+    @function
+    async def with_ssh_key_auth(
+        self,
+        private_key: Annotated[dagger.Secret, Doc("SSH private key secret")],
+        known_hosts: Annotated[dagger.Secret, Doc("SSH known_hosts secret")],
+        host: Annotated[str | None, Doc("Optional SSH Git host to configure")] = None,
+    ) -> Self:
+        """Configure SSH key authentication for Git operations."""
+        self.container_ = (
+            Auth(self._git())
+            .with_ssh_key_auth(
+                private_key=private_key,
+                known_hosts=known_hosts,
+                host=host,
+            )
+            .container_
+        )
+        return self
 
     @function
     async def get_changed_paths(
