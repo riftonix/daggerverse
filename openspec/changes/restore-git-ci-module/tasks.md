@@ -57,10 +57,10 @@
 
 ## 9. Repository Metadata
 
-- [ ] 9.1 Implement `get_head_sha()` and tests for full SHA output.
-- [ ] 9.2 Implement `get_current_branch()` and `get_current_ref()` with tests for branch and detached HEAD states.
-- [ ] 9.3 Implement `get_remote_url(remote='origin')` and `get_default_branch(remote='origin')` with tests against a local bare remote.
-- [ ] 9.4 Implement `get_status_porcelain()` and `has_clean_worktree()` with tests for clean and dirty worktrees.
+- [x] 9.1 Implement `get_head_sha()` and tests for full SHA output.
+- [x] 9.2 Implement `get_current_branch()` and `get_current_ref()` with tests for branch and detached HEAD states.
+- [x] 9.3 Implement `get_remote_url(remote='origin')` and `get_default_branch(remote='origin')` with tests against a local bare remote.
+- [x] 9.4 Implement `get_status_porcelain()` and `has_clean_worktree()` with tests for clean and dirty worktrees.
 
 ## 10. Files At Ref
 
