@@ -1,8 +1,8 @@
 ## 1. Docker Module With Incremental Tests
 
-- [ ] 1.1 Create `modules/docker` Dagger module structure with metadata, Python package files, source package, README, neighboring `modules/docker/tests`, a minimal fixture image context, and an `all` test stub.
-- [ ] 1.2 Update the root command interface so `make tests module docker` runs the Docker test module as soon as the stub exists.
-- [ ] 1.3 Implement `Docker`, `DockerBuild`, and `DockerImage` object types with minimal construction and result accessors, then add or update Docker module tests for construction and aggregate test wiring.
+- [x] 1.1 Create `modules/docker` Dagger module structure with metadata, Python package files, source package, README, neighboring `modules/docker/tests`, a minimal fixture image context, and an `all` test stub.
+- [x] 1.2 Update the root command interface so `make tests module docker` runs the Docker test module as soon as the stub exists.
+- [x] 1.3 Implement `Docker`, `DockerBuild`, and `DockerImage` object types with minimal construction and result accessors, then add or update Docker module tests for construction and aggregate test wiring.
 - [ ] 1.4 Implement image build using Dagger-native container build behavior with context path, Dockerfile path, target, and `KEY=VALUE` build arguments, then add or update Docker module tests for successful build, build options, and invalid build argument validation.
 - [ ] 1.5 Add `platforms` support to image build and retain platform variants on `DockerBuild`, then add or update Docker module tests for explicit platform builds where practical.
 - [ ] 1.6 Implement optional smoke checks on `DockerBuild` that run a caller-provided command in the resulting container, then add or update Docker module tests for smoke success and failure behavior.
