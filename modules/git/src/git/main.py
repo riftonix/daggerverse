@@ -307,6 +307,47 @@ class Git:
         return await Metadata(self._git()).get_short_commit_sha(length=length)
 
     @function
+    async def get_head_sha(self) -> str:
+        """Return full commit SHA for HEAD."""
+        return await Metadata(self._git()).get_head_sha()
+
+    @function
+    async def get_current_branch(self) -> str:
+        """Return the current branch name, or an empty string for detached HEAD."""
+        return await Metadata(self._git()).get_current_branch()
+
+    @function
+    async def get_current_ref(self) -> str:
+        """Return the current symbolic ref, or the full HEAD SHA for detached HEAD."""
+        return await Metadata(self._git()).get_current_ref()
+
+    @function
+    async def get_remote_url(
+        self,
+        remote: Annotated[str, Doc("Remote name")] = "origin",
+    ) -> str:
+        """Return the configured URL for a remote."""
+        return await Metadata(self._git()).get_remote_url(remote=remote)
+
+    @function
+    async def get_default_branch(
+        self,
+        remote: Annotated[str, Doc("Remote name")] = "origin",
+    ) -> str:
+        """Return the remote default branch name."""
+        return await Metadata(self._git()).get_default_branch(remote=remote)
+
+    @function
+    async def get_status_porcelain(self) -> str:
+        """Return git status in porcelain format."""
+        return await Metadata(self._git()).get_status_porcelain()
+
+    @function
+    async def has_clean_worktree(self) -> bool:
+        """Return whether the repository worktree has no pending changes."""
+        return await Metadata(self._git()).has_clean_worktree()
+
+    @function
     async def get_tags_pointing_at(
         self,
         ref: Annotated[str, Doc("Git ref to inspect")] = "HEAD",

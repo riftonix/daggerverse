@@ -19,6 +19,68 @@ class SyntheticGitRepos:
             .directory("/work/repo")
         )
 
+    def repo_on_main_branch(self) -> dagger.Directory:
+        """Return a git repo with HEAD attached to the main branch."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .directory("/work/repo")
+        )
+
+    def repo_with_detached_head(self) -> dagger.Directory:
+        """Return a git repo with HEAD detached at the current commit."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "checkout", "--detach", "HEAD"])
+            .directory("/work/repo")
+        )
+
+    def repo_with_default_branch_remote(self) -> dagger.Directory:
+        """Return a git repo with a local bare origin whose default branch is main."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                ["sh", "-c", "printf 'feature\\n' > feature.txt && git add feature.txt && git commit -m feature"]
+            )
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(["mkdir", "-p", ".remote"])
+            .with_exec(["git", "clone", "--bare", ".", ".remote/origin.git"])
+            .with_exec(["git", "remote", "add", "origin", ".remote/origin.git"])
+            .directory("/work/repo")
+        )
+
+    def repo_with_dirty_worktree(self) -> dagger.Directory:
+        """Return a git repo with modified tracked and untracked files."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["sh", "-c", "printf 'dirty\\n' > README.md && printf 'new\\n' > untracked.txt"])
+            .directory("/work/repo")
+        )
+
     def repo_with_version_tags(self) -> dagger.Directory:
         """Return a git repo with tags that sort differently by version and refname."""
         return (
