@@ -34,13 +34,20 @@ class Components:
         shared_paths: list[str] | None,
         single_component: bool | None,
     ) -> list[str]:
-        _ = single_component
+        changed_files = await self._get_changed_files(base_ref=base_ref, head_ref=head_ref)
+        normalized_shared_paths = [normalize_path(path) for path in shared_paths or []]
+
+        if single_component:
+            matching_roots = [normalize_path(root) for root in component_roots]
+            matching_paths = [*matching_roots, *normalized_shared_paths]
+            if any(path_matches_root(path, root) for path in changed_files for root in matching_paths):
+                return ["."]
+            return []
+
         components = await self.get_components(component_roots=component_roots)
         if not components:
             return []
 
-        changed_files = await self._get_changed_files(base_ref=base_ref, head_ref=head_ref)
-        normalized_shared_paths = [normalize_path(path) for path in shared_paths or []]
         if any(
             path_matches_root(path, shared_path) for path in changed_files for shared_path in normalized_shared_paths
         ):
@@ -110,4 +117,6 @@ def matching_component_root(path: str, pattern: str) -> str | None:
 def path_matches_root(path: str, root: str) -> bool:
     normalized_path = normalize_path(path)
     normalized_root = normalize_path(root)
+    if normalized_root == ".":
+        return True
     return normalized_path == normalized_root or normalized_path.startswith(f"{normalized_root}/")

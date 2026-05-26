@@ -333,3 +333,43 @@ class SyntheticGitRepos:
                 ]
             )
         )
+
+    def repo_with_single_component_changes(self) -> dagger.Container:
+        """Return a single-component repo with matching and non-matching changed paths."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    (
+                        "mkdir -p src docs && "
+                        "printf 'app\\n' > src/app.py && "
+                        "printf 'docs\\n' > docs/readme.md && "
+                        "git add . && git commit -m base"
+                    ),
+                ]
+            )
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf 'feature\\n' > src/app.py && git add . && git commit -m feature",
+                ]
+            )
+            .with_exec(["git", "checkout", "main"])
+            .with_exec(["git", "checkout", "-b", "docs-only"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf 'docs feature\\n' > docs/readme.md && git add . && git commit -m docs",
+                ]
+            )
+        )

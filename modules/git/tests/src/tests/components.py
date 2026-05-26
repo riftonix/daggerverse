@@ -13,6 +13,7 @@ class ComponentTests(SyntheticGitRepos):
         await self.components_from_glob_like_roots()
         await self.changed_components_from_component_roots()
         await self.shared_path_change_returns_all_components()
+        await self.single_component_change_returns_repository_root()
 
     async def components_from_explicit_roots(self) -> None:
         """Return existing explicit component roots in stable sorted order."""
@@ -87,3 +88,39 @@ class ComponentTests(SyntheticGitRepos):
         test_case = TestCase()
         test_case.assertEqual(["packages/shared", "services/api", "services/web"], components)
         test_case.assertEqual(["packages/shared", "services/api", "services/web"], file_components)
+
+    async def single_component_change_returns_repository_root(self) -> None:
+        """Return the repository root component when matching files change in single-component mode."""
+        git = dag.git(source=self.repo_with_single_component_changes().directory("/work/repo"))
+
+        source_components = await git.get_changed_components(
+            base_ref="main",
+            head_ref="feature",
+            component_roots=["src"],
+            single_component=True,
+        )
+        root_components = await git.get_changed_components(
+            base_ref="main",
+            head_ref="feature",
+            component_roots=["."],
+            single_component=True,
+        )
+        unchanged_components = await git.get_changed_components(
+            base_ref="main",
+            head_ref="docs-only",
+            component_roots=["src"],
+            single_component=True,
+        )
+        shared_components = await git.get_changed_components(
+            base_ref="main",
+            head_ref="docs-only",
+            component_roots=["src"],
+            shared_paths=["docs"],
+            single_component=True,
+        )
+
+        test_case = TestCase()
+        test_case.assertEqual(["."], source_components)
+        test_case.assertEqual(["."], root_components)
+        test_case.assertEqual([], unchanged_components)
+        test_case.assertEqual(["."], shared_components)

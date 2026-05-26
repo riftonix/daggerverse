@@ -48,6 +48,12 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - ensure_ref(ref: str) -> str
   - Resolves a ref to a SHA or fails with a clear missing-ref error.
 
+- get_components(component_roots: list[str]) -> list[str]
+  - Returns discovered component roots in stable sorted order.
+
+- get_changed_components(base_ref: str, head_ref: str, component_roots: list[str], shared_paths: list[str] | None = None, single_component: bool = False) -> list[str]
+  - Returns component roots whose files changed between two refs. In single-component mode, returns `["."]` when matching files changed.
+
 - get_tags(pattern: str | None = None) -> list[str]
   - Lists tags, optionally filtered by a glob pattern (e.g. `chartname/1.2.3`).
 
@@ -111,6 +117,76 @@ Get the merge base for two refs:
 
 ```bash
 dagger -m ./modules/git call get-merge-base --source=. --base-ref=origin/main --head-ref=HEAD
+```
+
+## Component Discovery Examples
+
+Use component discovery when CI should run checks only for affected repository parts.
+
+### Monorepo Components
+
+Discover components from explicit roots and glob-like root patterns:
+
+```bash
+dagger -m ./modules/git call get-components \
+  --source=. \
+  --component-roots=services/* \
+  --component-roots=packages/*
+```
+
+For a repository with `services/api`, `services/web`, and `packages/shared`, the result is sorted:
+
+```text
+["packages/shared", "services/api", "services/web"]
+```
+
+Get only components changed between two refs:
+
+```bash
+dagger -m ./modules/git call get-changed-components \
+  --source=. \
+  --base-ref=origin/main \
+  --head-ref=HEAD \
+  --component-roots=services/* \
+  --component-roots=packages/*
+```
+
+Add shared paths when changes outside component roots should affect every discovered component:
+
+```bash
+dagger -m ./modules/git call get-changed-components \
+  --source=. \
+  --base-ref=origin/main \
+  --head-ref=HEAD \
+  --component-roots=services/* \
+  --component-roots=packages/* \
+  --shared-paths=shared \
+  --shared-paths=.github/workflows
+```
+
+### Single-Component Repositories
+
+Use `single_component` when the repository should be treated as one deployable unit. The module returns `["."]` when files under the configured roots or shared paths changed, and `[]` when they did not.
+
+```bash
+dagger -m ./modules/git call get-changed-components \
+  --source=. \
+  --base-ref=origin/main \
+  --head-ref=HEAD \
+  --component-roots=. \
+  --single-component=true
+```
+
+Scope the same single component to source files while still treating CI configuration as shared:
+
+```bash
+dagger -m ./modules/git call get-changed-components \
+  --source=. \
+  --base-ref=origin/main \
+  --head-ref=HEAD \
+  --component-roots=src \
+  --shared-paths=.github/workflows \
+  --single-component=true
 ```
 
 ## License
