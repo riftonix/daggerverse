@@ -54,14 +54,20 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - get_changed_components(base_ref: str, head_ref: str, component_roots: list[str], shared_paths: list[str] | None = None, single_component: bool = False) -> list[str]
   - Returns component roots whose files changed between two refs. In single-component mode, returns `["."]` when matching files changed.
 
-- get_tags(pattern: str | None = None) -> list[str]
-  - Lists tags, optionally filtered by a glob pattern (e.g. `chartname/1.2.3`).
+- get_tags(pattern: str = '*', sort: str = 'version') -> list[str]
+  - Lists tags, optionally filtered by a glob pattern (e.g. `chartname/1.2.3`) and sorted by version by default.
+
+- has_tag(tag: str) -> bool
+  - Returns whether an exact tag exists in the repository.
+
+- get_latest_tag(pattern: str = '*', semver: bool = True) -> str
+  - Returns the latest matching tag, or an empty string when no tag matches. In semver mode, only semantic version tags are considered.
 
 - get_short_commit_sha(length: int = 8) -> str
   - Returns the short SHA of the current `HEAD` commit.
 
-- get_tags_pointing_at(ref: str = 'HEAD', remote: str = 'origin') -> list[str]
-  - Fetches tags and returns tags that point at `ref`.
+- get_tags_pointing_at(ref: str = 'HEAD') -> list[str]
+  - Returns tags that point at `ref`.
 
 ## Usage (Python SDK)
 

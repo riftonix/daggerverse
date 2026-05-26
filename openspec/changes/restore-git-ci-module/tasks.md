@@ -42,12 +42,12 @@
 
 ## 7. Tags And Versions
 
-- [ ] 7.1 Implement `get_tags(pattern='*', sort='version')` as the verb-based replacement for `list_tags`, with tests.
-- [ ] 7.2 Implement `has_tag(tag)` and tests for existing and missing tags.
-- [ ] 7.3 Implement `get_latest_tag(pattern='*', semver=True)` and tests for semver and non-semver tag sets.
-- [ ] 7.4 Implement `get_tags_pointing_at(ref='HEAD')` and tests for HEAD and non-HEAD refs.
-- [ ] 7.5 Implement `create_tag(tag, message=None, user_name='dagger-ci', user_email='dagger-ci@example.local')` and tests for lightweight and annotated tags.
-- [ ] 7.6 Implement `push_tag(tag, remote='origin')` and tests that push to a local bare remote.
+- [x] 7.1 Implement `get_tags(pattern='*', sort='version')` as the verb-based replacement for `list_tags`, with tests.
+- [x] 7.2 Implement `has_tag(tag)` and tests for existing and missing tags.
+- [x] 7.3 Implement `get_latest_tag(pattern='*', semver=True)` and tests for semver and non-semver tag sets.
+- [x] 7.4 Implement `get_tags_pointing_at(ref='HEAD')` and tests for HEAD and non-HEAD refs.
+- [x] 7.5 Implement `create_tag(tag, message=None, user_name='dagger-ci', user_email='dagger-ci@example.local')` and tests for lightweight and annotated tags.
+- [x] 7.6 Implement `push_tag(tag, remote='origin')` and tests that push to a local bare remote.
 
 ## 8. Portable Authentication
 

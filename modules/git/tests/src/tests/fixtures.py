@@ -19,6 +19,54 @@ class SyntheticGitRepos:
             .directory("/work/repo")
         )
 
+    def repo_with_version_tags(self) -> dagger.Directory:
+        """Return a git repo with tags that sort differently by version and refname."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "tag", "v1.0.0"])
+            .with_exec(["git", "tag", "v1.10.0"])
+            .with_exec(["git", "tag", "v1.2.0"])
+            .with_exec(["git", "tag", "v2.0.0-rc.1"])
+            .with_exec(["git", "tag", "v2.0.0"])
+            .with_exec(["git", "tag", "3.0.0-rc.1"])
+            .with_exec(["git", "tag", "3.0.0"])
+            .with_exec(["git", "tag", "release-2024.2"])
+            .with_exec(["git", "tag", "release-2024.10"])
+            .with_exec(["git", "tag", "modules/helm/v1.1.1"])
+            .with_exec(["git", "tag", "modules/helm/v1.10.0"])
+            .with_exec(["git", "tag", "modules/helm/v2.0.0-rc.1"])
+            .with_exec(["git", "tag", "modules/helm/v2.0.0"])
+            .with_exec(["git", "tag", "modules/plain/1.1.1"])
+            .with_exec(["git", "tag", "modules/plain/1.10.0"])
+            .with_exec(["git", "tag", "modules/git/v3.0.0"])
+            .with_exec(["git", "tag", "service/v2.0.0"])
+            .directory("/work/repo")
+        )
+
+    def repo_with_tags_on_multiple_refs(self) -> dagger.Directory:
+        """Return a git repo with tags pointing at HEAD and a non-HEAD ref."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(["sh", "-c", "printf 'initial\\n' > README.md && git add README.md && git commit -m initial"])
+            .with_exec(["git", "tag", "v1.0.0"])
+            .with_exec(["git", "tag", "first"])
+            .with_exec(["sh", "-c", "printf 'head\\n' > HEAD.md && git add HEAD.md && git commit -m head"])
+            .with_exec(["git", "tag", "v2.0.0"])
+            .with_exec(["git", "tag", "head"])
+            .directory("/work/repo")
+        )
+
     def repo_with_remote_tag(self) -> dagger.Directory:
         """Return a git repo whose local bare remote contains a tag missing locally."""
         return (
