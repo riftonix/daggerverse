@@ -2,11 +2,13 @@
 
 ## git
 
-Detects changed paths and exposes common Git metadata operations.
+Provides provider-neutral Git primitives for CI workflows, including refs, diffs, tags, components, repository metadata, authentication, and files-at-ref helpers.
 
 - Path: `modules/git`
 - Main source: `modules/git/src/git/main.py`
-- Typical command: `dagger -m ./modules/git call get-changed-paths --source=.`
+- Detailed reference: [Git module reference](git.md)
+- Typical command: `dagger -m ./modules/git call get-changed-files --source=. --base-ref=origin/main --head-ref=HEAD`
+- CI use cases: pull request diffs, changed-component matrices, release tags, repository metadata, and files-at-ref checks.
 
 ## helm
 

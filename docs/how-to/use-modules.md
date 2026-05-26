@@ -2,6 +2,8 @@
 
 Reusable Dagger modules live under `modules/`. Ready-to-run CI jobs belong under `scenarios/`.
 
+The current `modules/pipelines` directory is a temporary exception. Treat it as a Helm CI wrapper that should move to a future `scenarios/` entrypoint; the final scenario name, layout, and provider-specific job shape should be defined in a separate proposal.
+
 Use this command shape from the repository root:
 
 ```bash
@@ -11,7 +13,7 @@ dagger -m ./modules/<module> call <function> [arguments]
 For example:
 
 ```bash
-dagger -m ./modules/git call list-tags --source=.
+dagger -m ./modules/git call get-tags --source=.
 ```
 
 ## Pass Source Directories
