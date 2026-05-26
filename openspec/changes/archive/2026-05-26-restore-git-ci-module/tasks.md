@@ -69,8 +69,8 @@
 
 ## 11. Documentation And Integration
 
-- [ ] 11.1 Update `modules/git/README.md` so every documented function exists and every example uses verb-based names.
-- [ ] 11.2 Update repository docs and module reference for Git CI use cases.
-- [ ] 11.3 Document that the current `modules/pipelines` implementation is a temporary Helm CI wrapper that should become a future `scenarios/` entrypoint in a separate proposal.
-- [ ] 11.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
-- [ ] 11.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.
+- [x] 11.1 Update `modules/git/README.md` so every documented function exists and every example uses verb-based names.
+- [x] 11.2 Update repository docs and module reference for Git CI use cases.
+- [x] 11.3 Document that the current `modules/pipelines` implementation is a temporary Helm CI wrapper that should become a future `scenarios/` entrypoint in a separate proposal.
+- [x] 11.4 Remove the legacy `modules/git/tests/test.sh` after the Dagger-native test module is the canonical test path.
+- [x] 11.5 Run `make tests git`, `make lint-check git`, `make format-check git`, and `openspec validate --all --strict`.

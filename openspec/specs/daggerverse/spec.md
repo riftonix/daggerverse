@@ -73,6 +73,11 @@ When module-specific tests are added for a reusable Dagger module, the repositor
 - **AND** the guidance SHALL describe the neighboring test module pattern
 - **AND** the guidance SHALL describe calling parent module APIs through local Dagger dependencies
 
+#### Scenario: Implement Git module feature
+- **WHEN** a feature is implemented for `modules/git`
+- **THEN** the same implementation step SHALL add or update Dagger-native tests for that feature
+- **AND** the Git test module SHALL remain runnable with `make tests git`
+
 #### Scenario: Run all tests for a tested module
 - **WHEN** a module has a Dagger test module
 - **THEN** the test module SHOULD expose an aggregate function suitable for CI
