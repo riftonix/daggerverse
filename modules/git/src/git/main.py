@@ -7,6 +7,7 @@ from .auth import Auth
 from .cli import GitCli
 from .components import Components
 from .diffs import Diffs
+from .files_at_ref import FilesAtRef
 from .metadata import Metadata
 from .refs import Refs
 from .tags import Tags
@@ -346,6 +347,24 @@ class Git:
     async def has_clean_worktree(self) -> bool:
         """Return whether the repository worktree has no pending changes."""
         return await Metadata(self._git()).has_clean_worktree()
+
+    @function
+    async def has_file_at_ref(
+        self,
+        ref: Annotated[str, Doc("Git ref or SHA to inspect")],
+        path: Annotated[str, Doc("File path relative to the repository root")],
+    ) -> bool:
+        """Return whether a file exists at a Git ref."""
+        return await FilesAtRef(self._git()).has_file_at_ref(ref=ref, path=path)
+
+    @function
+    async def get_file_contents_at_ref(
+        self,
+        ref: Annotated[str, Doc("Git ref or SHA to read from")],
+        path: Annotated[str, Doc("File path relative to the repository root")],
+    ) -> str:
+        """Return file contents from a Git ref."""
+        return await FilesAtRef(self._git()).get_file_contents_at_ref(ref=ref, path=path)
 
     @function
     async def get_tags_pointing_at(

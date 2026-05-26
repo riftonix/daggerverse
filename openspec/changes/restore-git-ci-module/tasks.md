@@ -64,8 +64,8 @@
 
 ## 10. Files At Ref
 
-- [ ] 10.1 Implement `has_file_at_ref(ref, path)` and tests for existing and missing files.
-- [ ] 10.2 Implement `get_file_contents_at_ref(ref, path)` and tests for reading a file from a non-HEAD ref.
+- [x] 10.1 Implement `has_file_at_ref(ref, path)` and tests for existing and missing files.
+- [x] 10.2 Implement `get_file_contents_at_ref(ref, path)` and tests for reading a file from a non-HEAD ref.
 
 ## 11. Documentation And Integration
 

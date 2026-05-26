@@ -8,6 +8,7 @@ from dagger import DefaultPath, Doc, function, object_type
 from .auth import AuthTests
 from .components import ComponentTests
 from .diffs import DiffTests
+from .files_at_ref import FilesAtRefTests
 from .metadata import MetadataTests
 from .refs import RefTests
 from .tags import TagTests
@@ -38,3 +39,4 @@ class Tests:
         await RefTests().all()
         await DiffTests().all()
         await ComponentTests().all()
+        await FilesAtRefTests().all()

@@ -81,6 +81,25 @@ class SyntheticGitRepos:
             .directory("/work/repo")
         )
 
+    def repo_with_file_versions_at_refs(self) -> dagger.Directory:
+        """Return a git repo with different file contents on HEAD and a tag."""
+        return (
+            dag.container()
+            .from_("docker.io/alpine/git:2.52.0")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_exec(
+                ["sh", "-c", "printf 'old contents\\n' > version.txt && git add version.txt && git commit -m old"]
+            )
+            .with_exec(["git", "tag", "old-version"])
+            .with_exec(
+                ["sh", "-c", "printf 'head contents\\n' > version.txt && git add version.txt && git commit -m head"]
+            )
+            .directory("/work/repo")
+        )
+
     def repo_with_version_tags(self) -> dagger.Directory:
         """Return a git repo with tags that sort differently by version and refname."""
         return (
