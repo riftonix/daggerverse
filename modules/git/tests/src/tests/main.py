@@ -5,6 +5,7 @@ from typing import Annotated
 import dagger
 from dagger import DefaultPath, Doc, function, object_type
 
+from .auth import AuthTests
 from .components import ComponentTests
 from .diffs import DiffTests
 from .metadata import MetadataTests
@@ -33,6 +34,7 @@ class Tests:
         """Run all Git module tests."""
         await MetadataTests().all(source=source)
         await TagTests().all()
+        await AuthTests().all()
         await RefTests().all()
         await DiffTests().all()
         await ComponentTests().all()

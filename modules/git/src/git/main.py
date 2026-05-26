@@ -59,9 +59,42 @@ class Git:
         return container
 
     @function
-    async def with_ssh_private_key(self, source: Annotated[dagger.File, Doc("Private key file")]) -> str:
-        """Add ssh private key to container"""
-        return await Auth(self._git()).with_ssh_private_key(source=source)
+    async def with_https_token_auth(
+        self,
+        host: Annotated[str, Doc("HTTPS Git host to authenticate against")],
+        token: Annotated[dagger.Secret, Doc("HTTPS token secret")],
+        username: Annotated[str | None, Doc("Optional HTTPS username")] = None,
+    ) -> Self:
+        """Configure HTTPS token authentication for Git operations."""
+        self.container_ = (
+            Auth(self._git())
+            .with_https_token_auth(
+                host=host,
+                token=token,
+                username=username,
+            )
+            .container_
+        )
+        return self
+
+    @function
+    async def with_ssh_key_auth(
+        self,
+        private_key: Annotated[dagger.Secret, Doc("SSH private key secret")],
+        known_hosts: Annotated[dagger.Secret, Doc("SSH known_hosts secret")],
+        host: Annotated[str | None, Doc("Optional SSH Git host to configure")] = None,
+    ) -> Self:
+        """Configure SSH key authentication for Git operations."""
+        self.container_ = (
+            Auth(self._git())
+            .with_ssh_key_auth(
+                private_key=private_key,
+                known_hosts=known_hosts,
+                host=host,
+            )
+            .container_
+        )
+        return self
 
     @function
     async def get_changed_paths(
@@ -243,9 +276,27 @@ class Git:
     async def get_tags(
         self,
         pattern: Annotated[str, Doc("Optional tag filter pattern (glob)")] = "*",
+        sort: Annotated[str, Doc("Tag sort key: version, refname, or any git tag sort key")] = "version",
     ) -> list[str]:
         """Return tags in the repository, optionally filtered by glob pattern."""
-        return await Tags(self._git()).get_tags(pattern=pattern)
+        return await Tags(self._git()).get_tags(pattern=pattern, sort=sort)
+
+    @function
+    async def has_tag(
+        self,
+        tag: Annotated[str, Doc("Tag name to check")],
+    ) -> bool:
+        """Return whether a tag exists in the repository."""
+        return await Tags(self._git()).has_tag(tag=tag)
+
+    @function
+    async def get_latest_tag(
+        self,
+        pattern: Annotated[str, Doc("Optional tag filter pattern (glob)")] = "*",
+        semver: Annotated[bool | None, Doc("Only consider semantic version tags")] = True,
+    ) -> str:
+        """Return the latest matching tag, or an empty string when none match."""
+        return await Tags(self._git()).get_latest_tag(pattern=pattern, semver=semver)
 
     @function
     async def get_short_commit_sha(
@@ -259,7 +310,37 @@ class Git:
     async def get_tags_pointing_at(
         self,
         ref: Annotated[str, Doc("Git ref to inspect")] = "HEAD",
-        remote: Annotated[str, Doc("Remote name to fetch tags from")] = "origin",
     ) -> list[str]:
-        """Fetch tags and return tags that point at a ref."""
-        return await Tags(self._git()).get_tags_pointing_at(ref=ref, remote=remote)
+        """Return tags that point at a ref."""
+        return await Tags(self._git()).get_tags_pointing_at(ref=ref)
+
+    @function
+    async def create_tag(
+        self,
+        tag: Annotated[str, Doc("Tag name to create")],
+        message: Annotated[str | None, Doc("Optional annotated tag message")] = None,
+        user_name: Annotated[str, Doc("Tagger name for annotated tags")] = "dagger-ci",
+        user_email: Annotated[str, Doc("Tagger email for annotated tags")] = "dagger-ci@example.local",
+    ) -> Self:
+        """Create a local lightweight or annotated tag."""
+        self.container_ = (
+            Tags(self._git())
+            .create_tag(
+                tag=tag,
+                message=message,
+                user_name=user_name,
+                user_email=user_email,
+            )
+            .container_
+        )
+        return self
+
+    @function
+    async def push_tag(
+        self,
+        tag: Annotated[str, Doc("Tag name to push")],
+        remote: Annotated[str, Doc("Remote name to push the tag to")] = "origin",
+    ) -> Self:
+        """Push a local tag to a remote."""
+        self.container_ = Tags(self._git()).push_tag(tag=tag, remote=remote).container_
+        return self
