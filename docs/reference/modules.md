@@ -10,6 +10,16 @@ Provides provider-neutral Git primitives for CI workflows, including refs, diffs
 - Typical command: `dagger -m ./modules/git call get-changed-files --source=. --base-ref=origin/main --head-ref=HEAD`
 - CI use cases: pull request diffs, changed-component matrices, release tags, repository metadata, and files-at-ref checks.
 
+## docker
+
+Provides Dagger-native Docker and OCI image primitives for CI workflows, including image build, build arguments, explicit platforms, smoke checks, registry auth, and publish wiring.
+
+- Path: `modules/docker`
+- Main source: `modules/docker/src/docker/main.py`
+- Detailed reference: [Docker module reference](docker.md)
+- Typical command: `dagger -m ./modules/docker call build --source=. --context-path=modules/docker/tests/fixtures/basic-image container`
+- CI use cases: daemonless image builds, image smoke checks, registry-authenticated publish, and reusable primitives for higher-level container image scenarios.
+
 ## helm
 
 Runs Helm operations in a containerized environment.

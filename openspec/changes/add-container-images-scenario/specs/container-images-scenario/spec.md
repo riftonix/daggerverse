@@ -84,4 +84,5 @@ The `scenarios/container-images` scenario SHALL have Dagger-native tests that va
 #### Scenario: Test scenario publication
 - **WHEN** single-image or multi-image publication behavior is implemented
 - **THEN** the same implementation step SHALL add or update Dagger-native tests for that publication behavior
-- **AND** publication tests SHALL use a local OCI registry service
+- **AND** default publication tests SHALL verify publish input and result wiring without requiring a real registry or GitHub Container Registry credentials
+- **AND** real publication integration tests, when added, SHALL require a registry reachable by the Dagger engine rather than an ephemeral Dagger service registry

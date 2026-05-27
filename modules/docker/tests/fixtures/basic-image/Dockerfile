@@ -1,4 +1,4 @@
-FROM docker.io/alpine:3.22
+FROM docker.io/alpine:3.22 AS runtime
 
 ARG MESSAGE=hello
 
