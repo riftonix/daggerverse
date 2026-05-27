@@ -1,6 +1,10 @@
 # Daggerverse
 
-Collection of Dagger CI modules. Each module lives under `modules/` and can be used independently.
+Collection of reusable Dagger CI modules and ready-to-run scenarios.
+
+Modules live under `modules/` and are self-contained building blocks. Scenarios
+live under `scenarios/` and compose modules or other scenarios into concrete CI
+workflows.
 
 ## Documentation
 
@@ -8,6 +12,10 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
 
 ## Modules
 
+- **docker** - Dagger-native Docker and OCI image build, smoke check, registry auth, and publish primitives.
+  - https://github.com/riftonix/daggerverse/modules/docker
+- **git** - detect changed paths/directories in a git repository.
+  - https://github.com/riftonix/daggerverse/modules/git
 - **helm** - linting, templating, packaging, and publishing Helm charts.
   - https://github.com/riftonix/daggerverse/modules/helm
 - **kind** - base container with `kind` installed for local k8s usage.
@@ -16,10 +24,13 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/modules/opentofu
 - **ssh** - SSH client in a container with key setup helpers.
   - https://github.com/riftonix/daggerverse/modules/ssh
-- **git** - detect changed paths/directories in a git repository.
-  - https://github.com/riftonix/daggerverse/modules/git
 - **pipelines** - CI orchestration on top of modules (currently helm + git).
   - https://github.com/riftonix/daggerverse/modules/pipelines
+
+## Scenarios
+
+- **container-images** - portable image verification and publication workflow using explicit context paths and image references.
+  - https://github.com/riftonix/daggerverse/scenarios/container-images
 
 ## Requirements
 
@@ -31,4 +42,13 @@ Example module call:
 
 ```bash
 dagger -m ./modules/helm call --source=./modules/helm/tests/charts/ns-configurator lint
+```
+
+Run checks through the explicit component command form:
+
+```bash
+make tests module docker
+make tests scenario container-images
+make lint-check
+make format-check
 ```

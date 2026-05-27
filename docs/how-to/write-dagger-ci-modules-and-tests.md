@@ -231,20 +231,20 @@ For structured command output, parse the output and assert fields rather than ma
 Use the root `Makefile` for supported local checks:
 
 ```bash
-make tests <module>
-make lint-check <module>
-make format-check <module>
+make tests module <module>
+make lint-check module <module>
+make format-check module <module>
 ```
 
 For Helm:
 
 ```bash
-make tests helm
-make lint-check helm
-make format-check helm
+make tests module helm
+make lint-check module helm
+make format-check module helm
 ```
 
-`make tests <module>` enters `modules/<module>/tests` and calls the test module aggregate function.
+`make tests module <module>` enters `modules/<module>/tests` and calls the test module aggregate function.
 
 Use raw `dagger call` commands only for local debugging:
 
@@ -255,13 +255,14 @@ DAGGER_NO_NAG=1 DO_NOT_TRACK=1 dagger call --progress=plain all
 
 ## CI Expectations
 
-Pull request CI discovers modules with:
+Pull request CI discovers tested modules and scenarios with:
 
 ```text
 modules/<module>/tests/dagger.json
+scenarios/<scenario>/tests/dagger.json
 ```
 
-Only those modules are included in the test matrix. Modules without Dagger test modules are skipped until tests are added.
+Only those components are included in the test matrix. Components without Dagger test modules are skipped until tests are added.
 
 CI should call the same `Makefile` entrypoints used by local development. Do not duplicate module-specific raw Dagger calls in workflow YAML.
 
@@ -279,5 +280,5 @@ Before considering a module ready:
 - The test module depends on the parent module through `source: ".."`.
 - Tests call the parent public API through `dag.<module>(...)`.
 - The test module exposes `all`.
-- `make tests <module>` passes locally.
+- `make tests module <module>` passes locally.
 - Module README links back to `docs/README.md`.

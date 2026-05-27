@@ -61,6 +61,14 @@ The `scenarios/container-images` scenario SHALL avoid CI-provider-specific trigg
 - **THEN** the scenario SHALL only perform publication when called with explicit publish inputs
 - **AND** the scenario SHALL NOT inspect GitHub Actions or GitLab CI event environment variables
 
+### Requirement: Container images scenario hides implementation module object types
+The `scenarios/container-images` scenario SHALL compose implementation modules internally while exposing a module-neutral public API.
+
+#### Scenario: Compose scenario with independent Docker module version
+- **WHEN** a caller uses the released container-images scenario and also depends on a different released Docker module version in their own scenario
+- **THEN** the container-images scenario public API SHALL remain usable through stable inputs and outputs
+- **AND** the container-images scenario SHALL NOT require the caller to pass or consume Docker module object types such as `Docker`, `DockerBuild`, or `DockerImage`
+
 ### Requirement: Container images scenario documents CI integration pattern
 The `scenarios/container-images` README SHALL describe how CI systems compose Git selection, tag policy, and image verification or publication.
 

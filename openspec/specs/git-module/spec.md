@@ -25,7 +25,7 @@ The Git module SHALL have a neighboring Dagger test module that validates public
 
 #### Scenario: Run Git module tests
 
-- **WHEN** a user or CI runs `make tests git`
+- **WHEN** a user or CI runs `make tests module git`
 - **THEN** the Git test module SHALL run its aggregate `all` function
 - **AND** the tests SHALL call the parent Git module through a local Dagger dependency
 

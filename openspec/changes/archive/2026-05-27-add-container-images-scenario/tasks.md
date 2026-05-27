@@ -25,16 +25,16 @@
 ## 3. Container Images Scenario With Incremental Tests
 
 - [x] 3.1 Create `scenarios/container-images` Dagger module structure with metadata, Python package files, source package, README, neighboring test module, local dependency on `modules/docker`, fixture image contexts, and an `all` test stub.
-- [ ] 3.2 Implement single-image verification with explicit source, context path, Dockerfile path, optional target, optional build args, optional platforms, and optional smoke command, then add or update scenario tests for build-only, build options, and smoke verification.
-- [ ] 3.3 Implement multi-image verification over caller-provided image specs, then add or update scenario tests for successful multi-image verification and failure propagation.
-- [ ] 3.4 Implement single-image publication with explicit source, context path, destination image reference, optional build options, optional platforms, and optional registry auth, then add or update scenario tests using publish dry-run wiring without requiring external registry credentials.
-- [ ] 3.5 Implement multi-image publication over caller-provided publish specs, then add or update scenario tests for publishing multiple refs and failure propagation.
-- [ ] 3.6 Ensure the scenario implementation and tests keep GitHub Actions, GitLab CI, tag parsing, changed-directory detection, and hardcoded `docker/` path policy outside the scenario.
+- [x] 3.2 Implement single-image verification with explicit source, context path, Dockerfile path, optional target, optional build args, optional platforms, and optional smoke command, then add or update scenario tests for build-only, build options, and smoke verification.
+- [x] 3.3 Implement multi-image verification over caller-provided image specs, then add or update scenario tests for successful multi-image verification and failure propagation.
+- [x] 3.4 Implement single-image publication with explicit source, context path, destination image reference, optional build options, optional platforms, and optional registry auth, then add or update scenario tests using publish dry-run wiring without requiring external registry credentials.
+- [x] 3.5 Implement multi-image publication over caller-provided publish specs, then add or update scenario tests for publishing multiple refs and failure propagation.
+- [x] 3.6 Ensure the scenario implementation and tests keep GitHub Actions, GitLab CI, tag parsing, changed-directory detection, and hardcoded `docker/` path policy outside the scenario.
 
 ## 4. Documentation
 
 - [x] 4.1 Document `modules/docker` public API and examples for build, registry auth, publish, platforms, build arguments, and smoke checks by following the style of `modules/git/README.md`.
-- [ ] 4.2 Document `scenarios/container-images` examples using explicit `context_path` and `image_ref` inputs.
-- [ ] 4.3 Update repository docs to describe the Docker module and container-images scenario as separate layers.
-- [ ] 4.4 Include an example CI mapping where a provider workflow parses `docker/<image-name>/<version>` into `context_path` and `image_ref` before calling the scenario.
-- [ ] 4.5 Document the explicit Makefile command form for modules and scenarios, including tests, lint, and format.
+- [x] 4.2 Document `scenarios/container-images` examples using explicit `context_path` and `image_ref` inputs.
+- [x] 4.3 Update repository docs to describe the Docker module and container-images scenario as separate layers.
+- [x] 4.4 Include an example CI mapping where a provider workflow parses `docker/<image-name>/<version>` into `context_path` and `image_ref` before calling the scenario.
+- [x] 4.5 Document the explicit Makefile command form for modules and scenarios, including tests, lint, and format.

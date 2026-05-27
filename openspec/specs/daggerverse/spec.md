@@ -13,6 +13,15 @@ The repository SHALL organize reusable Dagger CI modules under the `modules/` di
 - **THEN** the module is available under `modules/<module-name>`
 - **AND** each module directory contains its own Dagger module metadata and source code
 
+### Requirement: Scenario repository layout
+
+The repository SHALL organize reusable Dagger CI scenarios under the `scenarios/` directory.
+
+#### Scenario: Locate a scenario
+- **WHEN** a user looks for a scenario implementation
+- **THEN** the scenario is available under `scenarios/<scenario-name>`
+- **AND** each scenario directory contains its own Dagger module metadata and source code
+
 ### Requirement: Repository documentation
 
 The repository SHALL keep English documentation under the `docs/` directory.
@@ -21,6 +30,12 @@ The repository SHALL keep English documentation under the `docs/` directory.
 - **WHEN** a user opens `docs/README.md`
 - **THEN** the page explains the recommended learning path
 - **AND** the page links to learning material, task guides, reference material, and design explanations
+
+#### Scenario: Read container image CI documentation
+- **WHEN** a user reads the repository documentation for container image CI
+- **THEN** it SHALL explain that `modules/docker` provides reusable Docker and OCI primitives
+- **AND** it SHALL explain that `scenarios/container-images` provides portable image verification and publication functions
+- **AND** it SHALL explain that CI-provider workflows own event triggers, changed path selection, and tag-to-image-reference mapping
 
 ### Requirement: Module README links
 
@@ -48,13 +63,43 @@ The repository SHALL expose supported local and CI workflows through the root `M
 
 #### Scenario: Run module tests
 - **WHEN** a user or CI needs to run tests for a module with a Dagger test module
-- **THEN** the tests SHALL be runnable with `make tests <module-name>`
+- **THEN** the tests SHALL be runnable with `make tests module <module-name>`
 - **AND** the target SHALL call the module test aggregate function
 
-#### Scenario: Run module maintenance commands
-- **WHEN** a user needs to run a supported maintenance command for modules
-- **THEN** the command SHOULD be available through the root `Makefile`
-- **AND** module-specific commands SHOULD accept a positional module name, such as `make lint-check <module-name>` or `make format-check <module-name>`
+#### Scenario: Run scenario tests
+- **WHEN** a user or CI needs to run tests for a scenario with a Dagger test module
+- **THEN** the tests SHALL be runnable with `make tests scenario <scenario-name>`
+- **AND** the target SHALL call the scenario test aggregate function
+
+#### Scenario: Scenario has no tests
+- **WHEN** a scenario has no Dagger test module
+- **THEN** CI discovery SHALL NOT fail only because that scenario has no tests
+
+#### Scenario: Remove legacy shorthand test command
+- **WHEN** a user runs a legacy module-only shorthand such as `make tests docker`
+- **THEN** the Makefile SHALL reject the command through the generic explicit-form usage validation
+- **AND** it SHALL NOT translate the shorthand to `make tests module docker`
+
+#### Scenario: Run lint for all Python components
+- **WHEN** a user or CI runs `make lint` or `make lint-check` without a component selector
+- **THEN** the command SHALL run Ruff against all existing Python component roots under `modules/` and `scenarios/`
+
+#### Scenario: Run lint for one module
+- **WHEN** a user or CI runs `make lint module docker` or `make lint-check module docker`
+- **THEN** the command SHALL run Ruff only against `modules/docker`
+
+#### Scenario: Run lint for one scenario
+- **WHEN** a user or CI runs `make lint scenario container-images` or `make lint-check scenario container-images`
+- **THEN** the command SHALL run Ruff only against `scenarios/container-images`
+
+#### Scenario: Run format for all Python components
+- **WHEN** a user or CI runs `make format` or `make format-check` without a component selector
+- **THEN** the command SHALL run Ruff formatting against all existing Python component roots under `modules/` and `scenarios/`
+
+#### Scenario: Shared Ruff configuration
+- **WHEN** Ruff commands run from the repository root
+- **THEN** Ruff SHALL use a shared repository-level configuration file
+- **AND** the Ruff configuration SHALL NOT live under `modules/`
 
 ### Requirement: Dagger-native module tests
 
@@ -76,7 +121,7 @@ When module-specific tests are added for a reusable Dagger module, the repositor
 #### Scenario: Implement Git module feature
 - **WHEN** a feature is implemented for `modules/git`
 - **THEN** the same implementation step SHALL add or update Dagger-native tests for that feature
-- **AND** the Git test module SHALL remain runnable with `make tests git`
+- **AND** the Git test module SHALL remain runnable with `make tests module git`
 
 #### Scenario: Run all tests for a tested module
 - **WHEN** a module has a Dagger test module
@@ -121,8 +166,8 @@ The repository SHALL run the in-scope Dagger module tests in GitHub Actions for 
 #### Scenario: Pull request targets default branch
 - **WHEN** a pull request targets the repository default branch
 - **THEN** GitHub Actions SHALL discover modules with Dagger test modules
-- **AND** GitHub Actions SHALL run each discovered module through `make tests <module-name>`
-- **AND** the workflow SHALL use Dagger CLI version `0.20.6`
+- **AND** GitHub Actions SHALL run each discovered module through `make tests module <module-name>`
+- **AND** the workflow SHALL use the repository-aligned Dagger CLI version
 
 #### Scenario: A module does not yet have Dagger tests
 - **WHEN** a module has no Dagger test module
@@ -133,11 +178,38 @@ The repository SHALL run the in-scope Dagger module tests in GitHub Actions for 
 - **WHEN** a module Dagger test fails in pull request CI
 - **THEN** the pull request CI SHALL fail
 
+### Requirement: GitHub pull request CI for available scenario tests
+
+The repository SHALL run available Dagger scenario tests in GitHub Actions for pull requests targeting the repository default branch.
+
+#### Scenario: Pull request targets default branch
+- **WHEN** a pull request targets the repository default branch
+- **THEN** GitHub Actions SHALL discover scenarios with Dagger test modules under `scenarios/<scenario-name>/tests`
+- **AND** GitHub Actions SHALL run each discovered scenario test aggregate function
+
+#### Scenario: Scenario tests fail
+- **WHEN** a scenario Dagger test fails in pull request CI
+- **THEN** the pull request CI SHALL fail
+
+### Requirement: Scenario publication workflow
+
+The repository SHALL publish Dagger scenarios through GitHub Actions using rules analogous to module publication.
+
+#### Scenario: Publish all scenarios on default branch push
+- **WHEN** changes are pushed to the default branch
+- **THEN** GitHub Actions SHALL discover scenarios under `scenarios/<scenario-name>` with Dagger module metadata
+- **AND** GitHub Actions SHALL publish each discovered scenario
+
+#### Scenario: Publish one scenario from release tag
+- **WHEN** a tag matching `scenarios/<scenario-name>/vX.Y.Z` is pushed
+- **THEN** GitHub Actions SHALL publish only the named scenario
+- **AND** the workflow SHALL fail clearly if the tag references an unknown scenario
+
 ### Requirement: Dagger version alignment
 
-The repository SHALL align the Helm test module work and GitHub pull request CI on Dagger `0.20.6`.
+The repository SHALL align Dagger module metadata and CI on the repository Dagger version.
 
 #### Scenario: Dagger module metadata is updated
-- **WHEN** the Helm test module change is implemented
-- **THEN** affected Dagger module metadata SHALL use engine version `v0.20.6`
+- **WHEN** Dagger module metadata is updated
+- **THEN** affected Dagger module metadata SHALL use the repository-aligned engine version
 - **AND** generated SDK artifacts SHALL be consistent with that engine version
