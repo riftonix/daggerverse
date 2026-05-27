@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    tags: ["modules/*/v[0-9]+.[0-9]+.[0-9]+"]
+    tags:
+      - "modules/*/v[0-9]+.[0-9]+.[0-9]+"
+      - "scenarios/*/v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   DAGGER_VERSION: 0.20.8
@@ -16,23 +18,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Determine module
-        id: module
+      - name: Determine component
+        id: component
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          module="${TAG#modules/}"
-          module="${module%%/*}"
-          if [ ! -f "modules/$module/dagger.json" ]; then
-            printf 'Unknown module from tag %s: %s\n' "$TAG" "$module" >&2
+          case "$TAG" in
+            modules/*/v[0-9]*.[0-9]*.[0-9]*)
+              kind=module
+              root=modules
+              ;;
+            scenarios/*/v[0-9]*.[0-9]*.[0-9]*)
+              kind=scenario
+              root=scenarios
+              ;;
+            *)
+              printf 'Invalid release tag: %s\n' "$TAG" >&2
+              printf 'Usage: modules/<module>/vX.Y.Z or scenarios/<scenario>/vX.Y.Z\n' >&2
+              exit 2
+              ;;
+          esac
+
+          name="${TAG#"$root"/}"
+          name="${name%%/*}"
+          if [ ! -f "$root/$name/dagger.json" ]; then
+            printf 'Unknown %s from tag %s: %s\n' "$kind" "$TAG" "$name" >&2
             exit 2
           fi
-          echo "name=$module" >> "$GITHUB_OUTPUT"
 
-      - name: Publish module
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "path=$root/$name" >> "$GITHUB_OUTPUT"
+
+      - name: Publish component
         uses: dagger/dagger-for-github@v8.4.1
         with:
-          module: ./modules/${{ steps.module.outputs.name }}
+          module: ./${{ steps.component.outputs.path }}
           verb: publish
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
           version: ${{ env.DAGGER_VERSION }}

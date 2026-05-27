@@ -11,20 +11,20 @@
 
 ## 2. Repository CI And Scenario Lifecycle
 
-- [ ] 2.1 Replace module-only Makefile argument parsing with explicit component addressing: `make tests module docker` and `make tests scenario container-images`.
-- [ ] 2.2 Remove legacy shorthand commands such as `make tests docker` and make them fail with usage guidance for the explicit command form.
-- [ ] 2.3 Move shared Ruff configuration from `modules/ruff.toml` to repository-level `ruff.toml`.
-- [ ] 2.4 Update `make lint`, `make lint-check`, `make format`, and `make format-check` so no-argument runs cover all existing Python component roots under `modules/` and `scenarios/`.
-- [ ] 2.5 Update lint and format selectors so `make lint module docker`, `make lint scenario container-images`, and analogous check/format commands target one component.
-- [ ] 2.6 Extend pull request CI discovery to produce module and scenario test matrix entries with explicit `kind` and `name` fields.
-- [ ] 2.7 Extend pull request CI test execution to call `make tests <kind> <name>` for each discovered module or scenario test module.
-- [ ] 2.8 Extend branch-push publication so all Dagger scenarios under `scenarios/<scenario-name>` are published analogously to modules.
-- [ ] 2.9 Extend release-tag publication so tags matching `scenarios/<scenario-name>/vX.Y.Z` publish only the named scenario and fail clearly for unknown scenarios.
-- [ ] 2.10 Update release command validation so scenario release tags can be created consistently with module release tags.
+- [x] 2.1 Replace module-only Makefile argument parsing with explicit component addressing: `make tests module docker` and `make tests scenario container-images`.
+- [x] 2.2 Remove legacy shorthand commands such as `make tests docker` and reject them through generic explicit-form usage validation.
+- [x] 2.3 Move shared Ruff configuration from `modules/ruff.toml` to repository-level `ruff.toml`.
+- [x] 2.4 Update `make lint`, `make lint-check`, `make format`, and `make format-check` so no-argument runs cover all existing Python component roots under `modules/` and `scenarios/`.
+- [x] 2.5 Update lint and format selectors so `make lint module docker`, `make lint scenario container-images`, and analogous check/format commands target one component.
+- [x] 2.6 Extend pull request CI discovery to produce module and scenario test matrix entries with explicit `kind` and `name` fields.
+- [x] 2.7 Extend pull request CI test execution to call `make tests <kind> <name>` for each discovered module or scenario test module.
+- [x] 2.8 Extend branch-push publication so all Dagger scenarios under `scenarios/<scenario-name>` are published analogously to modules.
+- [x] 2.9 Extend release-tag publication so tags matching `scenarios/<scenario-name>/vX.Y.Z` publish only the named scenario and fail clearly for unknown scenarios.
+- [x] 2.10 Update release command validation so scenario release tags can be created consistently with module release tags.
 
 ## 3. Container Images Scenario With Incremental Tests
 
-- [ ] 3.1 Create `scenarios/container-images` Dagger module structure with metadata, Python package files, source package, README, neighboring test module, local dependency on `modules/docker`, fixture image contexts, and an `all` test stub.
+- [x] 3.1 Create `scenarios/container-images` Dagger module structure with metadata, Python package files, source package, README, neighboring test module, local dependency on `modules/docker`, fixture image contexts, and an `all` test stub.
 - [ ] 3.2 Implement single-image verification with explicit source, context path, Dockerfile path, optional target, optional build args, optional platforms, and optional smoke command, then add or update scenario tests for build-only, build options, and smoke verification.
 - [ ] 3.3 Implement multi-image verification over caller-provided image specs, then add or update scenario tests for successful multi-image verification and failure propagation.
 - [ ] 3.4 Implement single-image publication with explicit source, context path, destination image reference, optional build options, optional platforms, and optional registry auth, then add or update scenario tests using publish dry-run wiring without requiring external registry credentials.
