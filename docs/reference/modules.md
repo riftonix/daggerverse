@@ -62,4 +62,19 @@ Runs SSH client operations in a container.
 
 ## Scenario Note
 
-Ready-to-run CI jobs are scenarios, not reusable modules. The current `modules/pipelines` implementation is transitional: it is a temporary Helm CI wrapper for a future scenario, with final naming and layout left to a separate proposal.
+Ready-to-run CI jobs are scenarios, not reusable modules.
+
+## container-images scenario
+
+Composes the reusable Docker module into a portable image verification and publication workflow.
+
+- Path: `scenarios/container-images`
+- Main source: `scenarios/container-images/src/container_images/main.py`
+- Detailed reference: [Container images scenario reference](container-images.md)
+- Typical verify command: `dagger -m ./scenarios/container-images call verify-image --source=. --context-path=images/api`
+- Typical publish command: `dagger -m ./scenarios/container-images call publish-image --source=. --context-path=images/api --image-ref=ghcr.io/example/api:v1.2.3`
+- CI use cases: verify selected image contexts, publish caller-provided OCI image references, and keep provider-specific tag/path policy in the workflow layer.
+
+The Docker module and container-images scenario are separate layers. `modules/docker` exposes reusable Docker and OCI primitives for other scenarios. `scenarios/container-images` uses those primitives internally and exposes stable scenario-level inputs and outputs.
+
+The current `modules/pipelines` implementation is transitional: it is a temporary Helm CI wrapper for a future scenario, with final naming and layout left to a separate proposal.

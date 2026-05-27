@@ -30,17 +30,19 @@ Each child directory is an independent Dagger module. A module directory contain
 
 When a module has Dagger-native tests, they live under `modules/<name>/tests` as a neighboring Dagger module.
 
-Reusable modules should expose tool primitives, not complete provider-specific CI jobs.
+Reusable modules should expose tool primitives, not complete provider-specific CI jobs. Modules are leaf building blocks: they must not import repository scenarios or other repository modules.
 
 ## `scenarios/`
 
-Ready-to-run CI jobs live under `scenarios/<name>`. Scenarios compose reusable modules for concrete workflows such as Helm chart verification or publication in GitHub Actions and GitLab CI.
+Ready-to-run CI jobs live under `scenarios/<name>`. Scenarios compose reusable modules or other scenarios for concrete workflows such as Helm chart verification, container image verification, or publication in GitHub Actions and GitLab CI.
+
+Scenarios should pin and test the versions of the building blocks they compose. A scenario may use module-specific objects internally, but its public API should expose stable Dagger primitives or scenario-owned spec/result objects rather than object types from implementation modules. This lets users compose released scenarios and modules independently without type collisions between different versions of the same module.
 
 The existing `modules/pipelines` directory is transitional. It is a temporary Helm CI wrapper for a future scenario, but the final `scenarios/` layout should be defined in a separate proposal.
 
 ## `.github/workflows/`
 
-GitHub Actions workflows. Pull request CI discovers modules with `modules/<name>/tests/dagger.json` and runs their checks through the root `Makefile`.
+GitHub Actions workflows. Pull request CI discovers modules with `modules/<name>/tests/dagger.json` and scenarios with `scenarios/<name>/tests/dagger.json`, then runs their checks through the root `Makefile`.
 
 ## `current_docs/`
 
