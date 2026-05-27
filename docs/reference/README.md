@@ -6,5 +6,6 @@ Available reference pages:
 
 - [Module reference](modules.md)
 - [Git module reference](git.md)
+- [Docker module reference](docker.md)
 - [CI and module test conventions](ci.md)
 - [Repository layout](repository-layout.md)

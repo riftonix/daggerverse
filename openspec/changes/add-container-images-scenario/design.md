@@ -68,6 +68,8 @@ The new container image workflow should support a future `container-images` mono
 
    Publication should pass caller-provided OCI image references directly to Dagger. This keeps registries such as `ghcr.io` provider-neutral and avoids Docker CLI or daemon requirements.
 
+   `Container.publish` is resolved by the Dagger engine rather than by a caller-managed container. Because of that, Dagger service bindings used by test containers do not make an ephemeral registry service reachable to the publish resolver. Default Docker module tests should cover publish validation and result wiring with a dry-run publish mode. Real publish integration tests, when needed, require a registry that is reachable by the Dagger engine itself, such as an engine-level `registry:5000` fixture configured in `engine.json`.
+
 11. The Docker module will accept target platforms.
 
    The build API should accept `platforms: list[dagger.Platform] | None`. Empty or omitted platforms mean single-platform build for the default/current platform. Multiple platforms produce platform variants that publication can push as a multi-platform image.
@@ -78,10 +80,10 @@ The new container image workflow should support a future `container-images` mono
 
 ## Risks / Trade-offs
 
-- Registry auth behavior varies between registries -> Keep the Docker module registry auth generic and test it against a local OCI registry rather than external GHCR state.
+- Registry auth behavior varies between registries -> Keep the Docker module registry auth generic and test credential configuration without exposing the secret in default tests.
 - Smoke commands can be too image-specific -> Require callers to pass the command explicitly and keep the default behavior to build-only verification.
 - Passing structured image specs through Dagger CLI can be less ergonomic than provider-specific scripts -> Provide single-image functions and batch functions so CI can choose the simpler interface.
-- OCI publication tests can be slow or flaky if they depend on external services -> Use a local registry service in Dagger-native tests.
+- OCI publication tests can be slow or flaky if they depend on external services -> Cover publish wiring in default Dagger-native tests with dry-run mode; run real publication only in an integration environment with an engine-reachable registry fixture.
 - Scenario CI broadens the root command interface beyond modules -> Use explicit component kind and name in Makefile commands and update documentation at the same time.
 - Removing module-only shorthand commands changes local developer muscle memory -> Make the new commands clear in help text and docs.
 

@@ -59,6 +59,11 @@ The Docker module SHALL publish built images to caller-provided OCI image refere
 - **WHEN** a `DockerBuild` contains platform variants
 - **THEN** publication SHALL include those variants in the published image
 
+#### Scenario: Dry-run publish wiring
+- **WHEN** Docker module tests need to validate publish input and result wiring without a registry reachable by the Dagger engine
+- **THEN** the Docker module SHALL provide a dry-run publish mode on `DockerBuild`
+- **AND** dry-run publication SHALL validate image references and return a `DockerImage` without calling `Container.publish`
+
 ### Requirement: Docker module runs smoke checks
 The Docker module SHALL provide an optional smoke-check function that runs a caller-provided command in the built image.
 
@@ -79,7 +84,7 @@ The Docker module SHALL have a neighboring Dagger test module that validates pub
 - **THEN** the Docker test module SHALL run its aggregate `all` function
 - **AND** the tests SHALL call the parent Docker module through a local Dagger dependency
 
-#### Scenario: Verify publish without external registry credentials
-- **WHEN** the Docker test module verifies image publication
-- **THEN** it SHALL publish to a local OCI registry service
-- **AND** it SHALL NOT require GitHub Container Registry credentials
+#### Scenario: Verify publish wiring without external registry credentials
+- **WHEN** the Docker test module runs its default aggregate tests
+- **THEN** it SHALL verify publish input and result wiring without requiring a real registry or GitHub Container Registry credentials
+- **AND** it SHALL NOT require an ephemeral Dagger service registry for `Container.publish`
