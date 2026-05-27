@@ -46,22 +46,27 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      modules: ${{ steps.modules.outputs.modules }}
+      components: ${{ steps.components.outputs.components }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: List modules with tests
-        id: modules
+      - name: List components with tests
+        id: components
         run: |
-          modules="$(
-            find modules -mindepth 2 -maxdepth 2 -path 'modules/*/tests' -type d \
-              -exec sh -c 'test -f "$1/dagger.json" && basename "$(dirname "$1")"' sh {} \; \
-              | sort
+          components="$(
+            {
+              find modules -mindepth 2 -maxdepth 2 -path 'modules/*/tests' -type d \
+                -exec sh -c 'test -f "$1/dagger.json" && printf "module\t%s\n" "$(basename "$(dirname "$1")")"' sh {} \;
+              if [ -d scenarios ]; then
+                find scenarios -mindepth 2 -maxdepth 2 -path 'scenarios/*/tests' -type d \
+                  -exec sh -c 'test -f "$1/dagger.json" && printf "scenario\t%s\n" "$(basename "$(dirname "$1")")"' sh {} \;
+              fi
+            } | sort
           )"
-          json="$(printf '%s\n' "$modules" | python3 -c 'import json, sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')"
-          echo "modules=$json" >> "$GITHUB_OUTPUT"
+          json="$(printf '%s\n' "$components" | python3 -c 'import json, sys; print(json.dumps([{"kind": parts[0], "name": parts[1]} for line in sys.stdin if (parts := line.strip().split("\t", 1)) and len(parts) == 2]))')"
+          echo "components=$json" >> "$GITHUB_OUTPUT"
 
   test:
     name: Test
@@ -70,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: ${{ fromJson(needs.prepare-tests.outputs.modules) }}
+        component: ${{ fromJson(needs.prepare-tests.outputs.components) }}
 
     steps:
       - name: Checkout repository
@@ -81,8 +86,8 @@ jobs:
         with:
           version: ${{ env.DAGGER_VERSION }}
 
-      - name: Run module tests
-        run: make tests "${{ matrix.module }}"
+      - name: Run component tests
+        run: make tests "${{ matrix.component.kind }}" "${{ matrix.component.name }}"
 
   ci-passed:
     name: CI Passed

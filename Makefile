@@ -1,64 +1,89 @@
 SHELL := /bin/sh
 
-MODULES_DIR := modules
-MODULE_NAMES := $(notdir $(wildcard $(MODULES_DIR)/*))
-COMMAND_TARGETS := help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module module
-MODULE_ARG := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
-COMPONENT_KIND := $(filter module,$(MAKECMDGOALS))
+COMPONENT_KINDS := module scenario
+COMPONENT_ROOT.module := modules
+COMPONENT_ROOT.scenario := scenarios
+COMPONENT_ROOTS := $(foreach kind,$(COMPONENT_KINDS),$(COMPONENT_ROOT.$(kind)))
+COMPONENT_NAMES := $(foreach root,$(COMPONENT_ROOTS),$(notdir $(wildcard $(root)/*)))
+COMMAND_TARGETS := help lint lint-check format format-check openspec-validate check-dagger-version release check-release-tag tests check-python-component check-test-component $(COMPONENT_KINDS)
+COMMAND_ARGS := $(filter-out $(COMMAND_TARGETS),$(MAKECMDGOALS))
+COMPONENT_KIND := $(filter $(COMPONENT_KINDS),$(MAKECMDGOALS))
+QUALITY_GOAL := $(firstword $(filter lint lint-check format format-check,$(MAKECMDGOALS)))
+PY_COMPONENT_ROOTS := $(foreach root,$(COMPONENT_ROOTS),$(wildcard $(root)/*))
 
 RUFF ?= ruff
 RUFF_FLAGS ?= --no-cache
 OPENSPEC ?= openspec
 DAGGER_ENV ?= DAGGER_NO_NAG=1 DO_NOT_TRACK=1 DAGGER_NO_UPDATE_CHECK=1
 
-ifeq ($(COMPONENT_KIND),module)
-SELECTED_MODULE := $(firstword $(MODULE_ARG))
-else ifneq ($(strip $(MODULE_ARG)),)
-SELECTED_MODULE := $(firstword $(MODULE_ARG))
+ifneq ($(strip $(COMMAND_ARGS)),)
+SELECTED_ARG := $(firstword $(COMMAND_ARGS))
 endif
 
-ifdef SELECTED_MODULE
-PY_TARGET := $(MODULES_DIR)/$(SELECTED_MODULE)
-TEST_TARGET := $(MODULES_DIR)/$(SELECTED_MODULE)/tests
+SELECTED_COMPONENT := $(firstword $(COMMAND_ARGS))
+COMPONENT_ROOT := $(COMPONENT_ROOT.$(COMPONENT_KIND))
+COMPONENT_DIR := $(if $(COMPONENT_KIND),$(COMPONENT_ROOT)/$(SELECTED_COMPONENT))
+COMPONENT_TEST_DIR := $(COMPONENT_DIR)/tests
+
+ifdef COMPONENT_KIND
+PY_TARGETS := $(COMPONENT_DIR)
 else
-PY_TARGET := $(MODULES_DIR)
+PY_TARGETS := $(PY_COMPONENT_ROOTS)
 endif
 
-.PHONY: help lint lint-check format format-check openspec-validate check-dagger-version release check-release tests check-module check-test-module module $(MODULE_NAMES)
+.PHONY: help lint lint-check format format-check openspec-validate check-dagger-version release check-release-tag tests check-python-component check-test-component $(COMPONENT_KINDS) $(COMPONENT_NAMES)
 
 help:
 	@printf '%s\n' \
 		'Targets:' \
-		'  make lint                  Run Ruff lint and fix all modules without cache' \
-		'  make lint helm             Run Ruff lint and fix one module without cache' \
-		'  make lint-check            Check Ruff lint for all modules without cache' \
-		'  make lint-check helm       Check Ruff lint for one module without cache' \
-		'  make format                Format all modules with Ruff without cache' \
-		'  make format helm           Format one module with Ruff without cache' \
-		'  make format-check          Check Ruff formatting for all modules without cache' \
-		'  make format-check helm     Check Ruff formatting for one module without cache' \
+		'  make lint                         Run Ruff lint and fix all Python components without cache' \
+		'  make lint module helm             Run Ruff lint and fix one module without cache' \
+		'  make lint scenario name           Run Ruff lint and fix one scenario without cache' \
+		'  make lint-check                   Check Ruff lint for all Python components without cache' \
+		'  make lint-check module helm       Check Ruff lint for one module without cache' \
+		'  make lint-check scenario name     Check Ruff lint for one scenario without cache' \
+		'  make format                       Format all Python components with Ruff without cache' \
+		'  make format module helm           Format one module with Ruff without cache' \
+		'  make format scenario name         Format one scenario with Ruff without cache' \
+		'  make format-check                 Check Ruff formatting for all Python components without cache' \
+		'  make format-check module helm     Check Ruff formatting for one module without cache' \
+		'  make format-check scenario name   Check Ruff formatting for one scenario without cache' \
 		'  make openspec-validate     Validate OpenSpec specs and changes strictly' \
 		'  make check-dagger-version  Check Dagger module and CI versions are aligned' \
 		'  make release modules/helm/v0.0.0' \
-		'  make tests module helm     Run all Dagger tests for one module'
+		'  make release scenarios/name/v0.0.0' \
+		'  make tests module helm     Run all Dagger tests for one module' \
+		'  make tests scenario name   Run all Dagger tests for one scenario'
 
-check-module:
-	@if [ -n '$(SELECTED_MODULE)' ] && [ ! -d '$(PY_TARGET)' ]; then \
-		printf 'Unknown module: %s\n' '$(SELECTED_MODULE)' >&2; \
+check-python-component:
+	@if [ -z '$(COMPONENT_KIND)' ] && [ -n '$(SELECTED_COMPONENT)' ]; then \
+		printf 'Usage: make $(QUALITY_GOAL) <module|scenario> <name>\n' >&2; \
+		exit 2; \
+	fi
+	@if [ '$(words $(COMPONENT_KIND))' -gt 1 ]; then \
+		printf 'Select exactly one component kind: module or scenario\n' >&2; \
+		exit 2; \
+	fi
+	@if [ -n '$(COMPONENT_KIND)' ] && [ -z '$(SELECTED_COMPONENT)' ]; then \
+		printf 'Usage: make $(QUALITY_GOAL) <module|scenario> <name>\n' >&2; \
+		exit 2; \
+	fi
+	@if [ -n '$(COMPONENT_KIND)' ] && [ ! -d '$(COMPONENT_DIR)' ]; then \
+		printf 'Unknown %s: %s\n' '$(COMPONENT_KIND)' '$(SELECTED_COMPONENT)' >&2; \
 		exit 2; \
 	fi
 
-lint: check-module
-	$(RUFF) check --fix $(RUFF_FLAGS) $(PY_TARGET)
+lint: check-python-component
+	$(RUFF) check --fix $(RUFF_FLAGS) $(PY_TARGETS)
 
-lint-check: check-module
-	$(RUFF) check $(RUFF_FLAGS) $(PY_TARGET)
+lint-check: check-python-component
+	$(RUFF) check $(RUFF_FLAGS) $(PY_TARGETS)
 
-format: check-module
-	$(RUFF) format $(RUFF_FLAGS) $(PY_TARGET)
+format: check-python-component
+	$(RUFF) format $(RUFF_FLAGS) $(PY_TARGETS)
 
-format-check: check-module
-	$(RUFF) format --check $(RUFF_FLAGS) $(PY_TARGET)
+format-check: check-python-component
+	$(RUFF) format --check $(RUFF_FLAGS) $(PY_TARGETS)
 
 openspec-validate:
 	$(OPENSPEC) validate --all --strict
@@ -66,9 +91,10 @@ openspec-validate:
 check-dagger-version:
 	python3 scripts/check_dagger_version.py
 
-check-release:
-	@if [ -z '$(SELECTED_MODULE)' ]; then \
+check-release-tag:
+	@if [ -z '$(SELECTED_ARG)' ]; then \
 		printf 'Usage: make release modules/<module>/vX.Y.Z\n' >&2; \
+		printf '   or: make release scenarios/<scenario>/vX.Y.Z\n' >&2; \
 		exit 2; \
 	fi
 	@branch=$$(git branch --show-current); \
@@ -76,50 +102,63 @@ check-release:
 		printf 'Releases must be created from master. Current branch: %s\n' "$$branch" >&2; \
 		exit 2; \
 	fi
-	@case '$(SELECTED_MODULE)' in \
-		modules/*/v[0-9]*.[0-9]*.[0-9]*) ;; \
+	@case '$(SELECTED_ARG)' in \
+		modules/*/v[0-9]*.[0-9]*.[0-9]*) \
+			root='$(COMPONENT_ROOT.module)'; \
+			kind='module'; \
+			;; \
+		scenarios/*/v[0-9]*.[0-9]*.[0-9]*) \
+			root='$(COMPONENT_ROOT.scenario)'; \
+			kind='scenario'; \
+			;; \
 		*) \
-			printf 'Invalid release tag: %s\n' '$(SELECTED_MODULE)' >&2; \
+			printf 'Invalid release tag: %s\n' '$(SELECTED_ARG)' >&2; \
 			printf 'Usage: make release modules/<module>/vX.Y.Z\n' >&2; \
+			printf '   or: make release scenarios/<scenario>/vX.Y.Z\n' >&2; \
 			exit 2; \
 			;; \
-	esac
-	@module=$$(printf '%s\n' '$(SELECTED_MODULE)' | cut -d/ -f2); \
-	if [ ! -f '$(MODULES_DIR)'/$$module/dagger.json ]; then \
-		printf 'Unknown module: %s\n' "$$module" >&2; \
+	esac; \
+	name=$$(printf '%s\n' '$(SELECTED_ARG)' | cut -d/ -f2); \
+	if [ ! -f "$$root/$$name/dagger.json" ]; then \
+		printf 'Unknown %s: %s\n' "$$kind" "$$name" >&2; \
 		exit 2; \
 	fi
-	@if git rev-parse -q --verify 'refs/tags/$(SELECTED_MODULE)' >/dev/null; then \
-		printf 'Release tag already exists: %s\n' '$(SELECTED_MODULE)' >&2; \
-		exit 2; \
-	fi
-
-release: check-release
-	git tag -a '$(SELECTED_MODULE)' -m 'Release $(SELECTED_MODULE)'
-	git push origin '$(SELECTED_MODULE)'
-
-check-test-module:
-	@if [ -z '$(SELECTED_MODULE)' ]; then \
-		printf 'Usage: make tests module <module>\n' >&2; \
-		exit 2; \
-	fi
-	@if [ ! -d '$(PY_TARGET)' ]; then \
-		printf 'Unknown module: %s\n' '$(SELECTED_MODULE)' >&2; \
-		exit 2; \
-	fi
-	@if [ ! -f '$(TEST_TARGET)/dagger.json' ]; then \
-		printf 'Module has no Dagger test module: %s\n' '$(SELECTED_MODULE)' >&2; \
+	@if git rev-parse -q --verify 'refs/tags/$(SELECTED_ARG)' >/dev/null; then \
+		printf 'Release tag already exists: %s\n' '$(SELECTED_ARG)' >&2; \
 		exit 2; \
 	fi
 
-tests: check-test-module
-	cd $(TEST_TARGET) && $(DAGGER_ENV) dagger call --progress=plain all
+release: check-release-tag
+	git tag -a '$(SELECTED_ARG)' -m 'Release $(SELECTED_ARG)'
+	git push origin '$(SELECTED_ARG)'
 
-module:
+check-test-component:
+	@if [ -z '$(COMPONENT_KIND)' ] || [ -z '$(SELECTED_COMPONENT)' ]; then \
+		printf 'Usage: make tests <module|scenario> <name>\n' >&2; \
+		exit 2; \
+	fi
+	@if [ '$(words $(COMPONENT_KIND))' -ne 1 ]; then \
+		printf 'Select exactly one component kind: module or scenario\n' >&2; \
+		printf 'Usage: make tests <module|scenario> <name>\n' >&2; \
+		exit 2; \
+	fi
+	@if [ ! -d '$(COMPONENT_DIR)' ]; then \
+		printf 'Unknown %s: %s\n' '$(COMPONENT_KIND)' '$(SELECTED_COMPONENT)' >&2; \
+		exit 2; \
+	fi
+	@if [ ! -f '$(COMPONENT_TEST_DIR)/dagger.json' ]; then \
+		printf '%s has no Dagger test module: %s\n' '$(COMPONENT_KIND)' '$(SELECTED_COMPONENT)' >&2; \
+		exit 2; \
+	fi
+
+tests: check-test-component
+	cd $(COMPONENT_TEST_DIR) && $(DAGGER_ENV) dagger call --progress=plain all
+
+$(COMPONENT_KINDS):
 	@:
 
-$(MODULE_NAMES):
+$(COMPONENT_NAMES):
 	@:
 
-modules/%:
+$(foreach root,$(COMPONENT_ROOTS),$(root)/%):
 	@:

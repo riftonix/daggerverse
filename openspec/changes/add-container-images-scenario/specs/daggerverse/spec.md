@@ -42,9 +42,10 @@ The repository SHALL address modules and scenarios explicitly in root Makefile c
 - **THEN** the command SHALL be `make tests scenario container-images`
 - **AND** it SHALL run `scenarios/container-images/tests`
 
-#### Scenario: Reject legacy shorthand test command
+#### Scenario: Remove legacy shorthand test command
 - **WHEN** a user runs a legacy module-only shorthand such as `make tests docker`
-- **THEN** the Makefile SHALL fail with usage guidance for the explicit command form
+- **THEN** the Makefile SHALL reject the command through the generic explicit-form usage validation
+- **AND** it SHALL NOT translate the shorthand to `make tests module docker`
 
 ### Requirement: Repository-wide Ruff command interface
 The repository SHALL lint and format Python code in both modules and scenarios through the root Makefile.

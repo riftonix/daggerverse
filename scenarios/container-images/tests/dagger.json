@@ -1,0 +1,17 @@
+{
+  "name": "tests",
+  "engineVersion": "v0.20.8",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "container-images",
+      "source": ".."
+    },
+    {
+      "name": "docker",
+      "source": "../../../modules/docker"
+    }
+  ]
+}
