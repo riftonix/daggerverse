@@ -30,14 +30,19 @@ class Tests:
         """Run all container image scenario tests."""
         await self.constructs_scenario()
         await self.has_local_docker_dependency()
+        await self.configures_one_registry_auth()
+        await self.configures_multiple_registry_auths()
         await self.verifies_image_build_only()
         await self.verifies_image_with_build_options()
         await self.verifies_image_with_smoke_command()
         await self.verifies_multiple_images()
         await self.propagates_multi_image_verification_failure()
+        await self.verifies_bake_target_build_only()
         await self.dry_run_publishes_image()
+        await self.dry_run_publishes_bake_target()
         await self.dry_run_publishes_image_with_options_and_registry_auth()
         await self.dry_run_publishes_multiple_images()
+        await self.dry_run_publishes_multiple_images_with_registry_auth()
         await self.propagates_multi_image_publication_failure()
         await self.keeps_provider_policy_out_of_scenario_code()
 
@@ -50,6 +55,36 @@ class Tests:
     async def has_local_docker_dependency(self) -> None:
         """Verify tests can call the local Docker module dependency."""
         TestCase().assertEqual("docker", await dag.docker().module())
+
+    @function
+    async def configures_one_registry_auth(self) -> None:
+        """Verify the scenario records one registry auth without exposing its secret."""
+        scenario = dag.container_images().with_registry_auth(
+            address="registry.example.local",
+            username="ci-user",
+            password=dag.set_secret("registry-password", "super-secret"),
+        )
+
+        TestCase().assertEqual(["registry.example.local"], await scenario.registry_auth_addresses())
+
+    @function
+    async def configures_multiple_registry_auths(self) -> None:
+        """Verify the scenario accumulates registry auth for multiple registries."""
+        scenario = (
+            dag.container_images()
+            .with_registry_auth(
+                address="ghcr.io",
+                username="ghcr-user",
+                password=dag.set_secret("ghcr-password", "super-secret"),
+            )
+            .with_registry_auth(
+                address="gitea.local",
+                username="gitea-user",
+                password=dag.set_secret("gitea-password", "super-secret"),
+            )
+        )
+
+        TestCase().assertEqual(["ghcr.io", "gitea.local"], await scenario.registry_auth_addresses())
 
     @function
     async def verifies_image_build_only(self) -> None:
@@ -124,6 +159,19 @@ class Tests:
             test_case.fail("expected missing image context to fail")
 
     @function
+    async def verifies_bake_target_build_only(self) -> None:
+        """Verify the scenario builds and smoke-checks one Bake target without publishing."""
+        result = await dag.container_images().verify_bake_target(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            bake_path="docker-bake.json",
+            bake_target="app",
+            variable_overrides=["MESSAGE=hello-from-override"],
+            smoke_command=["grep", "hello-from-override", "/message.txt"],
+        )
+
+        TestCase().assertEqual("verified Bake target app", result)
+
+    @function
     async def dry_run_publishes_image(self) -> None:
         """Verify single-image publication wiring without a registry."""
         image_ref = "registry.example.local/container-images/basic:latest"
@@ -137,21 +185,47 @@ class Tests:
         TestCase().assertEqual(image_ref, result)
 
     @function
+    async def dry_run_publishes_bake_target(self) -> None:
+        """Verify Bake publication uses resolved image references without pushing."""
+        result = await (
+            dag.container_images()
+            .with_registry_auth(
+                address="registry.example.local",
+                username="ci-user",
+                password=dag.set_secret("bake-registry-password", "super-secret"),
+            )
+            .publish_bake_target(
+                source=dag.current_module().source().directory("fixtures/bake-image"),
+                bake_path="docker-bake.json",
+                bake_target="app",
+                variable_overrides=["MESSAGE=hello-from-publish"],
+                publish_dry_run=True,
+            )
+        )
+
+        TestCase().assertEqual(["registry.example.local/container-images/bake:latest"], result)
+
+    @function
     async def dry_run_publishes_image_with_options_and_registry_auth(self) -> None:
         """Verify publication forwards build options and registry auth."""
         image_ref = "registry.example.local/container-images/basic:runtime"
-        result = await dag.container_images().publish_image(
-            source=dag.current_module().source(),
-            context_path="fixtures/basic-image",
-            image_ref=image_ref,
-            dockerfile_path="Dockerfile",
-            target="runtime",
-            build_args=["MESSAGE=published=scenario"],
-            platforms=[Platform("linux/amd64")],
-            registry_address="registry.example.local",
-            registry_username="ci-user",
-            registry_password=dag.set_secret("container-images-registry-password", "super-secret"),
-            publish_dry_run=True,
+        result = await (
+            dag.container_images()
+            .with_registry_auth(
+                address="registry.example.local",
+                username="ci-user",
+                password=dag.set_secret("container-images-registry-password", "super-secret"),
+            )
+            .publish_image(
+                source=dag.current_module().source(),
+                context_path="fixtures/basic-image",
+                image_ref=image_ref,
+                dockerfile_path="Dockerfile",
+                target="runtime",
+                build_args=["MESSAGE=published=scenario"],
+                platforms=[Platform("linux/amd64")],
+                publish_dry_run=True,
+            )
         )
 
         TestCase().assertEqual(image_ref, result)
@@ -170,6 +244,32 @@ class Tests:
                 f"fixtures/alt-image={image_refs[1]}",
             ],
             publish_dry_run=True,
+        )
+
+        TestCase().assertEqual(image_refs, results)
+
+    @function
+    async def dry_run_publishes_multiple_images_with_registry_auth(self) -> None:
+        """Verify multi-image publication retains separately configured registry auth."""
+        image_refs = [
+            "registry.example.local/container-images/basic:latest",
+            "registry.example.local/container-images/alt:latest",
+        ]
+        results = await (
+            dag.container_images()
+            .with_registry_auth(
+                address="registry.example.local",
+                username="ci-user",
+                password=dag.set_secret("multi-image-registry-password", "super-secret"),
+            )
+            .publish_images(
+                source=dag.current_module().source(),
+                publish_specs=[
+                    f"fixtures/basic-image={image_refs[0]}",
+                    f"fixtures/alt-image={image_refs[1]}",
+                ],
+                publish_dry_run=True,
+            )
         )
 
         TestCase().assertEqual(image_refs, results)

@@ -1,0 +1,19 @@
+{
+  "variable": {
+    "MESSAGE": {
+      "default": "hello-from-bake"
+    }
+  },
+  "target": {
+    "app": {
+      "context": ".",
+      "dockerfile": "Dockerfile",
+      "args": {
+        "MESSAGE": "${MESSAGE}"
+      },
+      "tags": [
+        "registry.example.local/container-images/bake:latest"
+      ]
+    }
+  }
+}

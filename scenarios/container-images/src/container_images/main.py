@@ -1,17 +1,59 @@
-from typing import Annotated
+from dataclasses import field
+from typing import Annotated, Self
 
 import dagger
 from dagger import DefaultPath, Doc, dag, function, object_type
 
 
 @object_type
+class ContainerImagesRegistryAuth:
+    """Registry authentication configuration."""
+
+    address_: str
+    username_: str
+    password_: dagger.Secret
+
+
+@object_type
 class ContainerImages:
     """Container image scenario entrypoint."""
+
+    registry_auths_: list[ContainerImagesRegistryAuth] = field(default_factory=list)
 
     @function
     def module(self) -> str:
         """Return the scenario name."""
         return "container-images"
+
+    @function
+    def registry_auth_addresses(self) -> list[str]:
+        """Return configured registry auth addresses."""
+        return [registry_auth.address_ for registry_auth in self.registry_auths_]
+
+    @function
+    def with_registry_auth(
+        self,
+        address: Annotated[str, Doc("Registry address to authenticate against")],
+        username: Annotated[str, Doc("Registry username")],
+        password: Annotated[dagger.Secret, Doc("Registry password or token secret")],
+    ) -> Self:
+        """Configure registry authentication for later publication."""
+        if not address:
+            msg = "Registry address must not be empty"
+            raise ValueError(msg)
+        if not username:
+            msg = "Registry username must not be empty"
+            raise ValueError(msg)
+        return ContainerImages(
+            registry_auths_=[
+                *self.registry_auths_,
+                ContainerImagesRegistryAuth(
+                    address_=address,
+                    username_=username,
+                    password_=password,
+                ),
+            ]
+        )
 
     @function
     async def verify_image(
@@ -87,6 +129,42 @@ class ContainerImages:
         return results
 
     @function
+    async def verify_bake_target(
+        self,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Source directory containing the Bake file and image build context"),
+        ],
+        bake_path: Annotated[str, Doc("Path to the Bake file relative to source")],
+        bake_target: Annotated[str, Doc("Bake target to verify")],
+        variable_overrides: Annotated[
+            list[str] | None,
+            Doc("Optional Bake variable overrides in KEY=VALUE form"),
+        ] = None,
+        smoke_command: Annotated[list[str] | None, Doc("Optional command to run in the built image")] = None,
+    ) -> str:
+        """Build and optionally smoke-check one Bake target without publishing."""
+        build = dag.docker().build_from_bake(
+            source=source,
+            bake_path=bake_path,
+            target=bake_target,
+            variable_overrides=variable_overrides,
+        )
+
+        if smoke_command is not None:
+            build = build.with_smoke_check(smoke_command)
+
+        platform_variants = await build.platform_variants()
+        if platform_variants:
+            for variant in platform_variants:
+                await variant.sync()
+        else:
+            await build.container().sync()
+
+        return f"verified Bake target {bake_target}"
+
+    @function
     async def publish_image(
         self,
         source: Annotated[
@@ -100,24 +178,10 @@ class ContainerImages:
         target: Annotated[str | None, Doc("Optional Docker build target")] = None,
         build_args: Annotated[list[str] | None, Doc("Optional build arguments in KEY=VALUE form")] = None,
         platforms: Annotated[list[dagger.Platform] | None, Doc("Optional target platforms")] = None,
-        registry_address: Annotated[str | None, Doc("Optional registry address for authentication")] = None,
-        registry_username: Annotated[str | None, Doc("Optional registry username")] = None,
-        registry_password: Annotated[dagger.Secret | None, Doc("Optional registry password or token secret")] = None,
         publish_dry_run: Annotated[bool, Doc("Validate publish inputs without pushing to a registry")] = False,
     ) -> str:
         """Build and publish one explicit image context."""
-        docker = dag.docker()
-        registry_auth_values = [registry_address, registry_username, registry_password]
-        if any(value is not None for value in registry_auth_values):
-            if registry_address is None or registry_username is None or registry_password is None:
-                msg = "Registry auth requires registry_address, registry_username, and registry_password"
-                raise ValueError(msg)
-            docker = docker.with_registry_auth(
-                address=registry_address,
-                username=registry_username,
-                password=registry_password,
-            )
-
+        docker = self._docker()
         build = docker.build(
             source=source,
             context_path=context_path,
@@ -133,6 +197,37 @@ class ContainerImages:
         return await image.image_ref()
 
     @function
+    async def publish_bake_target(
+        self,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Source directory containing the Bake file and image build context"),
+        ],
+        bake_path: Annotated[str, Doc("Path to the Bake file relative to source")],
+        bake_target: Annotated[str, Doc("Bake target to publish")],
+        variable_overrides: Annotated[
+            list[str] | None,
+            Doc("Optional Bake variable overrides in KEY=VALUE form"),
+        ] = None,
+        publish_dry_run: Annotated[bool, Doc("Validate publish inputs without pushing to a registry")] = False,
+    ) -> list[str]:
+        """Build and publish the resolved image references for one Bake target."""
+        docker = self._docker()
+        build = docker.build_from_bake(
+            source=source,
+            bake_path=bake_path,
+            target=bake_target,
+            variable_overrides=variable_overrides,
+        )
+        if publish_dry_run:
+            build = build.with_publish_dry_run()
+
+        image_refs = await build.image_refs()
+        image = build.publish(image_refs=image_refs)
+        return await image.image_refs()
+
+    @function
     async def publish_images(
         self,
         source: Annotated[
@@ -145,9 +240,6 @@ class ContainerImages:
         target: Annotated[str | None, Doc("Optional Docker build target")] = None,
         build_args: Annotated[list[str] | None, Doc("Optional build arguments in KEY=VALUE form")] = None,
         platforms: Annotated[list[dagger.Platform] | None, Doc("Optional target platforms")] = None,
-        registry_address: Annotated[str | None, Doc("Optional registry address for authentication")] = None,
-        registry_username: Annotated[str | None, Doc("Optional registry username")] = None,
-        registry_password: Annotated[dagger.Secret | None, Doc("Optional registry password or token secret")] = None,
         publish_dry_run: Annotated[bool, Doc("Validate publish inputs without pushing to a registry")] = False,
     ) -> list[str]:
         """Build and publish multiple explicit image contexts."""
@@ -167,9 +259,6 @@ class ContainerImages:
                     target=target,
                     build_args=build_args,
                     platforms=platforms,
-                    registry_address=registry_address,
-                    registry_username=registry_username,
-                    registry_password=registry_password,
                     publish_dry_run=publish_dry_run,
                 )
             )
@@ -182,3 +271,13 @@ class ContainerImages:
             msg = f"Invalid publish spec {publish_spec!r}: expected CONTEXT_PATH=IMAGE_REF"
             raise ValueError(msg)
         return context_path, image_ref
+
+    def _docker(self):
+        docker = dag.docker()
+        for registry_auth in self.registry_auths_:
+            docker = docker.with_registry_auth(
+                address=registry_auth.address_,
+                username=registry_auth.username_,
+                password=registry_auth.password_,
+            )
+        return docker
