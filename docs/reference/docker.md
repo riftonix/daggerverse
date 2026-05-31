@@ -16,6 +16,8 @@ Defaults:
 - `target`: empty
 - `build_args`: none
 - `platforms`: current/default platform
+- `bake_path`: `docker-bake.json`
+- `variable_overrides`: none
 
 ## Core Objects
 
@@ -27,7 +29,7 @@ Defaults:
 
 ## Build
 
-- `build(source, context_path='.', dockerfile_path='Dockerfile', target=None, build_args=None, platforms=None) -> DockerBuild`
+- `build(source, context_path='.', dockerfile_path='Dockerfile', target=None, build_args=None, platforms=None, tags=None, labels=None) -> DockerBuild`
 - `DockerBuild.container() -> dagger.Container`
 - `DockerBuild.context_path() -> str`
 - `DockerBuild.dockerfile_path() -> str`
@@ -70,6 +72,106 @@ build = dag.docker().build(
 container = build.container()
 ```
 
+## Docker Buildx Bake
+
+- `build_from_bake(source, target, bake_path='docker-bake.json', variable_overrides=None) -> DockerBuild`
+- `DockerBuild.image_refs() -> list[str]`
+- `DockerBuild.tags() -> list[str]`
+- `DockerBuild.labels() -> list[str]`
+
+`build_from_bake` loads a JSON Docker Buildx Bake manifest and translates one target into Dagger-native build calls. It does not invoke the Docker CLI or require a Docker socket.
+
+Supported target fields:
+
+- `context`
+- `dockerfile`
+- `target`
+- `args`
+- `tags`
+- `labels`
+- `platforms`
+
+Each Bake target must define at least one non-empty tag. Unsupported target fields fail explicitly instead of being ignored.
+
+Bake variables use JSON objects with `default` values:
+
+```json
+{
+  "variable": {
+    "REGISTRY": {
+      "default": "ghcr.io/my-org"
+    },
+    "VERSION": {
+      "default": "1.2.3"
+    }
+  },
+  "target": {
+    "app": {
+      "context": "docker/app",
+      "dockerfile": "Dockerfile",
+      "args": {
+        "VERSION": "${VERSION}"
+      },
+      "tags": [
+        "${REGISTRY}/app:${VERSION}"
+      ],
+      "labels": {
+        "org.opencontainers.image.version": "${VERSION}"
+      },
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    }
+  }
+}
+```
+
+Build from the manifest:
+
+```bash
+dagger -m ./modules/docker call build-from-bake \
+  --source=. \
+  --bake-path=docker/app/docker-bake.json \
+  --target=app \
+  image-refs
+```
+
+Override variables without editing the manifest:
+
+```bash
+dagger -m ./modules/docker call build-from-bake \
+  --source=. \
+  --bake-path=docker/app/docker-bake.json \
+  --target=app \
+  --variable-overrides=REGISTRY=registry.example.local/team \
+  image-refs
+```
+
+Python SDK example:
+
+```python
+build = dag.docker().build_from_bake(
+    source=repo,
+    bake_path="docker/app/docker-bake.json",
+    target="app",
+    variable_overrides=["REGISTRY=registry.example.local/team"],
+)
+image_refs = await build.image_refs()
+```
+
+Interpolation supports `${VAR}` placeholders in `context`, `dockerfile`, `target`, `args`, `tags`, `labels`, and `platforms`. Other interpolation forms and unresolved placeholders fail with a clear error.
+
+Explicit `build(...)` calls return empty lists from `image_refs()` and `tags()`. Bake-derived builds return their resolved Bake tags from both accessors.
+
+Bake resolution fails explicitly when:
+
+- the Bake file does not exist
+- the requested target does not exist
+- the target has no non-empty tags
+- the target uses unsupported fields
+- a supported field contains unsupported or unresolved interpolation
+
 ## Platforms
 
 - `DockerBuild.platforms() -> list[dagger.Platform]`
@@ -110,7 +212,7 @@ For platform builds, the smoke command runs against the retained platform varian
 - `Docker.with_registry_auth(address, username, password) -> Docker`
 - `Docker.registry_auth_addresses() -> list[str]`
 
-Configure registry credentials before build or publish operations that need authenticated registry access. The password is a `dagger.Secret` and is not exposed through returned values.
+Configure registry credentials before build or publish operations that need authenticated registry access. Address and username must be non-empty. The password is a `dagger.Secret` and is not exposed through returned values.
 
 ```python
 docker = dag.docker().with_registry_auth(
@@ -124,12 +226,12 @@ docker = dag.docker().with_registry_auth(
 
 ## Publish
 
-- `DockerBuild.publish(image_refs) -> DockerImage`
+- `DockerBuild.publish(image_refs=None) -> DockerImage`
 - `DockerBuild.with_publish_dry_run() -> DockerBuild`
 - `DockerImage.image_ref() -> str`
 - `DockerImage.image_refs() -> list[str]`
 
-Publish sends the built image to one or more caller-provided OCI image references through Dagger-native `Container.publish`:
+Publish sends the built image to one or more OCI image references through Dagger-native `Container.publish`. Explicit builds pass references with `image_refs`. Bake-derived builds can omit the argument and publish their resolved Bake tags:
 
 ```python
 image = dag.docker().with_registry_auth(
@@ -140,7 +242,7 @@ image = dag.docker().with_registry_auth(
     source=repo,
     context_path="docker/app",
     platforms=[dagger.Platform("linux/amd64"), dagger.Platform("linux/arm64")],
-).publish([
+).publish(image_refs=[
     "ghcr.io/my-org/app:1.2.3",
     "ghcr.io/my-org/app:latest",
 ])
@@ -155,9 +257,19 @@ Dry-run publish validates input and returns the same `DockerImage` shape without
 image = dag.docker().build(
     source=repo,
     context_path="docker/app",
-).with_publish_dry_run().publish([
+).with_publish_dry_run().publish(image_refs=[
     "registry.example.local/app:latest",
 ])
+```
+
+Bake dry-run publish:
+
+```python
+image = dag.docker().build_from_bake(
+    source=repo,
+    bake_path="docker/app/docker-bake.json",
+    target="app",
+).with_publish_dry_run().publish()
 ```
 
 Use dry-run mode for default unit-style Dagger tests. Real publication requires a registry reachable by the Dagger engine itself. A Dagger service binding inside a test container is not enough for `Container.publish`, because publish is resolved by the engine.
@@ -170,4 +282,4 @@ The Docker module has a neighboring Dagger test module under `modules/docker/tes
 make tests module docker
 ```
 
-The default tests cover build construction, build options, build argument validation, explicit platforms, smoke checks, registry auth configuration, dry-run publish wiring, and image result accessors. They intentionally avoid requiring external registry credentials or an ephemeral in-Dagger registry for real `Container.publish` calls.
+The default tests cover explicit builds, Bake target loading and interpolation, Bake validation failures, image reference accessors, registry auth validation, explicit platforms, smoke checks, and dry-run publish wiring. They intentionally avoid requiring external registry credentials or an ephemeral in-Dagger registry for real `Container.publish` calls.

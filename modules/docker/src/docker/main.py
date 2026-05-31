@@ -1,7 +1,20 @@
+import json
+import re
+from dataclasses import field
 from typing import Annotated, Self
 
 import dagger
 from dagger import DefaultPath, Doc, function, object_type
+
+SUPPORTED_BAKE_TARGET_FIELDS = {
+    "args",
+    "context",
+    "dockerfile",
+    "labels",
+    "platforms",
+    "tags",
+    "target",
+}
 
 
 @object_type
@@ -36,11 +49,28 @@ class DockerBuild:
     platform_variants_: list[dagger.Container]
     registry_auths_: list[DockerRegistryAuth] | None = None
     publish_dry_run_: bool = False
+    tags_: list[str] = field(default_factory=list)
+    labels_: dict[str, str] = field(default_factory=dict)
 
     @function
     def container(self) -> dagger.Container:
         """Return the built container."""
         return self.container_
+
+    @function
+    def tags(self) -> list[str]:
+        """Return the configured image tags."""
+        return self.tags_
+
+    @function
+    def image_refs(self) -> list[str]:
+        """Return the full OCI image references."""
+        return self.tags_
+
+    @function
+    def labels(self) -> list[str]:
+        """Return the configured image labels in KEY=VALUE form."""
+        return [f"{k}={v}" for k, v in self.labels_.items()]
 
     @function
     def context_path(self) -> str:
@@ -100,15 +130,18 @@ class DockerBuild:
             platform_variants_=self.platform_variants_,
             registry_auths_=self.registry_auths_,
             publish_dry_run_=True,
+            tags_=self.tags_,
+            labels_=self.labels_,
         )
 
     @function
     async def publish(
         self,
-        image_refs: Annotated[list[str], Doc("OCI image references to publish")],
+        image_refs: Annotated[list[str] | None, Doc("Optional OCI image references to publish")] = None,
     ) -> "DockerImage":
-        """Publish the built image to one or more OCI image references."""
-        if not image_refs:
+        """Publish the built image to explicit or build-configured OCI image references."""
+        publish_refs = self.tags_ if image_refs is None else image_refs
+        if not publish_refs:
             msg = "At least one image reference is required"
             raise ValueError(msg)
 
@@ -116,7 +149,7 @@ class DockerBuild:
         platform_variants = [self._with_registry_auths(variant) for variant in self.platform_variants_[1:]]
 
         published_refs: list[str] = []
-        for image_ref in image_refs:
+        for image_ref in publish_refs:
             if not image_ref:
                 msg = "Image references must not be empty"
                 raise ValueError(msg)
@@ -182,6 +215,12 @@ class Docker:
         password: Annotated[dagger.Secret, Doc("Registry password or token secret")],
     ) -> Self:
         """Configure registry authentication for later registry operations."""
+        if not address:
+            msg = "Registry address must not be empty"
+            raise ValueError(msg)
+        if not username:
+            msg = "Registry username must not be empty"
+            raise ValueError(msg)
         return Docker(
             registry_auths_=[
                 *(self.registry_auths_ or []),
@@ -206,26 +245,35 @@ class Docker:
         target: Annotated[str | None, Doc("Optional Docker build target")] = None,
         build_args: Annotated[list[str] | None, Doc("Optional build arguments in KEY=VALUE form")] = None,
         platforms: Annotated[list[dagger.Platform] | None, Doc("Optional target platforms")] = None,
+        tags: Annotated[list[str] | None, Doc("Optional image tags")] = None,
+        labels: Annotated[list[str] | None, Doc("Optional image labels in KEY=VALUE form")] = None,
     ) -> DockerBuild:
         """Build a container image from a Dockerfile context."""
         parsed_build_args = self._parse_build_args(build_args or [])
+        parsed_labels = self._parse_labels(labels or [])
         context = source.directory(context_path)
         platform_variants = [
-            context.docker_build(
-                dockerfile=dockerfile_path,
-                target=target or "",
-                build_args=parsed_build_args,
-                platform=platform,
+            self._with_labels(
+                context.docker_build(
+                    dockerfile=dockerfile_path,
+                    target=target or "",
+                    build_args=parsed_build_args,
+                    platform=platform,
+                ),
+                parsed_labels,
             )
             for platform in platforms or []
         ]
         container = (
             platform_variants[0]
             if platform_variants
-            else context.docker_build(
-                dockerfile=dockerfile_path,
-                target=target or "",
-                build_args=parsed_build_args,
+            else self._with_labels(
+                context.docker_build(
+                    dockerfile=dockerfile_path,
+                    target=target or "",
+                    build_args=parsed_build_args,
+                ),
+                parsed_labels,
             )
         )
         return DockerBuild(
@@ -238,7 +286,118 @@ class Docker:
             platform_variants_=platform_variants,
             registry_auths_=self.registry_auths_,
             publish_dry_run_=False,
+            tags_=tags or [],
+            labels_=parsed_labels,
         )
+
+    @function
+    async def build_from_bake(
+        self,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Source directory containing the Docker build context and Bake file"),
+        ],
+        target: Annotated[str, Doc("Bake target to build")],
+        bake_path: Annotated[str, Doc("Path to the Bake file relative to source")] = "docker-bake.json",
+        variable_overrides: Annotated[
+            list[str] | None,
+            Doc("Optional Bake variable overrides in KEY=VALUE form"),
+        ] = None,
+    ) -> DockerBuild:
+        """Build a container image from a Docker Buildx Bake target."""
+        try:
+            bake_contents = await source.file(bake_path).contents()
+        except Exception as exc:
+            msg = f"Bake file not found: {bake_path}"
+            raise ValueError(msg) from exc
+        try:
+            bake_data = json.loads(bake_contents)
+        except json.JSONDecodeError as exc:
+            msg = f"Failed to parse Bake file {bake_path}: {exc}"
+            raise ValueError(msg) from exc
+
+        variables = bake_data.get("variable", {})
+        vars_map: dict[str, str] = {
+            name: str(variable.get("default", "")) for name, variable in variables.items() if isinstance(variable, dict)
+        }
+        vars_map.update(self._parse_key_values(variable_overrides or [], "Bake variable override"))
+
+        targets = bake_data.get("target", {})
+        if target not in targets:
+            msg = f"Bake target {target!r} not found in {bake_path}"
+            raise ValueError(msg)
+
+        target_data = targets[target]
+        unsupported_fields = sorted(set(target_data) - SUPPORTED_BAKE_TARGET_FIELDS)
+        if unsupported_fields:
+            msg = f"Unsupported fields in Bake target {target!r}: {', '.join(unsupported_fields)}"
+            raise ValueError(msg)
+
+        bake_args = target_data.get("args", {})
+        build_args: list[str] = []
+        if isinstance(bake_args, dict):
+            for k, v in bake_args.items():
+                build_args.append(f"{k}={self._interpolate_bake_string(str(v), vars_map, f'args.{k}')}")
+        elif isinstance(bake_args, list):
+            for arg in bake_args:
+                name, _, value = arg.partition("=")
+                if name:
+                    build_args.append(f"{name}={self._interpolate_bake_string(value, vars_map, f'args.{name}')}")
+
+        context_path = self._interpolate_bake_string(target_data.get("context", "."), vars_map, "context")
+        dockerfile_path = self._interpolate_bake_string(
+            target_data.get("dockerfile", "Dockerfile"),
+            vars_map,
+            "dockerfile",
+        )
+        docker_target = self._interpolate_bake_string(target_data.get("target", "") or "", vars_map, "target")
+
+        bake_platforms = target_data.get("platforms", [])
+        platforms: list[dagger.Platform] = [
+            dagger.Platform(self._interpolate_bake_string(p, vars_map, "platforms")) for p in bake_platforms
+        ]
+
+        bake_tags = target_data.get("tags", [])
+        tags: list[str] = [self._interpolate_bake_string(t, vars_map, "tags") for t in bake_tags]
+        if not tags or any(not tag for tag in tags):
+            msg = f"Bake target {target!r} must define at least one non-empty tag"
+            raise ValueError(msg)
+
+        bake_labels = target_data.get("labels", {})
+        labels: list[str] = []
+        if isinstance(bake_labels, dict):
+            labels = [
+                f"{k}={self._interpolate_bake_string(str(v), vars_map, f'labels.{k}')}" for k, v in bake_labels.items()
+            ]
+        elif isinstance(bake_labels, list):
+            labels = [self._interpolate_bake_string(label, vars_map, "labels") for label in bake_labels]
+
+        return self.build(
+            source=source,
+            context_path=context_path,
+            dockerfile_path=dockerfile_path,
+            target=docker_target or None,
+            build_args=build_args,
+            platforms=platforms,
+            tags=tags,
+            labels=labels,
+        )
+
+    def _interpolate_bake_string(self, text: str, vars_map: dict[str, str], field: str) -> str:
+        """Interpolate ${VAR} placeholders in a string."""
+        if not text:
+            return ""
+
+        def replace(match: re.Match) -> str:
+            var_name = match.group(1)
+            return vars_map.get(var_name, match.group(0))
+
+        resolved = re.sub(r"\${(\w+)}", replace, text)
+        if "$" in resolved:
+            msg = f"Unsupported Bake interpolation in {field}: {text!r}"
+            raise ValueError(msg)
+        return resolved
 
     @function
     def image(
@@ -257,3 +416,21 @@ class Docker:
                 raise ValueError(msg)
             parsed.append(dagger.BuildArg(name=name, value=value))
         return parsed
+
+    def _parse_labels(self, labels: list[str]) -> dict[str, str]:
+        return self._parse_key_values(labels, "label")
+
+    def _parse_key_values(self, values: list[str], kind: str) -> dict[str, str]:
+        parsed: dict[str, str] = {}
+        for item in values:
+            name, separator, value = item.partition("=")
+            if separator != "=" or not name:
+                msg = f"Invalid {kind} {item!r}: expected KEY=VALUE with a non-empty key"
+                raise ValueError(msg)
+            parsed[name] = value
+        return parsed
+
+    def _with_labels(self, container: dagger.Container, labels: dict[str, str]) -> dagger.Container:
+        for name, value in labels.items():
+            container = container.with_label(name, value)
+        return container

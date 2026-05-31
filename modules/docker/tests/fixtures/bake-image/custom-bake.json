@@ -1,0 +1,15 @@
+{
+  "target": {
+    "app": {
+      "context": ".",
+      "dockerfile": "Dockerfile",
+      "target": "base",
+      "args": {
+        "MESSAGE": "custom-bake-says-hello"
+      },
+      "tags": [
+        "registry.example.local/custom-bake-image:latest"
+      ]
+    }
+  }
+}

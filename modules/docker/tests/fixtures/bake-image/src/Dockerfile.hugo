@@ -1,0 +1,4 @@
+ARG BASE=alpine:latest
+FROM ${BASE}
+ARG VERSION=0.0.0
+RUN echo "${VERSION}" > /version.txt

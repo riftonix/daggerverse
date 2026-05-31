@@ -1,0 +1,41 @@
+{
+  "variable": {
+    "TAG": {
+      "default": "latest"
+    },
+    "REGISTRY": {
+      "default": "ghcr.io/riftonix"
+    },
+    "HUGO_VERSION": {
+      "default": "0.140.0"
+    },
+    "CONTEXT": {
+      "default": "src"
+    },
+    "DOCKERFILE": {
+      "default": "Dockerfile.hugo"
+    },
+    "PLATFORM": {
+      "default": "linux/amd64"
+    }
+  },
+  "target": {
+    "app": {
+      "context": "${CONTEXT}",
+      "dockerfile": "${DOCKERFILE}",
+      "args": {
+        "VERSION": "${HUGO_VERSION}",
+        "BASE": "alpine:${TAG}"
+      },
+      "tags": [
+        "${REGISTRY}/hugo:${HUGO_VERSION}"
+      ],
+      "labels": {
+        "org.opencontainers.image.version": "${HUGO_VERSION}"
+      },
+      "platforms": [
+        "${PLATFORM}"
+      ]
+    }
+  }
+}
