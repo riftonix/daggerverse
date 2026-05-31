@@ -1,6 +1,6 @@
 # Docker Dagger Module
 
-Reusable Dagger-native Docker and OCI image helpers for CI workflows. The module builds and publishes OCI images from explicit source directories, context paths, Dockerfiles, build arguments, platforms, smoke commands, and registry credentials without requiring a Docker daemon.
+Reusable Dagger-native Docker and OCI image helpers for CI workflows. The module builds and publishes OCI images from explicit Docker contexts or JSON Docker Buildx Bake targets without requiring a Docker daemon.
 
 ## Quick Example
 
@@ -9,6 +9,15 @@ dagger -m ./modules/docker call build \
   --source=. \
   --context-path=modules/docker/tests/fixtures/basic-image \
   container
+```
+
+Build a Bake target and inspect its resolved image references:
+
+```bash
+dagger -m ./modules/docker call build-from-bake \
+  --source=modules/docker/tests/fixtures/bake-image \
+  --target=app \
+  image-refs
 ```
 
 ## Documentation Path

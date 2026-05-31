@@ -27,6 +27,230 @@ class Tests:
         await self.configures_registry_auth_without_exposing_secret()
         await self.dry_run_publishes_image_refs()
         await self.constructs_image_result()
+        await self.builds_image_from_bake()
+        await self.builds_image_from_bake_explicit_path()
+        await self.builds_image_with_interpolation()
+        await self.builds_image_with_variable_override()
+        await self.exposes_bake_image_refs()
+        await self.explicit_build_has_no_image_refs()
+        await self.dry_run_publishes_bake_image_refs_with_registry_auth()
+        await self.rejects_empty_registry_auth_address()
+        await self.rejects_empty_registry_auth_username()
+        await self.rejects_missing_bake_file()
+        await self.rejects_missing_bake_target()
+        await self.rejects_missing_bake_tags()
+        await self.rejects_unsupported_bake_target_field()
+        await self.rejects_unsupported_bake_interpolation()
+
+    @function
+    async def builds_image_from_bake(self) -> None:
+        """Verify Docker.build_from_bake builds the fixture image using Bake settings."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            target="app",
+        )
+
+        output = await build.container().with_exec(["cat", "/message.txt"]).stdout()
+        TestCase().assertEqual("bake-says-hello\n", output)
+        TestCase().assertEqual("base", await build.target())
+
+    @function
+    async def builds_image_from_bake_explicit_path(self) -> None:
+        """Verify Docker.build_from_bake builds from an explicit Bake file path."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            target="app",
+            bake_path="custom-bake.json",
+        )
+
+        output = await build.container().with_exec(["cat", "/message.txt"]).stdout()
+        TestCase().assertEqual("custom-bake-says-hello\n", output)
+
+    @function
+    async def builds_image_with_interpolation(self) -> None:
+        """Verify Docker.build_from_bake handles variable interpolation."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            target="app",
+            bake_path="interpolation.json",
+        )
+
+        test_case = TestCase()
+        # Verify interpolated build args
+        build_args = await build.build_args()
+        test_case.assertIn("VERSION=0.140.0", build_args)
+        test_case.assertIn("BASE=alpine:latest", build_args)
+        test_case.assertNotIn("REGISTRY=ghcr.io/riftonix", build_args)
+
+        tags = await build.tags()
+        test_case.assertEqual(["ghcr.io/riftonix/hugo:0.140.0"], tags)
+
+        labels = await build.labels()
+        test_case.assertIn("org.opencontainers.image.version=0.140.0", labels)
+        container_labels = await build.container().labels()
+        rendered_container_labels = [f"{await label.name()}={await label.value()}" for label in container_labels]
+        test_case.assertIn("org.opencontainers.image.version=0.140.0", rendered_container_labels)
+
+        test_case.assertEqual(["linux/amd64"], await build.platforms())
+        output = await build.container().with_exec(["cat", "/version.txt"]).stdout()
+        test_case.assertEqual("0.140.0\n", output)
+
+    @function
+    async def builds_image_with_variable_override(self) -> None:
+        """Verify Docker.build_from_bake applies Bake variable overrides."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            target="app",
+            bake_path="interpolation.json",
+            variable_overrides=["REGISTRY=registry.example.local/team"],
+        )
+
+        TestCase().assertEqual(["registry.example.local/team/hugo:0.140.0"], await build.tags())
+
+    @function
+    async def exposes_bake_image_refs(self) -> None:
+        """Verify Bake builds expose resolved image references and tags."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            target="app",
+        )
+        expected = ["registry.example.local/bake-image:latest"]
+
+        test_case = TestCase()
+        test_case.assertEqual(expected, await build.image_refs())
+        test_case.assertEqual(expected, await build.tags())
+
+    @function
+    async def explicit_build_has_no_image_refs(self) -> None:
+        """Verify explicit builds do not expose Bake image references."""
+        build = dag.docker().build(
+            source=dag.current_module().source(),
+            context_path="fixtures/basic-image",
+        )
+
+        test_case = TestCase()
+        test_case.assertEqual([], await build.image_refs())
+        test_case.assertEqual([], await build.tags())
+
+    @function
+    async def dry_run_publishes_bake_image_refs_with_registry_auth(self) -> None:
+        """Verify Bake builds dry-run publish their resolved image references with registry auth."""
+        image = (
+            dag.docker()
+            .with_registry_auth(
+                address="registry.example.local",
+                username="ci-user",
+                password=dag.set_secret("bake-registry-password", "super-secret"),
+            )
+            .build_from_bake(
+                source=dag.current_module().source().directory("fixtures/bake-image"),
+                target="app",
+            )
+            .with_publish_dry_run()
+            .publish()
+        )
+
+        expected = ["registry.example.local/bake-image:latest"]
+        test_case = TestCase()
+        test_case.assertEqual(expected[0], await image.image_ref())
+        test_case.assertEqual(expected, await image.image_refs())
+
+    @function
+    async def rejects_empty_registry_auth_address(self) -> None:
+        """Verify registry auth requires a non-empty address."""
+        await self._assert_registry_auth_error(
+            address="",
+            username="ci-user",
+            expected="Registry address must not be empty",
+        )
+
+    @function
+    async def rejects_empty_registry_auth_username(self) -> None:
+        """Verify registry auth requires a non-empty username."""
+        await self._assert_registry_auth_error(
+            address="registry.example.local",
+            username="",
+            expected="Registry username must not be empty",
+        )
+
+    async def _assert_registry_auth_error(self, address: str, username: str, expected: str) -> None:
+        test_case = TestCase()
+        try:
+            await (
+                dag.docker()
+                .with_registry_auth(
+                    address=address,
+                    username=username,
+                    password=dag.set_secret("invalid-registry-password", "super-secret"),
+                )
+                .registry_auth_addresses()
+            )
+        except Exception as exc:
+            test_case.assertIn(expected, str(exc))
+        else:
+            test_case.fail(f"expected registry auth validation failure containing {expected!r}")
+
+    @function
+    async def rejects_missing_bake_file(self) -> None:
+        """Verify a missing Bake file fails clearly."""
+        await self._assert_bake_error(
+            target="app",
+            bake_path="missing.json",
+            expected="Bake file not found: missing.json",
+        )
+
+    @function
+    async def rejects_missing_bake_target(self) -> None:
+        """Verify a missing Bake target fails clearly."""
+        await self._assert_bake_error(
+            target="missing",
+            bake_path="docker-bake.json",
+            expected="Bake target 'missing' not found in docker-bake.json",
+        )
+
+    @function
+    async def rejects_missing_bake_tags(self) -> None:
+        """Verify a Bake target without tags fails clearly."""
+        await self._assert_bake_error(
+            target="missing-tags",
+            bake_path="validation-errors.json",
+            expected="Bake target 'missing-tags' must define at least one non-empty tag",
+        )
+
+    @function
+    async def rejects_unsupported_bake_target_field(self) -> None:
+        """Verify unsupported Bake target fields fail clearly."""
+        await self._assert_bake_error(
+            target="unsupported-field",
+            bake_path="validation-errors.json",
+            expected="Unsupported fields in Bake target 'unsupported-field': cache-from",
+        )
+
+    @function
+    async def rejects_unsupported_bake_interpolation(self) -> None:
+        """Verify unsupported Bake interpolation fails clearly."""
+        await self._assert_bake_error(
+            target="unsupported-interpolation",
+            bake_path="validation-errors.json",
+            expected="Unsupported Bake interpolation in tags",
+        )
+
+    async def _assert_bake_error(self, target: str, bake_path: str, expected: str) -> None:
+        test_case = TestCase()
+        try:
+            await (
+                dag.docker()
+                .build_from_bake(
+                    source=dag.current_module().source().directory("fixtures/bake-image"),
+                    target=target,
+                    bake_path=bake_path,
+                )
+                .tags()
+            )
+        except Exception as exc:
+            test_case.assertIn(expected, str(exc))
+        else:
+            test_case.fail(f"expected Bake validation failure containing {expected!r}")
 
     @function
     async def constructs_build_result(self) -> None:
@@ -162,7 +386,7 @@ class Tests:
                 context_path="fixtures/basic-image",
             )
             .with_publish_dry_run()
-            .publish(image_refs)
+            .publish(image_refs=image_refs)
         )
 
         test_case = TestCase()

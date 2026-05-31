@@ -1,0 +1,22 @@
+{
+  "target": {
+    "missing-tags": {
+      "context": "."
+    },
+    "unsupported-field": {
+      "context": ".",
+      "tags": [
+        "registry.example.local/bake-image:latest"
+      ],
+      "cache-from": [
+        "type=local,src=/tmp/cache"
+      ]
+    },
+    "unsupported-interpolation": {
+      "context": ".",
+      "tags": [
+        "registry.example.local/bake-image:${TAG:-latest}"
+      ]
+    }
+  }
+}

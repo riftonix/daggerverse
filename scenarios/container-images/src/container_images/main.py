@@ -129,7 +129,7 @@ class ContainerImages:
         if publish_dry_run:
             build = build.with_publish_dry_run()
 
-        image = build.publish([image_ref])
+        image = build.publish(image_refs=[image_ref])
         return await image.image_ref()
 
     @function
