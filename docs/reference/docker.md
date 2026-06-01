@@ -79,7 +79,7 @@ container = build.container()
 - `DockerBuild.tags() -> list[str]`
 - `DockerBuild.labels() -> list[str]`
 
-`build_from_bake` loads a JSON Docker Buildx Bake manifest and translates one target into Dagger-native build calls. It does not invoke the Docker CLI or require a Docker socket.
+`build_from_bake` loads a JSON Docker Buildx Bake manifest and translates one target into Dagger-native build calls. The target may be omitted when the manifest contains exactly one target. It does not invoke the Docker CLI or require a Docker socket.
 
 Supported target fields:
 
@@ -133,9 +133,10 @@ Build from the manifest:
 dagger -m ./modules/docker call build-from-bake \
   --source=. \
   --bake-path=docker/app/docker-bake.json \
-  --target=app \
   image-refs
 ```
+
+Pass `--target=app` when the manifest contains multiple targets.
 
 Override variables without editing the manifest:
 

@@ -50,11 +50,12 @@ Build a target from a JSON Docker Buildx Bake manifest without publishing:
 dagger -m ./scenarios/container-images call verify-bake-target \
   --source=. \
   --bake-path=images/api/docker-bake.json \
-  --bake-target=api \
   --variable-overrides=REGISTRY_PREFIX=registry.example.local/team \
   --smoke-command=app \
   --smoke-command=--version
 ```
+
+Pass `--bake-target=api` when the manifest contains multiple targets.
 
 ### Publish One Image
 
@@ -114,10 +115,11 @@ dagger -m ./scenarios/container-images call \
   publish-bake-target \
     --source=. \
     --bake-path=images/api/docker-bake.json \
-    --bake-target=api \
     --variable-overrides=REGISTRY_PREFIX=ghcr.io/example \
     --publish-dry-run=false
 ```
+
+Pass `--bake-target=api` when the manifest contains multiple targets.
 
 For local or default tests, change `--publish-dry-run=false` to `true` to
 validate publish wiring without pushing to a registry.

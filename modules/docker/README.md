@@ -16,7 +16,6 @@ Build a Bake target and inspect its resolved image references:
 ```bash
 dagger -m ./modules/docker call build-from-bake \
   --source=modules/docker/tests/fixtures/bake-image \
-  --target=app \
   image-refs
 ```
 

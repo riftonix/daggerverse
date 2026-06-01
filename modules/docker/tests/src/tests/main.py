@@ -28,6 +28,7 @@ class Tests:
         await self.dry_run_publishes_image_refs()
         await self.constructs_image_result()
         await self.builds_image_from_bake()
+        await self.builds_image_from_single_bake_target_without_explicit_target()
         await self.builds_image_from_bake_explicit_path()
         await self.builds_image_with_interpolation()
         await self.builds_image_with_variable_override()
@@ -38,6 +39,7 @@ class Tests:
         await self.rejects_empty_registry_auth_username()
         await self.rejects_missing_bake_file()
         await self.rejects_missing_bake_target()
+        await self.rejects_omitted_bake_target_for_multiple_targets()
         await self.rejects_missing_bake_tags()
         await self.rejects_unsupported_bake_target_field()
         await self.rejects_unsupported_bake_interpolation()
@@ -53,6 +55,16 @@ class Tests:
         output = await build.container().with_exec(["cat", "/message.txt"]).stdout()
         TestCase().assertEqual("bake-says-hello\n", output)
         TestCase().assertEqual("base", await build.target())
+
+    @function
+    async def builds_image_from_single_bake_target_without_explicit_target(self) -> None:
+        """Verify Docker.build_from_bake selects the only Bake target when omitted."""
+        build = dag.docker().build_from_bake(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+        )
+
+        output = await build.container().with_exec(["cat", "/message.txt"]).stdout()
+        TestCase().assertEqual("bake-says-hello\n", output)
 
     @function
     async def builds_image_from_bake_explicit_path(self) -> None:
@@ -209,6 +221,15 @@ class Tests:
         )
 
     @function
+    async def rejects_omitted_bake_target_for_multiple_targets(self) -> None:
+        """Verify an omitted Bake target fails when the manifest is ambiguous."""
+        await self._assert_bake_error(
+            target=None,
+            bake_path="validation-errors.json",
+            expected="Bake file validation-errors.json must define exactly one target when target is omitted; found 3",
+        )
+
+    @function
     async def rejects_missing_bake_tags(self) -> None:
         """Verify a Bake target without tags fails clearly."""
         await self._assert_bake_error(
@@ -235,7 +256,7 @@ class Tests:
             expected="Unsupported Bake interpolation in tags",
         )
 
-    async def _assert_bake_error(self, target: str, bake_path: str, expected: str) -> None:
+    async def _assert_bake_error(self, target: str | None, bake_path: str, expected: str) -> None:
         test_case = TestCase()
         try:
             await (
