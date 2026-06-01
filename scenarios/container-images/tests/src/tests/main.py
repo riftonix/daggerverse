@@ -38,8 +38,10 @@ class Tests:
         await self.verifies_multiple_images()
         await self.propagates_multi_image_verification_failure()
         await self.verifies_bake_target_build_only()
+        await self.verifies_single_bake_target_without_explicit_target()
         await self.dry_run_publishes_image()
         await self.dry_run_publishes_bake_target()
+        await self.dry_run_publishes_single_bake_target_without_explicit_target()
         await self.dry_run_publishes_image_with_options_and_registry_auth()
         await self.dry_run_publishes_multiple_images()
         await self.dry_run_publishes_multiple_images_with_registry_auth()
@@ -172,6 +174,16 @@ class Tests:
         TestCase().assertEqual("verified Bake target app", result)
 
     @function
+    async def verifies_single_bake_target_without_explicit_target(self) -> None:
+        """Verify the scenario selects the only Bake target when omitted."""
+        result = await dag.container_images().verify_bake_target(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            bake_path="docker-bake.json",
+        )
+
+        TestCase().assertEqual("verified Bake target from docker-bake.json", result)
+
+    @function
     async def dry_run_publishes_image(self) -> None:
         """Verify single-image publication wiring without a registry."""
         image_ref = "registry.example.local/container-images/basic:latest"
@@ -201,6 +213,17 @@ class Tests:
                 variable_overrides=["MESSAGE=hello-from-publish"],
                 publish_dry_run=True,
             )
+        )
+
+        TestCase().assertEqual(["registry.example.local/container-images/bake:latest"], result)
+
+    @function
+    async def dry_run_publishes_single_bake_target_without_explicit_target(self) -> None:
+        """Verify Bake publication selects the only target when omitted."""
+        result = await dag.container_images().publish_bake_target(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            bake_path="docker-bake.json",
+            publish_dry_run=True,
         )
 
         TestCase().assertEqual(["registry.example.local/container-images/bake:latest"], result)

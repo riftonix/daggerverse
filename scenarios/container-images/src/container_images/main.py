@@ -137,7 +137,10 @@ class ContainerImages:
             Doc("Source directory containing the Bake file and image build context"),
         ],
         bake_path: Annotated[str, Doc("Path to the Bake file relative to source")],
-        bake_target: Annotated[str, Doc("Bake target to verify")],
+        bake_target: Annotated[
+            str | None,
+            Doc("Optional Bake target to verify; omit when the manifest contains exactly one target"),
+        ] = None,
         variable_overrides: Annotated[
             list[str] | None,
             Doc("Optional Bake variable overrides in KEY=VALUE form"),
@@ -162,7 +165,11 @@ class ContainerImages:
         else:
             await build.container().sync()
 
-        return f"verified Bake target {bake_target}"
+        return (
+            f"verified Bake target {bake_target}"
+            if bake_target is not None
+            else f"verified Bake target from {bake_path}"
+        )
 
     @function
     async def publish_image(
@@ -205,7 +212,10 @@ class ContainerImages:
             Doc("Source directory containing the Bake file and image build context"),
         ],
         bake_path: Annotated[str, Doc("Path to the Bake file relative to source")],
-        bake_target: Annotated[str, Doc("Bake target to publish")],
+        bake_target: Annotated[
+            str | None,
+            Doc("Optional Bake target to publish; omit when the manifest contains exactly one target"),
+        ] = None,
         variable_overrides: Annotated[
             list[str] | None,
             Doc("Optional Bake variable overrides in KEY=VALUE form"),

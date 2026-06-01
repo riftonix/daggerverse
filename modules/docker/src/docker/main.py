@@ -298,7 +298,10 @@ class Docker:
             DefaultPath("."),
             Doc("Source directory containing the Docker build context and Bake file"),
         ],
-        target: Annotated[str, Doc("Bake target to build")],
+        target: Annotated[
+            str | None,
+            Doc("Optional Bake target to build; omit when the manifest contains exactly one target"),
+        ] = None,
         bake_path: Annotated[str, Doc("Path to the Bake file relative to source")] = "docker-bake.json",
         variable_overrides: Annotated[
             list[str] | None,
@@ -324,6 +327,13 @@ class Docker:
         vars_map.update(self._parse_key_values(variable_overrides or [], "Bake variable override"))
 
         targets = bake_data.get("target", {})
+        if target is None:
+            if len(targets) != 1:
+                msg = (
+                    f"Bake file {bake_path} must define exactly one target when target is omitted; found {len(targets)}"
+                )
+                raise ValueError(msg)
+            target = next(iter(targets))
         if target not in targets:
             msg = f"Bake target {target!r} not found in {bake_path}"
             raise ValueError(msg)

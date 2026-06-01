@@ -76,11 +76,12 @@ Verify one Bake target:
 dagger -m ./scenarios/container-images call verify-bake-target \
   --source=. \
   --bake-path=images/api/docker-bake.json \
-  --bake-target=api \
   --variable-overrides=REGISTRY_PREFIX=registry.example.local/team \
   --smoke-command=app \
   --smoke-command=--version
 ```
+
+Pass `--bake-target=api` when the manifest contains multiple targets.
 
 Verification builds the selected image without publishing it. See
 [Parameters](#parameters) for the distinction between `--target` and
@@ -141,10 +142,11 @@ dagger -m ./scenarios/container-images call \
   publish-bake-target \
     --source=. \
     --bake-path=images/api/docker-bake.json \
-    --bake-target=api \
     --variable-overrides=REGISTRY_PREFIX=ghcr.io/example \
     --publish-dry-run=false
 ```
+
+Pass `--bake-target=api` when the manifest contains multiple targets.
 
 `publish-bake-target` accepts optional `--variable-overrides=KEY=VALUE` values.
 Use them to override values such as the registry prefix without editing the
@@ -170,7 +172,7 @@ Explicit image build parameters:
 Bake target parameters:
 
 - `--bake-path`: JSON Docker Buildx Bake file relative to `--source`.
-- `--bake-target`: required named target from the Bake manifest. This is not a Dockerfile stage.
+- `--bake-target`: optional named target from the Bake manifest. Omit it only when the manifest contains exactly one target. This is not a Dockerfile stage.
 - `--variable-overrides=KEY=VALUE`: optional Bake variable override. Repeat for multiple variables.
 
 Verification parameter:
