@@ -51,6 +51,25 @@ class Tags:
         )
         return [line.strip() for line in output.splitlines() if line.strip()]
 
+    async def ensure_pushed_tag(self, tag: str, remote: str) -> str:
+        self.with_fetched_tags(remote=remote, prune=False)
+        if await self.has_tag(tag=tag):
+            return tag
+
+        self.create_tag(
+            tag=tag,
+            message=None,
+            user_name="dagger-ci",
+            user_email="dagger-ci@example.local",
+        )
+        self.push_tag(tag=tag, remote=remote)
+        await (
+            self.git.container()
+            .with_exec(["git", "ls-remote", "--exit-code", "--tags", remote, f"refs/tags/{tag}"])
+            .sync()
+        )
+        return tag
+
     def create_tag(self, tag: str, message: str | None, user_name: str, user_email: str) -> GitCli:
         cmd = ["git", "tag", tag]
         if message is not None:
