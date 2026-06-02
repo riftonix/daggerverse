@@ -22,6 +22,7 @@ Defaults:
 ## Core Objects
 
 - `Docker`
+- `DockerBakeTarget`
 - `DockerBuild`
 - `DockerImage`
 
@@ -74,12 +75,25 @@ container = build.container()
 
 ## Docker Buildx Bake
 
+- `resolve_bake_target(source, target=None, bake_path='docker-bake.json', variable_overrides=None) -> DockerBakeTarget`
 - `build_from_bake(source, target, bake_path='docker-bake.json', variable_overrides=None) -> DockerBuild`
+- `DockerBakeTarget.context_path() -> str`
+- `DockerBakeTarget.dockerfile_path() -> str`
+- `DockerBakeTarget.target() -> str`
+- `DockerBakeTarget.build_args() -> list[str]`
+- `DockerBakeTarget.platforms() -> list[dagger.Platform]`
+- `DockerBakeTarget.image_refs() -> list[str]`
+- `DockerBakeTarget.tags() -> list[str]`
+- `DockerBakeTarget.labels() -> list[str]`
 - `DockerBuild.image_refs() -> list[str]`
 - `DockerBuild.tags() -> list[str]`
 - `DockerBuild.labels() -> list[str]`
 
-`build_from_bake` loads a JSON Docker Buildx Bake manifest and translates one target into Dagger-native build calls. The target may be omitted when the manifest contains exactly one target. It does not invoke the Docker CLI or require a Docker socket.
+`resolve_bake_target` loads a JSON Docker Buildx Bake manifest and resolves one
+target without building an image. `build_from_bake` reuses the resolved metadata
+and translates it into Dagger-native build calls. The target may be omitted when
+the manifest contains exactly one target. Neither function invokes the Docker
+CLI or requires a Docker socket.
 
 Supported target fields:
 
@@ -136,6 +150,15 @@ dagger -m ./modules/docker call build-from-bake \
   image-refs
 ```
 
+Resolve metadata without building:
+
+```bash
+dagger -m ./modules/docker call resolve-bake-target \
+  --source=. \
+  --bake-path=docker/app/docker-bake.json \
+  image-refs
+```
+
 Pass `--target=app` when the manifest contains multiple targets.
 
 Override variables without editing the manifest:
@@ -149,7 +172,19 @@ dagger -m ./modules/docker call build-from-bake \
   image-refs
 ```
 
-Python SDK example:
+Python SDK metadata example:
+
+```python
+target = await dag.docker().resolve_bake_target(
+    source=repo,
+    bake_path="docker/app/docker-bake.json",
+    target="app",
+    variable_overrides=["REGISTRY=registry.example.local/team"],
+)
+image_refs = await target.image_refs()
+```
+
+Python SDK build example:
 
 ```python
 build = dag.docker().build_from_bake(
@@ -283,4 +318,9 @@ The Docker module has a neighboring Dagger test module under `modules/docker/tes
 make tests module docker
 ```
 
-The default tests cover explicit builds, Bake target loading and interpolation, Bake validation failures, image reference accessors, registry auth validation, explicit platforms, smoke checks, and dry-run publish wiring. They intentionally avoid requiring external registry credentials or an ephemeral in-Dagger registry for real `Container.publish` calls.
+The default tests cover explicit builds, metadata-only Bake target resolution,
+Bake target loading and interpolation, Bake validation failures, image reference
+accessors, registry auth validation, explicit platforms, smoke checks, and
+dry-run publish wiring. They intentionally avoid requiring external registry
+credentials or an ephemeral in-Dagger registry for real `Container.publish`
+calls.

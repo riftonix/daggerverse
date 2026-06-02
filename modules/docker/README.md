@@ -19,6 +19,14 @@ dagger -m ./modules/docker call build-from-bake \
   image-refs
 ```
 
+Resolve Bake metadata without building an image:
+
+```bash
+dagger -m ./modules/docker call resolve-bake-target \
+  --source=modules/docker/tests/fixtures/bake-image \
+  image-refs
+```
+
 ## Documentation Path
 
 Use this README only as the local module entry point. The main documentation lives under `docs/`:

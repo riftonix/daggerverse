@@ -1,0 +1,25 @@
+{
+  "variable": {
+    "VERSION": {
+      "default": "1.2.3"
+    }
+  },
+  "target": {
+    "metadata-only": {
+      "context": "missing-context",
+      "dockerfile": "MissingDockerfile",
+      "args": {
+        "VERSION": "${VERSION}"
+      },
+      "tags": [
+        "registry.example.local/metadata-only:${VERSION}"
+      ],
+      "labels": {
+        "org.opencontainers.image.version": "${VERSION}"
+      },
+      "platforms": [
+        "linux/amd64"
+      ]
+    }
+  }
+}

@@ -37,6 +37,59 @@ class DockerRegistryAuth:
 
 
 @object_type
+class DockerBakeTarget:
+    """Resolved Docker Buildx Bake target metadata."""
+
+    context_path_: str
+    dockerfile_path_: str
+    target_: str | None
+    build_args_: list[str]
+    platforms_: list[dagger.Platform]
+    tags_: list[str]
+    labels_: list[str]
+
+    @function
+    def context_path(self) -> str:
+        """Return the resolved build context path."""
+        return self.context_path_
+
+    @function
+    def dockerfile_path(self) -> str:
+        """Return the resolved Dockerfile path."""
+        return self.dockerfile_path_
+
+    @function
+    def target(self) -> str:
+        """Return the resolved Dockerfile target, if configured."""
+        return self.target_ or ""
+
+    @function
+    def build_args(self) -> list[str]:
+        """Return resolved build arguments."""
+        return self.build_args_
+
+    @function
+    def platforms(self) -> list[dagger.Platform]:
+        """Return resolved target platforms."""
+        return self.platforms_
+
+    @function
+    def tags(self) -> list[str]:
+        """Return resolved image tags."""
+        return self.tags_
+
+    @function
+    def image_refs(self) -> list[str]:
+        """Return resolved OCI image references."""
+        return self.tags_
+
+    @function
+    def labels(self) -> list[str]:
+        """Return resolved image labels in KEY=VALUE form."""
+        return self.labels_
+
+
+@object_type
 class DockerBuild:
     """Container image build result."""
 
@@ -309,6 +362,42 @@ class Docker:
         ] = None,
     ) -> DockerBuild:
         """Build a container image from a Docker Buildx Bake target."""
+        bake_target = await self.resolve_bake_target(
+            source=source,
+            target=target,
+            bake_path=bake_path,
+            variable_overrides=variable_overrides,
+        )
+        return self.build(
+            source=source,
+            context_path=bake_target.context_path_,
+            dockerfile_path=bake_target.dockerfile_path_,
+            target=bake_target.target_,
+            build_args=bake_target.build_args_,
+            platforms=bake_target.platforms_,
+            tags=bake_target.tags_,
+            labels=bake_target.labels_,
+        )
+
+    @function
+    async def resolve_bake_target(
+        self,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Source directory containing the Docker build context and Bake file"),
+        ],
+        target: Annotated[
+            str | None,
+            Doc("Optional Bake target to resolve; omit when the manifest contains exactly one target"),
+        ] = None,
+        bake_path: Annotated[str, Doc("Path to the Bake file relative to source")] = "docker-bake.json",
+        variable_overrides: Annotated[
+            list[str] | None,
+            Doc("Optional Bake variable overrides in KEY=VALUE form"),
+        ] = None,
+    ) -> DockerBakeTarget:
+        """Resolve Docker Buildx Bake target metadata without building an image."""
         try:
             bake_contents = await source.file(bake_path).contents()
         except Exception as exc:
@@ -383,15 +472,14 @@ class Docker:
         elif isinstance(bake_labels, list):
             labels = [self._interpolate_bake_string(label, vars_map, "labels") for label in bake_labels]
 
-        return self.build(
-            source=source,
-            context_path=context_path,
-            dockerfile_path=dockerfile_path,
-            target=docker_target or None,
-            build_args=build_args,
-            platforms=platforms,
-            tags=tags,
-            labels=labels,
+        return DockerBakeTarget(
+            context_path_=context_path,
+            dockerfile_path_=dockerfile_path,
+            target_=docker_target or None,
+            build_args_=build_args,
+            platforms_=platforms,
+            tags_=tags,
+            labels_=labels,
         )
 
     def _interpolate_bake_string(self, text: str, vars_map: dict[str, str], field: str) -> str:
