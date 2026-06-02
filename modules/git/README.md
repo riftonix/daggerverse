@@ -11,6 +11,14 @@ dagger -m ./modules/git call get-changed-files \
   --head-ref=HEAD
 ```
 
+Ensure a release tag exists on a remote:
+
+```bash
+dagger -m ./modules/git call ensure-pushed-tag \
+  --source=. \
+  --tag=v1.2.3
+```
+
 ## Documentation Path
 
 Use this README only as the local module entry point. The main documentation lives under `docs/`:

@@ -121,6 +121,7 @@ Use changed components to build a CI matrix outside the Git module. The module r
 - `has_tag(tag) -> bool`
 - `get_latest_tag(pattern='*', semver=True) -> str`
 - `get_tags_pointing_at(ref='HEAD') -> list[str]`
+- `ensure_pushed_tag(tag, remote='origin') -> str`
 - `create_tag(tag, message=None, user_name='dagger-ci', user_email='dagger-ci@example.local') -> Git`
 - `push_tag(tag, remote='origin') -> Git`
 
@@ -131,6 +132,19 @@ dagger -m ./modules/git call \
   create-tag --source=. --tag=v1.2.3 --message="Release v1.2.3" \
   push-tag --tag=v1.2.3 --remote=origin
 ```
+
+Idempotently create and push a lightweight release tag when it is missing:
+
+```bash
+dagger -m ./modules/git call ensure-pushed-tag \
+  --source=. \
+  --tag=v1.2.3 \
+  --remote=origin
+```
+
+`ensure-pushed-tag` fetches remote tags first. It returns the requested tag
+without pushing when the tag already exists, otherwise it creates the tag on
+`HEAD`, pushes it, and returns the tag name.
 
 ### Release Checks
 

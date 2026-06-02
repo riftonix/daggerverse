@@ -18,6 +18,8 @@ class TagTests(SyntheticGitRepos):
         await self.create_lightweight_tag()
         await self.create_annotated_tag()
         await self.push_tag_to_local_bare_remote()
+        await self.ensure_pushed_tag_creates_missing_remote_tag()
+        await self.ensure_pushed_tag_accepts_existing_remote_tag()
 
     async def with_fetched_tags(self) -> None:
         """Fetch tags from a local bare remote into a repository without local tags."""
@@ -157,3 +159,19 @@ class TagTests(SyntheticGitRepos):
         test_case.assertEqual("", before_push.strip())
         test_case.assertIn(local_sha.strip(), after_push)
         test_case.assertIn("refs/tags/v1.1.0", after_push)
+
+    async def ensure_pushed_tag_creates_missing_remote_tag(self) -> None:
+        """Create and push a missing remote tag."""
+        git = dag.git(source=self.repo_with_remote_tag())
+
+        result = await git.ensure_pushed_tag(tag="v1.1.0")
+
+        TestCase().assertEqual("v1.1.0", result)
+
+    async def ensure_pushed_tag_accepts_existing_remote_tag(self) -> None:
+        """Return an existing remote tag without pushing a duplicate."""
+        git = dag.git(source=self.repo_with_remote_tag())
+
+        result = await git.ensure_pushed_tag(tag="v1.0.0")
+
+        TestCase().assertEqual("v1.0.0", result)

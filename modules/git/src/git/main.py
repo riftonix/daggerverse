@@ -375,6 +375,15 @@ class Git:
         return await Tags(self._git()).get_tags_pointing_at(ref=ref)
 
     @function
+    async def ensure_pushed_tag(
+        self,
+        tag: Annotated[str, Doc("Tag name to ensure exists on the remote")],
+        remote: Annotated[str, Doc("Remote name to fetch and push the tag against")] = "origin",
+    ) -> str:
+        """Return a tag after ensuring it exists on the remote."""
+        return await Tags(self._git()).ensure_pushed_tag(tag=tag, remote=remote)
+
+    @function
     async def create_tag(
         self,
         tag: Annotated[str, Doc("Tag name to create")],
