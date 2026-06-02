@@ -238,6 +238,45 @@ class ContainerImages:
         return await image.image_refs()
 
     @function
+    async def get_bake_release_tag(
+        self,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Source directory containing the Bake file"),
+        ],
+        bake_path: Annotated[str, Doc("Path to the Bake file relative to source")],
+        component_path: Annotated[str, Doc("Repository component path used as the Git release tag prefix")],
+        bake_target: Annotated[
+            str | None,
+            Doc("Optional Bake target to inspect; omit when the manifest contains exactly one target"),
+        ] = None,
+        variable_overrides: Annotated[
+            list[str] | None,
+            Doc("Optional Bake variable overrides in KEY=VALUE form"),
+        ] = None,
+    ) -> str:
+        """Return a Git release tag rendered from resolved Bake metadata."""
+        normalized_component_path = component_path.strip("/")
+        if not normalized_component_path:
+            msg = "Component path must not be empty"
+            raise ValueError(msg)
+
+        target = dag.docker().resolve_bake_target(
+            source=source,
+            bake_path=bake_path,
+            target=bake_target,
+            variable_overrides=variable_overrides,
+        )
+        image_refs = await target.image_refs()
+        release_tags = {self._image_ref_tag(image_ref) for image_ref in image_refs}
+        if len(release_tags) != 1:
+            msg = f"Bake image references must resolve to exactly one release tag; found {sorted(release_tags)}"
+            raise ValueError(msg)
+
+        return f"{normalized_component_path}/{release_tags.pop()}"
+
+    @function
     async def publish_images(
         self,
         source: Annotated[
@@ -281,6 +320,13 @@ class ContainerImages:
             msg = f"Invalid publish spec {publish_spec!r}: expected CONTEXT_PATH=IMAGE_REF"
             raise ValueError(msg)
         return context_path, image_ref
+
+    def _image_ref_tag(self, image_ref: str) -> str:
+        repository, separator, tag = image_ref.rpartition(":")
+        if separator != ":" or not repository or not tag or "/" in tag:
+            msg = f"Image reference {image_ref!r} must include a release tag"
+            raise ValueError(msg)
+        return tag
 
     def _docker(self):
         docker = dag.docker()

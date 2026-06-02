@@ -2,6 +2,12 @@
   "variable": {
     "MESSAGE": {
       "default": "hello-from-bake"
+    },
+    "HUGO_VERSION": {
+      "default": "0.147.1"
+    },
+    "AUTOPREFIXER_VERSION": {
+      "default": "10.4.21"
     }
   },
   "target": {
@@ -12,7 +18,7 @@
         "MESSAGE": "${MESSAGE}"
       },
       "tags": [
-        "registry.example.local/container-images/bake:latest"
+        "registry.example.local/container-images/bake:${HUGO_VERSION}-${AUTOPREFIXER_VERSION}"
       ]
     }
   }

@@ -42,6 +42,7 @@ class Tests:
         await self.dry_run_publishes_image()
         await self.dry_run_publishes_bake_target()
         await self.dry_run_publishes_single_bake_target_without_explicit_target()
+        await self.gets_bake_release_tag()
         await self.dry_run_publishes_image_with_options_and_registry_auth()
         await self.dry_run_publishes_multiple_images()
         await self.dry_run_publishes_multiple_images_with_registry_auth()
@@ -215,7 +216,7 @@ class Tests:
             )
         )
 
-        TestCase().assertEqual(["registry.example.local/container-images/bake:latest"], result)
+        TestCase().assertEqual(["registry.example.local/container-images/bake:0.147.1-10.4.21"], result)
 
     @function
     async def dry_run_publishes_single_bake_target_without_explicit_target(self) -> None:
@@ -226,7 +227,19 @@ class Tests:
             publish_dry_run=True,
         )
 
-        TestCase().assertEqual(["registry.example.local/container-images/bake:latest"], result)
+        TestCase().assertEqual(["registry.example.local/container-images/bake:0.147.1-10.4.21"], result)
+
+    @function
+    async def gets_bake_release_tag(self) -> None:
+        """Verify the scenario renders a Git release tag from Bake metadata."""
+        component_path = "/".join(["docker", "hugo-autoprefixer"])
+        result = await dag.container_images().get_bake_release_tag(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            bake_path="docker-bake.json",
+            component_path=component_path,
+        )
+
+        TestCase().assertEqual(f"{component_path}/0.147.1-10.4.21", result)
 
     @function
     async def dry_run_publishes_image_with_options_and_registry_auth(self) -> None:

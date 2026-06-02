@@ -124,6 +124,18 @@ Pass `--bake-target=api` when the manifest contains multiple targets.
 For local or default tests, change `--publish-dry-run=false` to `true` to
 validate publish wiring without pushing to a registry.
 
+### Get One Bake Release Tag
+
+Render a Git release tag from resolved Bake metadata without building an image
+or performing Git operations:
+
+```bash
+dagger -m ./scenarios/container-images call get-bake-release-tag \
+  --source=. \
+  --bake-path=docker/hugo-autoprefixer/docker-bake.json \
+  --component-path=docker/hugo-autoprefixer
+```
+
 See [Container images scenario reference](../../docs/reference/container-images.md#parameters)
 for the meaning of every parameter.
 
