@@ -175,7 +175,7 @@ dagger -m ./modules/docker call build-from-bake \
 Python SDK metadata example:
 
 ```python
-target = await dag.docker().resolve_bake_target(
+target = dag.docker().resolve_bake_target(
     source=repo,
     bake_path="docker/app/docker-bake.json",
     target="app",

@@ -28,6 +28,7 @@ point that accepts selected image contexts and destination image references.
 - publish one explicit context to one explicit image reference
 - publish multiple explicit context/reference pairs
 - publish one JSON Docker Buildx Bake target to its resolved image references
+- render one Git release tag from resolved JSON Docker Buildx Bake metadata
 
 The scenario keeps CI-provider policy outside its implementation. Provider
 workflows decide when to run, which contexts changed, how tags map to image
@@ -155,6 +156,21 @@ manifest. The function returns all image references published for the target.
 Use `--publish-dry-run=true` in default tests or local wiring checks when no
 registry reachable by the Dagger engine is available.
 
+## Release Tags
+
+Render a Git release tag without building an image or performing Git operations:
+
+```bash
+dagger -m ./scenarios/container-images call get-bake-release-tag \
+  --source=. \
+  --bake-path=docker/hugo-autoprefixer/docker-bake.json \
+  --component-path=docker/hugo-autoprefixer
+```
+
+`get-bake-release-tag` returns `<component-path>/<image-version>`. All resolved
+Bake image references must use the same version tag so multi-registry
+publication still maps to one Git release marker.
+
 ## Parameters
 
 Common source parameter:
@@ -174,6 +190,7 @@ Bake target parameters:
 - `--bake-path`: JSON Docker Buildx Bake file relative to `--source`.
 - `--bake-target`: optional named target from the Bake manifest. Omit it only when the manifest contains exactly one target. This is not a Dockerfile stage.
 - `--variable-overrides=KEY=VALUE`: optional Bake variable override. Repeat for multiple variables.
+- `--component-path`: repository component path used by `get-bake-release-tag` as the Git release tag prefix.
 
 Verification parameter:
 
