@@ -27,6 +27,7 @@ class Tests:
         await self.configures_registry_auth_without_exposing_secret()
         await self.dry_run_publishes_image_refs()
         await self.constructs_image_result()
+        await self.resolves_bake_target_metadata_without_building()
         await self.builds_image_from_bake()
         await self.builds_image_from_single_bake_target_without_explicit_target()
         await self.builds_image_from_bake_explicit_path()
@@ -55,6 +56,24 @@ class Tests:
         output = await build.container().with_exec(["cat", "/message.txt"]).stdout()
         TestCase().assertEqual("bake-says-hello\n", output)
         TestCase().assertEqual("base", await build.target())
+
+    @function
+    async def resolves_bake_target_metadata_without_building(self) -> None:
+        """Verify Docker.resolve_bake_target does not require a buildable context."""
+        target = dag.docker().resolve_bake_target(
+            source=dag.current_module().source().directory("fixtures/bake-image"),
+            bake_path="metadata-only.json",
+        )
+
+        test_case = TestCase()
+        test_case.assertEqual("missing-context", await target.context_path())
+        test_case.assertEqual("MissingDockerfile", await target.dockerfile_path())
+        test_case.assertEqual("", await target.target())
+        test_case.assertEqual(["VERSION=1.2.3"], await target.build_args())
+        test_case.assertEqual(["linux/amd64"], await target.platforms())
+        test_case.assertEqual(["registry.example.local/metadata-only:1.2.3"], await target.tags())
+        test_case.assertEqual(["registry.example.local/metadata-only:1.2.3"], await target.image_refs())
+        test_case.assertEqual(["org.opencontainers.image.version=1.2.3"], await target.labels())
 
     @function
     async def builds_image_from_single_bake_target_without_explicit_target(self) -> None:
