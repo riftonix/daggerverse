@@ -24,13 +24,13 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/modules/opentofu
 - **ssh** - SSH client in a container with key setup helpers.
   - https://github.com/riftonix/daggerverse/modules/ssh
-- **pipelines** - CI orchestration on top of modules (currently helm + git).
-  - https://github.com/riftonix/daggerverse/modules/pipelines
 
 ## Scenarios
 
 - **container-images** - portable image verification and publication workflow using explicit context paths and image references.
   - https://github.com/riftonix/daggerverse/scenarios/container-images
+- **helm-ci** - portable Helm chart verification and publication workflow using the Helm and Git modules.
+  - https://github.com/riftonix/daggerverse/scenarios/helm-ci
 
 ## Requirements
 
@@ -49,6 +49,7 @@ Run checks through the explicit component command form:
 ```bash
 make tests module docker
 make tests scenario container-images
+make tests scenario helm-ci
 make lint-check
 make format-check
 ```

@@ -15,6 +15,7 @@
 │   ├── opentofu/
 │   └── ssh/
 ├── scenarios/
+│   ├── container-images/
 │   └── helm-ci/
 ├── README.md
 └── LICENSE
@@ -38,7 +39,7 @@ Ready-to-run CI jobs live under `scenarios/<name>`. Scenarios compose reusable m
 
 Scenarios should pin and test the versions of the building blocks they compose. A scenario may use module-specific objects internally, but its public API should expose stable Dagger primitives or scenario-owned spec/result objects rather than object types from implementation modules. This lets users compose released scenarios and modules independently without type collisions between different versions of the same module.
 
-The existing `modules/pipelines` directory is transitional. It is a temporary Helm CI wrapper for a future scenario, but the final `scenarios/` layout should be defined in a separate proposal.
+`scenarios/helm-ci` composes the Helm and Git modules into portable Helm chart verification and publication workflows.
 
 ## `.github/workflows/`
 

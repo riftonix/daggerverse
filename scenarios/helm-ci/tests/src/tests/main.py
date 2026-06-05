@@ -1,4 +1,4 @@
-"""Dagger-native tests for the transitional Pipelines module."""
+"""Dagger-native tests for the Helm CI scenario."""
 
 from unittest import TestCase
 
@@ -7,22 +7,22 @@ from dagger import Directory, dag, function, object_type
 
 @object_type
 class Tests:
-    """Test module entrypoint for transitional pipeline checks."""
+    """Test module entrypoint for Helm CI scenario checks."""
 
     @function
     def module(self) -> str:
         """Return the test module name."""
-        return "pipelines-tests"
+        return "helm-ci-tests"
 
     @function
     async def all(self) -> None:
-        """Run all Pipelines module tests."""
+        """Run all Helm CI scenario tests."""
         await self.helm_verify_changed_charts_uses_merge_base()
 
     @function
     async def helm_verify_changed_charts_uses_merge_base(self) -> None:
         """Verify only feature-branch chart changes, not base-branch drift."""
-        outputs = await dag.pipelines().helm_verify_changed_charts(
+        outputs = await dag.helm_ci().helm_verify_changed_charts(
             source=self._repo_with_pull_request_chart_changes(),
             target_branch="main",
             charts_path="charts",

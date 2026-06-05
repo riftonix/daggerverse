@@ -9,7 +9,7 @@ This documentation separates learning material, task-oriented guides, reference 
 3. Read [Run module and scenario checks](how-to/run-module-checks.md) to run local test, lint, and format commands.
 4. Read [Write Dagger CI modules and tests](how-to/write-dagger-ci-modules-and-tests.md) before adding or testing a module.
 5. Read [Git module reference](reference/git.md) when building Git-based CI decisions.
-6. Read [Run Helm checks through the transitional pipeline](how-to/run-helm-checks-through-pipelines.md) if you want the current CI-oriented Helm orchestration.
+6. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
 7. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
 8. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
 

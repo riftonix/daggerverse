@@ -32,7 +32,7 @@ For example, a Helm CI scenario can depend on local `helm` and `git` modules:
 ```json
 {
   "name": "helm",
-  "source": "../helm"
+  "source": "../../modules/helm"
 }
 ```
 
@@ -43,8 +43,6 @@ A released scenario should be self-consistent: it pins the module or scenario ve
 This prevents version collisions when a user composes their own scenario from multiple released building blocks. For example, a user may depend on `container-images@v1` and also use `docker@v2` directly. That is safe when `container-images@v1` hides its internal `docker` dependency behind primitive or scenario-owned return types. If a scenario exposed `DockerBuild` or `DockerImage` from its internal dependency, the user's direct `docker@v2` objects could become incompatible with the scenario's internal `docker@v1` objects.
 
 If users need a newer module behavior than a released scenario provides, they should either use the module directly in their own scenario, upgrade to a newer scenario release, or fork/recompose the scenario with their chosen module version.
-
-The current `modules/pipelines` directory is transitional. Treat it as a temporary Helm CI wrapper; the final `scenarios/` layout, naming, and provider-specific job shape should be defined in a separate proposal.
 
 ## Documentation Boundary
 

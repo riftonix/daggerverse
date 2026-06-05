@@ -6,7 +6,7 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 
 
 @object_type
-class Pipelines:
+class HelmCi:
     async def _get_changed_chart_paths(
         self,
         source: dagger.Directory,
