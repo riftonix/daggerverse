@@ -2,8 +2,6 @@
 
 Reusable Dagger modules live under `modules/`. Ready-to-run CI jobs belong under `scenarios/`.
 
-The current `modules/pipelines` directory is a temporary exception. Treat it as a Helm CI wrapper that should move to a future `scenarios/` entrypoint; the final scenario name, layout, and provider-specific job shape should be defined in a separate proposal.
-
 Use this command shape from the repository root:
 
 ```bash
@@ -39,7 +37,7 @@ Scenarios can depend on local modules. For example, a Helm CI scenario can depen
 ```json
 {
   "name": "helm",
-  "source": "../helm"
+  "source": "../../modules/helm"
 }
 ```
 

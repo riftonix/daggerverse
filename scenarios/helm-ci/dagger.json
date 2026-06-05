@@ -1,5 +1,5 @@
 {
-  "name": "pipelines",
+  "name": "helm-ci",
   "engineVersion": "v0.20.8",
   "sdk": {
     "source": "python"
@@ -7,11 +7,11 @@
   "dependencies": [
     {
       "name": "helm",
-      "source": "../helm"
+      "source": "../../modules/helm"
     },
     {
       "name": "git",
-      "source": "../git"
+      "source": "../../modules/git"
     }
   ]
 }

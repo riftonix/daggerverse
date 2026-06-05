@@ -64,6 +64,18 @@ Runs SSH client operations in a container.
 
 Ready-to-run CI jobs are scenarios, not reusable modules.
 
+## helm-ci scenario
+
+Composes the reusable Helm and Git modules into portable Helm chart verification
+and publication workflows.
+
+- Path: `scenarios/helm-ci`
+- Main source: `scenarios/helm-ci/src/helm_ci/main.py`
+- How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
+- Typical verify command: `dagger -m ./scenarios/helm-ci call helm-verify --source=./charts/mychart`
+- Typical changed-chart command: `dagger -m ./scenarios/helm-ci call helm-verify-changed-charts --source=. --target-branch=master --charts-path=charts`
+- CI use cases: verify one chart, verify changed chart directories through provider-neutral Git inputs, and publish caller-selected chart versions to OCI registries.
+
 ## container-images scenario
 
 Composes the reusable Docker module into a portable image verification and publication workflow.
@@ -76,5 +88,3 @@ Composes the reusable Docker module into a portable image verification and publi
 - CI use cases: verify selected image contexts, publish caller-provided OCI image references, and keep provider-specific tag/path policy in the workflow layer.
 
 The Docker module and container-images scenario are separate layers. `modules/docker` exposes reusable Docker and OCI primitives for other scenarios. `scenarios/container-images` uses those primitives internally and exposes stable scenario-level inputs and outputs.
-
-The current `modules/pipelines` implementation is transitional: it is a temporary Helm CI wrapper for a future scenario, with final naming and layout left to a separate proposal.

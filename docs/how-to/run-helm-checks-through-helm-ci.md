@@ -1,13 +1,17 @@
-# Run Helm Checks Through The Transitional Pipeline
+# Run Helm Checks Through Helm CI
 
-Use the current `pipelines` module when you want a CI-style wrapper around Helm checks.
+Use the `helm-ci` scenario when you want a CI-style wrapper around Helm chart
+checks. The scenario composes `modules/helm` for Helm operations and
+`modules/git` for changed-directory selection.
 
-This module is transitional. Treat it as a temporary Helm CI wrapper for a future `scenarios/` entrypoint; final naming and layout should be defined in a separate proposal.
+CI provider workflows own event triggers, branch selection, path selection, and
+publish timing. Pass those decisions into the scenario as explicit inputs.
 
 ## Verify One Chart
 
 ```bash
-dagger -m ./modules/pipelines call helm-verify --source=./modules/helm/tests/charts/ns-configurator
+dagger -m ./scenarios/helm-ci call helm-verify \
+  --source=./modules/helm/tests/charts/ns-configurator
 ```
 
 The command runs Helm lint and template through the local Helm module dependency.
@@ -17,7 +21,7 @@ The command runs Helm lint and template through the local Helm module dependency
 Use `helm-verify-changed-charts` when the repository is a Git checkout and you want to check only changed chart directories under a path:
 
 ```bash
-dagger -m ./modules/pipelines call helm-verify-changed-charts \
+dagger -m ./scenarios/helm-ci call helm-verify-changed-charts \
   --source=. \
   --target-branch=master \
   --charts-path=modules/helm/tests/charts
@@ -29,7 +33,7 @@ The command asks the Git module for changed chart directories, then verifies eac
 
 ```bash
 REGISTRY_PASSWORD=secret \
-dagger -m ./modules/pipelines call helm-publish \
+dagger -m ./scenarios/helm-ci call helm-publish \
   --source=./modules/helm/tests/charts/ns-configurator \
   --oci-url=registry.example.com/mycharts \
   --version=0.1.0 \

@@ -6,7 +6,7 @@
   },
   "dependencies": [
     {
-      "name": "pipelines",
+      "name": "helm-ci",
       "source": ".."
     }
   ]
