@@ -1,0 +1,55 @@
+baseURL: ''
+title: Static Site Fixture
+enableRobotsTXT: true
+
+contentDir: content
+defaultContentLanguage: en
+defaultContentLanguageInSubdir: false
+enableMissingTranslationPlaceholders: true
+
+markup:
+  goldmark:
+    parser:
+      attribute:
+        block: true
+    renderer:
+      unsafe: true
+  highlight:
+    style: tango
+
+params:
+  privacy_policy: ''
+  version_menu: Releases
+  archived_version: false
+  version: 0.0
+  url_latest_version: https://example.com
+  github_project_repo: https://github.com/riftonix/daggerverse
+  github_branch: main
+  offlineSearch: false
+  prism_syntax_highlighting: false
+  copyright:
+    authors: Riftonix
+    from_year: 2026
+  ui:
+    breadcrumb_disable: false
+    navbar_logo: false
+    navbar_translucent_over_cover_disable: true
+    sidebar_menu_compact: false
+    sidebar_search_disable: true
+    showLightDarkModeMenu: false
+    feedback:
+      enable: false
+    readingtime:
+      enable: true
+  links:
+    user: []
+    developer: []
+
+module:
+  proxy: direct
+  hugoVersion:
+    extended: true
+    min: 0.73.0
+  imports:
+    - path: github.com/google/docsy
+      disable: false
