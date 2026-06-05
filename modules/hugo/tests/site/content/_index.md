@@ -40,4 +40,6 @@ title: ☸ WorkFlow
 Knowledge base and process descriptions for deploying applications in Kubernetes.
 Materials are aimed at engineers and developers who regularly work with k8s and related tooling.
 
+{{< site-base-url >}}
+
 {{% /blocks/lead %}}

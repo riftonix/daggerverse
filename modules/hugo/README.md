@@ -1,19 +1,18 @@
 # Hugo Dagger Module
 
-Containerized Hugo build tooling for Dagger pipelines. This module wraps the Hugo CLI in a reproducible container and provides a `build` function that prepares modules, installs required npm dependencies, and renders the `public` directory.
+Containerized Hugo build tooling for Dagger pipelines. This module wraps the Hugo CLI in a reproducible container and provides a `build` function that prepares modules and renders the `public` directory.
 
 For full repository documentation, see [../../docs/README.md](../../docs/README.md). For module overview and paths, see [../../docs/reference/modules.md](../../docs/reference/modules.md).
 
 ## Features
 - Reproducible Hugo environment via container image
 - Hugo module download (`hugo mod get -u`)
-- Configurable npm registry for assets pipeline
 - Static site build with `hugo --minify`
 
 ## Defaults
-- image_registry: `docker.io`
-- image_repository: `hugomods/hugo`
-- image_tag: `exts-0.154.2`
+- image_registry: `ghcr.io`
+- image_repository: `riftonix/container-images/hugo-autoprefixer`
+- image_tag: `0.154.5-10.5.0`
 - container_user: `65532`
 - Working directory in container: `/tmp/hugo/site`
 - NPM cache/config paths: `/tmp/npm-cache` and `/tmp/.npmrc`
@@ -26,12 +25,10 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - container() -> dagger.Container
   - Returns the cached base container with Hugo installed and the site mounted at `/tmp/hugo/site`.
 
-- build(hugo_theme_url: str, site_base_url: str, npm_registry_url: str = 'https://registry.npmjs.org/') -> dagger.Directory
+- build(hugo_theme_url: str, site_base_url: str) -> dagger.Directory
   - Runs:
     - `hugo version`
     - `hugo mod get -u <theme>`
-    - `npm config set registry <registry>`
-    - `npm install autoprefixer`
     - `hugo --minify --destination public --baseURL <site_base_url> --forceSyncStatic --cleanDestinationDir`
   - Returns the `public` directory as a Dagger `Directory`.
 
