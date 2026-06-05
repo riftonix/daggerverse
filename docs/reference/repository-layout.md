@@ -16,7 +16,8 @@
 │   └── ssh/
 ├── scenarios/
 │   ├── container-images/
-│   └── helm-ci/
+│   ├── helm-ci/
+│   └── static-site/
 ├── README.md
 └── LICENSE
 ```

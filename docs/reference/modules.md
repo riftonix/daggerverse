@@ -30,11 +30,12 @@ Runs Helm operations in a containerized environment.
 
 ## hugo
 
-Builds Hugo sites in a containerized environment.
+Builds, validates, and prepares Hugo sites or Hugo modules in a containerized environment.
 
 - Path: `modules/hugo`
 - Main source: `modules/hugo/src/hugo/main.py`
-- Typical command: `dagger -m ./modules/hugo call build --source=./site`
+- Detailed reference: [Hugo module reference](hugo.md)
+- Typical command: `dagger -m ./modules/hugo call --source=./site build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
 
 ## kind
 
@@ -88,3 +89,15 @@ Composes the reusable Docker module into a portable image verification and publi
 - CI use cases: verify selected image contexts, publish caller-provided OCI image references, and keep provider-specific tag/path policy in the workflow layer.
 
 The Docker module and container-images scenario are separate layers. `modules/docker` exposes reusable Docker and OCI primitives for other scenarios. `scenarios/container-images` uses those primitives internally and exposes stable scenario-level inputs and outputs.
+
+## static-site scenario
+
+Composes static-site engine modules into provider-neutral verification and
+rendering workflows.
+
+- Path: `scenarios/static-site`
+- Main source: `scenarios/static-site/src/static_site/main.py`
+- Detailed reference: [Static site scenario reference](static-site.md)
+- Typical verify command: `dagger -m ./scenarios/static-site call verify-site --site=./site --site-base-url=https://example.com/ --engine=hugo`
+- Typical render command: `dagger -m ./scenarios/static-site call render-site --site=./site --site-base-url=https://example.com/ --engine=hugo --output=./public`
+- CI use cases: verify and render caller-selected static sites, validate Hugo mount collisions, and keep provider-specific Pages lifecycle in workflow YAML.

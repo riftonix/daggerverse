@@ -10,8 +10,9 @@ This documentation separates learning material, task-oriented guides, reference 
 4. Read [Write Dagger CI modules and tests](how-to/write-dagger-ci-modules-and-tests.md) before adding or testing a module.
 5. Read [Git module reference](reference/git.md) when building Git-based CI decisions.
 6. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
-7. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
-8. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
+7. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
+8. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
+9. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
 
 ## Documentation Structure
 

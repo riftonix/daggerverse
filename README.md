@@ -31,6 +31,8 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/scenarios/container-images
 - **helm-ci** - portable Helm chart verification and publication workflow using the Helm and Git modules.
   - https://github.com/riftonix/daggerverse/scenarios/helm-ci
+- **static-site** - provider-neutral static-site verification and rendering workflow backed by static-site engine modules.
+  - https://github.com/riftonix/daggerverse/scenarios/static-site
 
 ## Requirements
 

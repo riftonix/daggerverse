@@ -1,0 +1,13 @@
+{
+  "name": "static-site",
+  "engineVersion": "v0.20.8",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "hugo",
+      "source": "../../modules/hugo"
+    }
+  ]
+}
