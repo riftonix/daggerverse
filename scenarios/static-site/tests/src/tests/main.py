@@ -6,6 +6,7 @@ from dagger import Directory, dag, function, object_type
 
 FIXTURE_SITE_PATH = "site"
 SITE_BASE_URL = "https://example.com/"
+HUGO_THEME_URL = "github.com/google/docsy@v0.13.0"
 
 
 @object_type
@@ -21,6 +22,7 @@ class Tests:
     async def all(self) -> None:
         """Run all static-site scenario tests."""
         await self.verify_docsy_fixture()
+        await self.hugo_theme_url_is_required()
         await self.unsupported_engine_fails_clearly()
         await self.rendered_output_exists()
         await self.main_site_renders_imported_component_modules()
@@ -30,8 +32,10 @@ class Tests:
     @function
     async def verify_docsy_fixture(self) -> None:
         """Verify the Docsy fixture through the provider-neutral scenario API."""
-        validation_output = await dag.static_site().verify_site(
-            site=self._fixture_site(),
+        validation_output = await dag.static_site(
+            source=self._fixture_site(),
+            hugo_theme_url=HUGO_THEME_URL,
+        ).verify_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
         )
@@ -39,10 +43,28 @@ class Tests:
         TestCase().assertIn("Pages", validation_output)
 
     @function
+    async def hugo_theme_url_is_required(self) -> None:
+        """Reject Hugo operations without an explicit Hugo theme URL."""
+        test_case = TestCase()
+        try:
+            await dag.static_site(source=self._fixture_site()).verify_site(
+                site_base_url=SITE_BASE_URL,
+                engine="hugo",
+            )
+        except BaseException as exc:
+            message = str(exc)
+            test_case.assertIn("hugo_theme_url is required", message)
+            test_case.assertIn("engine is hugo", message)
+        else:
+            test_case.fail("expected missing hugo_theme_url to fail")
+
+    @function
     async def rendered_output_exists(self) -> None:
         """Render the Docsy fixture through the provider-neutral scenario API."""
-        public_dir = await dag.static_site().render_site(
-            site=self._fixture_site(),
+        public_dir = await dag.static_site(
+            source=self._fixture_site(),
+            hugo_theme_url=HUGO_THEME_URL,
+        ).render_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
         )
@@ -59,8 +81,10 @@ class Tests:
         await dag.hugo(source=source.directory("daggerverse-openspec")).prepare_module()
         await dag.hugo(source=source.directory("container-images-openspec")).prepare_module()
 
-        public_dir = await dag.static_site().render_site(
-            site=source,
+        public_dir = await dag.static_site(
+            source=source,
+            hugo_theme_url=HUGO_THEME_URL,
+        ).render_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
         )
@@ -132,8 +156,7 @@ class Tests:
         """Reject unsupported engines before invoking an engine module."""
         test_case = TestCase()
         try:
-            await dag.static_site().verify_site(
-                site=dag.directory(),
+            await dag.static_site(source=dag.directory()).verify_site(
                 site_base_url="https://example.com/",
                 engine="zola",
             )

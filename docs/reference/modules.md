@@ -1,5 +1,26 @@
 # Module Reference
 
+## Source Input Convention
+
+New and updated modules and scenarios use `source` for the primary caller
+provided directory: a repository checkout, chart, site, image build tree, IaC
+project, or other main input tree. Secondary inputs keep descriptive names, for
+example `values`, `charts_path`, `libs_path`, `context_path`,
+`dockerfile_path`, `bake_path`, `target_branch`, and registry or output
+arguments.
+
+The `source` convention does not move CI provider behavior into modules or
+scenarios. GitHub Actions, GitLab CI, and other workflow adapters continue to
+own event selection, checkout strategy, preview URL derivation, publication,
+cleanup, and pull request or merge request comments. They should translate that
+provider state into explicit refs, paths, URLs, secrets, and booleans before
+calling Dagger.
+
+Renaming a public primary directory input to `source` is a breaking API change.
+Any changed released module or scenario needs a new release tag so downstream
+workflows can opt into the new command shape. Consumers that cannot migrate yet
+should stay on the previous tag until their Dagger calls are updated.
+
 ## git
 
 Provides provider-neutral Git primitives for CI workflows, including refs, diffs, tags, components, repository metadata, authentication, and files-at-ref helpers.
@@ -98,6 +119,6 @@ rendering workflows.
 - Path: `scenarios/static-site`
 - Main source: `scenarios/static-site/src/static_site/main.py`
 - Detailed reference: [Static site scenario reference](static-site.md)
-- Typical verify command: `dagger -m ./scenarios/static-site call verify-site --site=./site --site-base-url=https://example.com/ --engine=hugo`
-- Typical render command: `dagger -m ./scenarios/static-site call render-site --site=./site --site-base-url=https://example.com/ --engine=hugo --output=./public`
+- Typical verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 verify-site --site-base-url=https://example.com/ --engine=hugo`
+- Typical render command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 render-site --site-base-url=https://example.com/ --engine=hugo --output=./public`
 - CI use cases: verify and render caller-selected static sites, validate Hugo mount collisions, and keep provider-specific Pages lifecycle in workflow YAML.

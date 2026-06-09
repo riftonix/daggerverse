@@ -8,8 +8,8 @@ behind the same scenario-level command shape.
 
 The public scenario API is limited to common static-site operations:
 
-- verify a site directory with an explicit `site_base_url`
-- render a site directory and return the generated static output
+- verify a `source` site directory with an explicit `site_base_url`
+- render a `source` site directory and return the generated static output
 - validate Hugo virtual mount collisions from a Hugo YAML module import layout
 
 Engine-specific operations remain in engine modules. For example, Hugo module
@@ -20,6 +20,9 @@ initialization and dependency resolution stay in `modules/hugo`.
 Use the `engine` argument to choose the static-site engine. The only supported
 engine today is `hugo`.
 
+Hugo-backed operations require constructor input `hugo_theme_url`. Use a Hugo
+module reference such as `github.com/google/docsy@v0.13.0`.
+
 Unsupported engines fail with a clear error. Adding a future engine such as
 Jekyll should route the existing render and verify operations to that engine
 without moving provider-specific publication behavior into this scenario.
@@ -27,21 +30,38 @@ without moving provider-specific publication behavior into this scenario.
 ## Verify Example
 
 ```bash
-dagger -m ./scenarios/static-site call verify-site \
-  --site ./site \
-  --site-base-url https://example.com/ \
-  --engine hugo
+dagger -m ./scenarios/static-site call \
+  --source=./site \
+  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  verify-site \
+  --site-base-url=https://example.com/ \
+  --engine=hugo
 ```
 
 ## Render Example
 
 ```bash
-dagger -m ./scenarios/static-site call render-site \
-  --site ./site \
-  --site-base-url https://example.com/ \
-  --engine hugo \
-  --output ./public
+dagger -m ./scenarios/static-site call \
+  --source=./site \
+  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  render-site \
+  --site-base-url=https://example.com/ \
+  --engine=hugo \
+  --output=./public
 ```
+
+## Migration From `--site`
+
+Older static-site scenario calls passed the site tree to each function with
+`--site=<dir>`. New calls pass the primary site tree once through constructor
+input `--source=<dir>` before the function name. Hugo calls must also pass
+constructor input `--hugo-theme-url=<module-ref>`.
+
+This is a breaking CLI change. Do not expect backward-compatible `--site`
+aliases in the updated scenario API. Release the changed static-site scenario
+under a new tag after this migration; consumers still using
+`scenarios/static-site/v0.1.0` should keep that tag until they replace
+function-level `--site=<dir>` calls with constructor `--source=<dir>` calls.
 
 ## Main Site Import Layout
 
@@ -139,6 +159,7 @@ and mounts.
 GitHub Actions and GitLab CI workflows remain responsible for:
 
 - event rules and changed-path selection
+- checkout depth, refs, and repository preparation
 - preview URL calculation
 - GitHub Pages or GitLab Pages publication
 - preview cleanup
