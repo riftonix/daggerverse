@@ -6,12 +6,30 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 
 DEFAULT_ENGINE = "hugo"
 SUPPORTED_ENGINES = (DEFAULT_ENGINE,)
-DEFAULT_THEME_URL = "github.com/google/docsy@v0.13.0"
 
 
 @object_type
 class StaticSite:
     """Static-site scenario entrypoint."""
+
+    source: dagger.Directory
+    hugo_theme_url: str | None
+
+    @classmethod
+    async def create(
+        cls,
+        source: Annotated[
+            dagger.Directory,
+            DefaultPath("."),
+            Doc("Static site source directory"),
+        ],
+        hugo_theme_url: Annotated[
+            str | None,
+            Doc("Hugo theme module URL, required when engine is hugo"),
+        ] = None,
+    ):
+        """Constructor."""
+        return cls(source=source, hugo_theme_url=hugo_theme_url)
 
     @function
     def module(self) -> str:
@@ -21,11 +39,6 @@ class StaticSite:
     @function
     async def verify_site(
         self,
-        site: Annotated[
-            dagger.Directory,
-            DefaultPath("."),
-            Doc("Static site source directory"),
-        ],
         site_base_url: Annotated[str, Doc("Base URL to render and validate the site with")],
         engine: Annotated[str, Doc("Static-site engine to use")] = DEFAULT_ENGINE,
     ) -> str:
@@ -33,8 +46,8 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await dag.hugo(source=site).validate(
-                hugo_theme_url=DEFAULT_THEME_URL,
+            return await dag.hugo(source=self.source).validate(
+                hugo_theme_url=self._required_hugo_theme_url(),
                 site_base_url=site_base_url,
             )
 
@@ -44,11 +57,6 @@ class StaticSite:
     @function
     async def render_site(
         self,
-        site: Annotated[
-            dagger.Directory,
-            DefaultPath("."),
-            Doc("Static site source directory"),
-        ],
         site_base_url: Annotated[str, Doc("Base URL to render the site with")],
         engine: Annotated[str, Doc("Static-site engine to use")] = DEFAULT_ENGINE,
     ) -> dagger.Directory:
@@ -56,8 +64,8 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await dag.hugo(source=site).build(
-                hugo_theme_url=DEFAULT_THEME_URL,
+            return await dag.hugo(source=self.source).build(
+                hugo_theme_url=self._required_hugo_theme_url(),
                 site_base_url=site_base_url,
             )
 
@@ -134,6 +142,13 @@ class StaticSite:
 
         supported_engines = ", ".join(SUPPORTED_ENGINES)
         msg = f"Unsupported static-site engine {engine!r}. Supported engines: {supported_engines}"
+        raise ValueError(msg)
+
+    def _required_hugo_theme_url(self) -> str:
+        if self.hugo_theme_url and self.hugo_theme_url.strip():
+            return self.hugo_theme_url
+
+        msg = "hugo_theme_url is required when engine is hugo"
         raise ValueError(msg)
 
     async def _hugo_imports(self, config: dagger.File) -> list[dict]:

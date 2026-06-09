@@ -66,6 +66,18 @@ Preparation is intentionally an engine-specific Hugo operation. The
 `scenarios/static-site` API only exposes common static-site render and verify
 operations.
 
+Scenario-level Hugo verification passes the site as constructor `source` and
+the Hugo theme as constructor `hugo_theme_url`:
+
+```bash
+dagger -m ./scenarios/static-site call \
+  --source=./site \
+  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  verify-site \
+  --site-base-url=https://example.com/ \
+  --engine=hugo
+```
+
 ## Recommended `docs` Module Layout
 
 A component documentation module should stay path-neutral. It should expose

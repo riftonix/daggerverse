@@ -16,7 +16,22 @@ dagger -m ./modules/git call get-tags --source=.
 
 ## Pass Source Directories
 
-Most modules accept a `source` directory. The source path is resolved from the directory where you run the `dagger` command, not from the module directory.
+Most modules and scenarios accept the primary input directory as `source`. The
+source path is resolved from the directory where you run the `dagger` command,
+not from the module directory.
+
+Use `source` for the main tree being operated on: a repository checkout, chart,
+site, image build tree, or IaC project. Keep secondary inputs descriptive. For
+example, Helm CI keeps `charts_path`, `libs_path`, `target_branch`, and
+`values`; Docker and container image calls keep `context_path`,
+`dockerfile_path`, and `bake_path`.
+
+`source` only identifies the directory tree passed to Dagger. CI provider
+workflows stay responsible for event rules, checkout depth and refs, preview URL
+calculation, publication timing, deployment cleanup, and pull request or merge
+request comments. Compute those provider-specific values in GitHub Actions,
+GitLab CI, or another workflow layer, then pass explicit inputs to modules and
+scenarios.
 
 For a chart inside this repository:
 
@@ -28,6 +43,18 @@ For an external chart:
 
 ```bash
 dagger -m ./modules/helm call lint --source=../my-project/charts/my-chart
+```
+
+For a static site scenario call, pass the site directory as constructor
+`source` before the operation name:
+
+```bash
+dagger -m ./scenarios/static-site call \
+  --source=./site \
+  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  verify-site \
+  --site-base-url=https://example.com/ \
+  --engine=hugo
 ```
 
 ## Use Local Module Dependencies

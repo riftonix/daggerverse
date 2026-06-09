@@ -1,9 +1,5 @@
-# helm-ci-scenario Specification
+## MODIFIED Requirements
 
-## Purpose
-Describe the current Helm CI scenario behavior for portable chart verification,
-changed-chart verification, and OCI chart publication.
-## Requirements
 ### Requirement: Helm CI scenario verifies one chart
 The `scenarios/helm-ci` scenario SHALL verify a Helm chart directory supplied explicitly by the caller through the public input named `source`.
 
@@ -49,46 +45,3 @@ The `scenarios/helm-ci` scenario SHALL verify changed Helm chart directories sel
 - **WHEN** a changed chart directory has no chart name or version in `Chart.yaml`
 - **THEN** the scenario SHALL skip that chart directory
 - **AND** it SHALL include a returned message explaining that required metadata is missing
-
-### Requirement: Helm CI scenario remains CI-provider portable
-The `scenarios/helm-ci` scenario SHALL avoid CI-provider-specific trigger, branch, tag, and changed-path policy.
-
-#### Scenario: Caller controls diff inputs
-- **WHEN** a CI workflow wants to verify changed charts
-- **THEN** the workflow SHALL provide target branch and path inputs to the scenario
-- **AND** the scenario SHALL NOT inspect GitHub Actions, GitLab CI, or other provider event environment variables
-
-#### Scenario: Caller controls publish timing
-- **WHEN** a CI workflow decides whether publication should run
-- **THEN** the scenario SHALL only publish when called with explicit publish inputs
-- **AND** the scenario SHALL NOT parse provider-specific release events
-
-### Requirement: Helm CI scenario hides implementation module object types
-The `scenarios/helm-ci` scenario SHALL compose implementation modules internally while exposing a module-neutral public API.
-
-#### Scenario: Compose scenario with independent Helm or Git module versions
-- **WHEN** a caller uses the released Helm CI scenario and also depends on different released Helm or Git module versions in their own scenario
-- **THEN** the Helm CI scenario public API SHALL remain usable through stable inputs and outputs
-- **AND** the Helm CI scenario SHALL NOT require the caller to pass or consume Helm or Git module object types
-
-### Requirement: Helm CI scenario documents CI integration pattern
-The `scenarios/helm-ci` README SHALL describe how CI systems call Helm verification and publication workflows.
-
-#### Scenario: Read scenario documentation
-- **WHEN** a user reads the Helm CI scenario README
-- **THEN** it SHALL show examples using `dagger -m ./scenarios/helm-ci`
-- **AND** it SHALL explain that CI provider workflows own event rules, branch selection, changed-path selection, and publish timing
-
-### Requirement: Helm CI scenario has Dagger-native tests
-The `scenarios/helm-ci` scenario SHALL have Dagger-native tests that validate public scenario behavior through its public API.
-
-#### Scenario: Run Helm CI scenario tests
-- **WHEN** a user or CI runs `make tests scenario helm-ci`
-- **THEN** the scenario test module SHALL run its aggregate `all` function
-- **AND** the tests SHALL call the scenario through a local Dagger dependency
-
-#### Scenario: Test changed chart verification
-- **WHEN** changed chart verification behavior is implemented or moved
-- **THEN** the same implementation step SHALL add or update Dagger-native tests for that behavior
-- **AND** the tests SHALL verify merge-base diff behavior so base-branch drift does not trigger unrelated chart checks
-
