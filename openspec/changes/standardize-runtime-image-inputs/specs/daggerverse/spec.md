@@ -55,6 +55,11 @@ Dagger test modules SHALL expose predictable public entrypoints for repository C
 - **THEN** the tests SHALL read fixtures through `dag.current_module().source()`
 - **AND** they SHALL NOT require a public `source` input unless the test intentionally validates caller-provided source behavior and documents that exception
 
+#### Scenario: Git test module uses synthetic repositories
+- **WHEN** Git module tests need a repository source to validate metadata such as HEAD SHA or short commit SHA
+- **THEN** the tests SHALL use a local synthetic Git repository fixture
+- **AND** the aggregate `all()` function SHALL NOT require a public `source` input for those metadata checks
+
 #### Scenario: Test helper service image inputs are prefixed
 - **WHEN** a test function exposes runtime image inputs for a helper service container
 - **THEN** those inputs SHALL be prefixed with the helper purpose

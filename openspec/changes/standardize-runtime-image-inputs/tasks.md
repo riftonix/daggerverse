@@ -1,9 +1,9 @@
 ## 1. Runtime Image API Audit
 
-- [ ] 1.1 Audit all public module and scenario constructors/functions for runtime tool image inputs.
-- [ ] 1.2 Classify each image-related input as runtime image selection, build/publish image metadata, registry authentication, or unrelated version input.
-- [ ] 1.3 Audit Dagger test module public entrypoints and helper service image inputs for convention drift.
-- [ ] 1.4 Record released modules/scenarios that require breaking public API changes and the tags consumers must upgrade from.
+- [x] 1.1 Audit all public module and scenario constructors/functions for runtime tool image inputs.
+- [x] 1.2 Classify each image-related input as runtime image selection, build/publish image metadata, registry authentication, or unrelated version input.
+- [x] 1.3 Audit Dagger test module public entrypoints and helper service image inputs for convention drift.
+- [x] 1.4 Record released modules/scenarios that require breaking public API changes and the tags consumers must upgrade from.
 
 ## 2. Static Site Scenario And Tests
 
@@ -40,7 +40,7 @@
 
 ## 6. Test Module Convention
 
-- [ ] 6.1 Normalize test module aggregate entrypoints to `all()` without public inputs unless an exception is documented.
+- [ ] 6.1 Normalize test module aggregate entrypoints to `all()` without public inputs unless an exception is documented; for `modules/git/tests`, replace `all(source)` with a no-argument aggregate and use a synthetic Git repository fixture for metadata SHA checks.
 - [ ] 6.2 Confirm test helper service image inputs use purpose-prefixed names such as `registry_image_*`.
 - [ ] 6.3 Ensure test module runtime image defaults stay synchronized with tested module or scenario defaults through Renovate-managed duplicates, shared constants, pass-through construction, or explicit assertions.
 
