@@ -5,7 +5,7 @@ on:
     branches: [master]
 
 env:
-  DAGGER_VERSION: 0.20.8
+  DAGGER_VERSION: 0.21.6
 
 jobs:
   quality:
