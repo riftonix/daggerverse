@@ -7,7 +7,7 @@ on:
       - "scenarios/*/v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  DAGGER_VERSION: 0.20.8
+  DAGGER_VERSION: 0.21.6
 
 jobs:
   publish:
