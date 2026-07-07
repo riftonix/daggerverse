@@ -129,3 +129,30 @@ The static-site scenario SHALL require callers to provide the Hugo theme URL use
 - **WHEN** a caller selects the Hugo engine without providing a non-empty Hugo theme URL
 - **THEN** the scenario SHALL fail clearly before invoking the Hugo module
 
+### Requirement: Static Site Hugo Runtime Image Inputs
+The static-site scenario SHALL expose Hugo runtime image inputs on its public constructor when Hugo is a supported engine.
+
+#### Scenario: Construct static-site scenario with Hugo image inputs
+- **WHEN** a caller constructs the static-site scenario for Hugo-backed operations
+- **THEN** the constructor SHALL accept `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, and `hugo_container_user_id`
+- **AND** each input SHALL default to the Hugo module default for the same runtime image field
+
+#### Scenario: Verify passes Hugo image inputs
+- **WHEN** a caller verifies a Hugo site through the static-site scenario
+- **THEN** the scenario SHALL pass the configured Hugo runtime image inputs to the Hugo module
+- **AND** the scenario SHALL pass the configured Hugo theme URL to the Hugo module
+
+#### Scenario: Render passes Hugo image inputs
+- **WHEN** a caller renders a Hugo site through the static-site scenario
+- **THEN** the scenario SHALL pass the configured Hugo runtime image inputs to the Hugo module
+- **AND** the rendered output SHALL come from the configured Hugo execution image
+
+#### Scenario: Static-site workflow pins Hugo image tag
+- **WHEN** a CI workflow needs reproducible Hugo rendering
+- **THEN** it SHALL be able to pin the Hugo runtime through `hugo_image_tag`
+- **AND** the pin SHALL be visible in the workflow rather than hidden in the Hugo module dependency default
+
+#### Scenario: Static-site tests avoid direct Hugo module calls
+- **WHEN** static-site scenario tests exercise Hugo-backed scenario operations
+- **THEN** they SHALL call the static-site scenario API with configured Hugo runtime image inputs
+- **AND** direct Hugo module integration checks SHALL live in the Hugo module tests

@@ -14,3 +14,8 @@ The Hugo module SHALL expose the standard runtime image inputs for the container
 #### Scenario: Hugo runtime image is visible to callers
 - **WHEN** CI needs to synchronize Hugo site configuration with the image used to render the site
 - **THEN** the required Hugo image tag SHALL be available as a public module input
+
+#### Scenario: Hugo tests use configured runtime image inputs
+- **WHEN** the Hugo test module runs direct Hugo module integration checks
+- **THEN** direct Hugo module calls SHALL use the test module constructor runtime image inputs
+- **AND** component module import rendering SHALL be covered in the Hugo test module rather than in the static-site scenario tests

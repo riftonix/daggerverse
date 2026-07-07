@@ -10,7 +10,9 @@ publish timing. Pass those decisions into the scenario as explicit inputs.
 ## Verify One Chart
 
 ```bash
-dagger -m ./scenarios/helm-ci call helm-verify \
+dagger -m ./scenarios/helm-ci call \
+  --helm-image-tag=3.18.6 \
+  helm-verify \
   --source=./modules/helm/tests/charts/ns-configurator
 ```
 
@@ -21,7 +23,10 @@ The command runs Helm lint and template through the local Helm module dependency
 Use `helm-verify-changed-charts` when the repository is a Git checkout and you want to check only changed chart directories under a path:
 
 ```bash
-dagger -m ./scenarios/helm-ci call helm-verify-changed-charts \
+dagger -m ./scenarios/helm-ci call \
+  --helm-image-tag=3.18.6 \
+  --git-image-tag=2.52.0 \
+  helm-verify-changed-charts \
   --source=. \
   --target-branch=master \
   --charts-path=modules/helm/tests/charts
@@ -29,11 +34,17 @@ dagger -m ./scenarios/helm-ci call helm-verify-changed-charts \
 
 The command asks the Git module for changed chart directories, then verifies each returned chart directory. Pull request workflows should use merge-base diff behavior so base-branch drift does not trigger unrelated chart checks.
 
+`helm-verify` and `helm-publish` use Helm runtime image inputs only. Changed-chart
+operations also use Git runtime image inputs. Pin both tags in CI when the
+workflow must be reproducible or must use mirrored images.
+
 ## Publish A Chart
 
 ```bash
 REGISTRY_PASSWORD=secret \
-dagger -m ./scenarios/helm-ci call helm-publish \
+dagger -m ./scenarios/helm-ci call \
+  --helm-image-tag=3.18.6 \
+  helm-publish \
   --source=./modules/helm/tests/charts/ns-configurator \
   --oci-url=registry.example.com/mycharts \
   --version=0.1.0 \

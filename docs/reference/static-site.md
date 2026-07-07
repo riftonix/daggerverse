@@ -23,6 +23,12 @@ engine today is `hugo`.
 Hugo-backed operations require constructor input `hugo_theme_url`. Use a Hugo
 module reference such as `github.com/google/docsy@v0.13.0`.
 
+Hugo-backed operations also expose Hugo runtime image inputs on the scenario
+constructor: `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`,
+and `hugo_container_user_id`. Pin `hugo_image_tag` in CI when reproducible Hugo
+rendering matters or when site configuration such as `module.hugoVersion.min`
+must stay synchronized with the builder image.
+
 Unsupported engines fail with a clear error. Adding a future engine such as
 Jekyll should route the existing render and verify operations to that engine
 without moving provider-specific publication behavior into this scenario.
@@ -33,6 +39,7 @@ without moving provider-specific publication behavior into this scenario.
 dagger -m ./scenarios/static-site call \
   --source=./site \
   --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  --hugo-image-tag=0.154.5-10.5.0 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
@@ -44,6 +51,7 @@ dagger -m ./scenarios/static-site call \
 dagger -m ./scenarios/static-site call \
   --source=./site \
   --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  --hugo-image-tag=0.154.5-10.5.0 \
   render-site \
   --site-base-url=https://example.com/ \
   --engine=hugo \
@@ -62,6 +70,10 @@ aliases in the updated scenario API. Release the changed static-site scenario
 under a new tag after this migration; consumers still using
 `scenarios/static-site/v0.1.0` should keep that tag until they replace
 function-level `--site=<dir>` calls with constructor `--source=<dir>` calls.
+
+Adding Hugo runtime image inputs also changes the released scenario API. Publish
+that update under a new scenario tag so workflows can opt into explicit image
+pinning without changing callers still pinned to older tags.
 
 ## Main Site Import Layout
 

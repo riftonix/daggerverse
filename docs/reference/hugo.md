@@ -15,6 +15,12 @@ The default image is `ghcr.io/riftonix/container-images/hugo-autoprefixer:0.154.
 The normal build and validation paths rely on tools already present in that
 image. They do not install npm packages at runtime.
 
+The runtime image can be pinned or mirrored with constructor inputs
+`image_registry`, `image_repository`, `image_tag`, and `user_id`. Keep Hugo site
+configuration such as `module.hugoVersion.min` synchronized with the runtime
+builder image when the site uses that field to describe the builder's available
+Hugo version. See [Runtime image input conventions](runtime-images.md).
+
 ## Functions
 
 `build(source, hugo_theme_url, site_base_url)` renders a Hugo site and returns
@@ -36,6 +42,7 @@ without producing a `public` directory.
 ```bash
 dagger -m ./modules/hugo call \
   --source ./site \
+  --image-tag 0.154.5-10.5.0 \
   build \
   --hugo-theme-url github.com/google/docsy@v0.13.0 \
   --site-base-url https://example.com/
@@ -46,6 +53,7 @@ dagger -m ./modules/hugo call \
 ```bash
 dagger -m ./modules/hugo call \
   --source ./site \
+  --image-tag 0.154.5-10.5.0 \
   validate \
   --hugo-theme-url github.com/google/docsy@v0.13.0 \
   --site-base-url https://example.com/
@@ -73,10 +81,17 @@ the Hugo theme as constructor `hugo_theme_url`:
 dagger -m ./scenarios/static-site call \
   --source=./site \
   --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  --hugo-image-tag=0.154.5-10.5.0 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
 ```
+
+Renovate should update duplicated Hugo runtime image tags and downstream
+`module.hugoVersion.min` values from the same Docker tag source when the minimum
+version is coupled to this builder. For the current image stream, use Docker
+tags from `hugomods/hugo` with `extractVersion=^exts-(?<version>.+)$` rather
+than `gohugoio/hugo` GitHub releases.
 
 ## Recommended `docs` Module Layout
 

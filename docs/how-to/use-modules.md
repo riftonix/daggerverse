@@ -46,16 +46,24 @@ dagger -m ./modules/helm call lint --source=../my-project/charts/my-chart
 ```
 
 For a static site scenario call, pass the site directory as constructor
-`source` before the operation name:
+`source` before the operation name. Pin the Hugo runtime image tag in CI when
+site rendering must be reproducible:
 
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
   --hugo-theme-url=github.com/google/docsy@v0.13.0 \
+  --hugo-image-tag=0.154.5-10.5.0 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
 ```
+
+Image-backed modules use `image_registry`, `image_repository`, `image_tag`, and
+`user_id` for their execution container. Scenarios that compose image-backed
+modules prefix those fields with the tool name, such as `hugo_image_tag`,
+`helm_image_tag`, or `git_image_tag`. See
+[Runtime image input conventions](../reference/runtime-images.md).
 
 ## Use Local Module Dependencies
 

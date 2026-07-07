@@ -14,22 +14,35 @@ class StaticSite:
 
     source: dagger.Directory
     hugo_theme_url: str | None
+    hugo_image_registry: str
+    hugo_image_repository: str
+    hugo_image_tag: str
+    hugo_container_user_id: str
 
     @classmethod
     async def create(
         cls,
-        source: Annotated[
-            dagger.Directory,
-            DefaultPath("."),
-            Doc("Static site source directory"),
-        ],
+        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Static site source directory")],
         hugo_theme_url: Annotated[
             str | None,
             Doc("Hugo theme module URL, required when engine is hugo"),
         ] = None,
+        hugo_image_registry: Annotated[str | None, Doc("Hugo image registry")] = "ghcr.io",
+        hugo_image_repository: Annotated[
+            str | None, Doc("Hugo image repository")
+        ] = "riftonix/container-images/hugo-autoprefixer",
+        hugo_image_tag: Annotated[str | None, Doc("Hugo image tag")] = "0.154.5-10.5.0",
+        hugo_container_user_id: Annotated[str | None, Doc("Hugo container user")] = "65532",
     ):
         """Constructor."""
-        return cls(source=source, hugo_theme_url=hugo_theme_url)
+        return cls(
+            source=source,
+            hugo_theme_url=hugo_theme_url,
+            hugo_image_registry=hugo_image_registry or "ghcr.io",
+            hugo_image_repository=hugo_image_repository or "riftonix/container-images/hugo-autoprefixer",
+            hugo_image_tag=hugo_image_tag or "0.154.5-10.5.0",
+            hugo_container_user_id=hugo_container_user_id or "65532",
+        )
 
     @function
     def module(self) -> str:
@@ -46,7 +59,7 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await dag.hugo(source=self.source).validate(
+            return await self._hugo().validate(
                 hugo_theme_url=self._required_hugo_theme_url(),
                 site_base_url=site_base_url,
             )
@@ -64,13 +77,23 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await dag.hugo(source=self.source).build(
+            return await self._hugo().build(
                 hugo_theme_url=self._required_hugo_theme_url(),
                 site_base_url=site_base_url,
             )
 
         msg = f"Static-site engine dispatch is incomplete for {selected_engine!r}"
         raise RuntimeError(msg)
+
+    def _hugo(self):
+        """Return a Hugo module configured with the scenario Hugo runtime image inputs."""
+        return dag.hugo(
+            source=self.source,
+            image_registry=self.hugo_image_registry,
+            image_repository=self.hugo_image_repository,
+            image_tag=self.hugo_image_tag,
+            user_id=self.hugo_container_user_id,
+        )
 
     @function
     async def validate_hugo_mounts(

@@ -11,8 +11,9 @@ This documentation separates learning material, task-oriented guides, reference 
 5. Read [Git module reference](reference/git.md) when building Git-based CI decisions.
 6. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
 7. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
-8. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
-9. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
+8. Read [Runtime image input conventions](reference/runtime-images.md) when pinning or mirroring tool runtime images.
+9. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
+10. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
 
 ## Documentation Structure
 

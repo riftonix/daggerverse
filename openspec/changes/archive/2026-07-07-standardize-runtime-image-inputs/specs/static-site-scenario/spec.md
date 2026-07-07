@@ -5,7 +5,7 @@ The static-site scenario SHALL expose Hugo runtime image inputs on its public co
 
 #### Scenario: Construct static-site scenario with Hugo image inputs
 - **WHEN** a caller constructs the static-site scenario for Hugo-backed operations
-- **THEN** the constructor SHALL accept `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, and `hugo_user_id`
+- **THEN** the constructor SHALL accept `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, and `hugo_container_user_id`
 - **AND** each input SHALL default to the Hugo module default for the same runtime image field
 
 #### Scenario: Verify passes Hugo image inputs
@@ -22,3 +22,8 @@ The static-site scenario SHALL expose Hugo runtime image inputs on its public co
 - **WHEN** a CI workflow needs reproducible Hugo rendering
 - **THEN** it SHALL be able to pin the Hugo runtime through `hugo_image_tag`
 - **AND** the pin SHALL be visible in the workflow rather than hidden in the Hugo module dependency default
+
+#### Scenario: Static-site tests avoid direct Hugo module calls
+- **WHEN** static-site scenario tests exercise Hugo-backed scenario operations
+- **THEN** they SHALL call the static-site scenario API with configured Hugo runtime image inputs
+- **AND** direct Hugo module integration checks SHALL live in the Hugo module tests

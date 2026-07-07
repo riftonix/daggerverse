@@ -4,16 +4,72 @@ import dagger
 import yaml
 from dagger import DefaultPath, Doc, dag, function, object_type
 
+DEFAULT_HELM_IMAGE_REGISTRY = "docker.io"
+DEFAULT_HELM_IMAGE_REPOSITORY = "alpine/helm"
+DEFAULT_HELM_IMAGE_TAG = "3.18.6"
+DEFAULT_HELM_CONTAINER_USER_ID = "65532"
+
+DEFAULT_GIT_IMAGE_REGISTRY = "docker.io"
+DEFAULT_GIT_IMAGE_REPOSITORY = "alpine/git"
+DEFAULT_GIT_IMAGE_TAG = "2.52.0"
+DEFAULT_GIT_CONTAINER_USER_ID = "65532"
+
 
 @object_type
 class HelmCi:
+    helm_image_registry: str
+    helm_image_repository: str
+    helm_image_tag: str
+    helm_container_user_id: str
+
+    git_image_registry: str
+    git_image_repository: str
+    git_image_tag: str
+    git_container_user_id: str
+
+    @classmethod
+    async def create(
+        cls,
+        helm_image_registry: Annotated[str | None, Doc("Helm image registry")] = DEFAULT_HELM_IMAGE_REGISTRY,
+        helm_image_repository: Annotated[str | None, Doc("Helm image repository")] = DEFAULT_HELM_IMAGE_REPOSITORY,
+        helm_image_tag: Annotated[str | None, Doc("Helm image tag")] = DEFAULT_HELM_IMAGE_TAG,
+        helm_container_user_id: Annotated[str | None, Doc("Helm container user")] = DEFAULT_HELM_CONTAINER_USER_ID,
+        git_image_registry: Annotated[
+            str | None, Doc("Git image registry for changed-chart detection")
+        ] = DEFAULT_GIT_IMAGE_REGISTRY,
+        git_image_repository: Annotated[
+            str | None, Doc("Git image repository for changed-chart detection")
+        ] = DEFAULT_GIT_IMAGE_REPOSITORY,
+        git_image_tag: Annotated[str | None, Doc("Git image tag for changed-chart detection")] = DEFAULT_GIT_IMAGE_TAG,
+        git_container_user_id: Annotated[
+            str | None, Doc("Git container user for changed-chart detection")
+        ] = DEFAULT_GIT_CONTAINER_USER_ID,
+    ):
+        """Constructor exposing Helm and Git runtime image inputs with prefixed names."""
+        return cls(
+            helm_image_registry=helm_image_registry or DEFAULT_HELM_IMAGE_REGISTRY,
+            helm_image_repository=helm_image_repository or DEFAULT_HELM_IMAGE_REPOSITORY,
+            helm_image_tag=helm_image_tag or DEFAULT_HELM_IMAGE_TAG,
+            helm_container_user_id=helm_container_user_id or DEFAULT_HELM_CONTAINER_USER_ID,
+            git_image_registry=git_image_registry or DEFAULT_GIT_IMAGE_REGISTRY,
+            git_image_repository=git_image_repository or DEFAULT_GIT_IMAGE_REPOSITORY,
+            git_image_tag=git_image_tag or DEFAULT_GIT_IMAGE_TAG,
+            git_container_user_id=git_container_user_id or DEFAULT_GIT_CONTAINER_USER_ID,
+        )
+
     async def _get_changed_chart_paths(
         self,
         source: dagger.Directory,
         target_branch: str,
         diff_paths: list[str] | None,
     ) -> list[str]:
-        git = dag.git(source=source)
+        git = dag.git(
+            source=source,
+            image_registry=self.git_image_registry,
+            image_repository=self.git_image_repository,
+            image_tag=self.git_image_tag,
+            user_id=self.git_container_user_id,
+        )
         changed_paths: list[str] = []
         for diff_path in diff_paths or []:
             changed_paths.extend(
@@ -24,21 +80,14 @@ class HelmCi:
             )
         return sorted(set(changed_paths))
 
-    async def _helm(
-        self,
-        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Helm chart host path")],
-        image_registry: Annotated[str | None, Doc("Helm image registry")] = "docker.io",
-        image_repository: Annotated[str | None, Doc("Helm image repository")] = "alpine/helm",
-        image_tag: Annotated[str | None, Doc("Helm image tag")] = "3.18.6",
-        user_id: Annotated[str | None, Doc("Helm image user")] = "65532",
-    ):
-        """Return configured Helm module instance from the helm module dependency"""
+    def _helm(self, source: dagger.Directory):
+        """Return configured Helm module instance from the helm module dependency."""
         return dag.helm(
             source=source,
-            image_registry=image_registry,
-            image_repository=image_repository,
-            image_tag=image_tag,
-            user_id=user_id,
+            image_registry=self.helm_image_registry,
+            image_repository=self.helm_image_repository,
+            image_tag=self.helm_image_tag,
+            user_id=self.helm_container_user_id,
         )
 
     async def _get_chart_metadata(self, source: dagger.Directory, chart_path: str) -> dict:
@@ -51,12 +100,12 @@ class HelmCi:
     @function
     async def helm_verify(
         self,
-        source: Annotated[dagger.Directory, Doc("Helm chart directory")],
+        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Helm chart directory")],
         values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
         release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
     ) -> str:
         """Run Helm lint and template via local helm module"""
-        chart = await self._helm(source=source)
+        chart = self._helm(source=source)
         lint_stdout = await chart.lint(strict=True)
         template_stdout = await chart.template(values=values, release_name=release_name)
         return f"lint:\n{lint_stdout}\n\ntemplate:\n{template_stdout}"
@@ -64,7 +113,7 @@ class HelmCi:
     @function
     async def helm_publish(
         self,
-        source: Annotated[dagger.Directory, Doc("Helm chart directory")],
+        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Helm chart directory")],
         oci_url: Annotated[str, Doc("Destination OCI registry URL without chart name")],
         version: Annotated[str, Doc("Chart semver to publish")],
         app_version: Annotated[str | None, Doc("Optional appVersion override")] = None,
@@ -73,7 +122,7 @@ class HelmCi:
         insecure: Annotated[bool | None, Doc("Allow plain http pushes")] = False,
     ) -> str:
         """Package and push helm chart via local helm module"""
-        chart = await self._helm(source=source)
+        chart = self._helm(source=source)
         if username and password:
             chart = chart.with_registry_login(username=username, password=password)
         return await chart.push(
@@ -86,7 +135,7 @@ class HelmCi:
     @function
     async def helm_verify_changed_charts(
         self,
-        source: Annotated[dagger.Directory, Doc("Repository root directory")],
+        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Repository root directory")],
         target_branch: Annotated[str, Doc("Target branch or ref to diff against")] = "master",
         charts_path: Annotated[str | None, Doc("Charts directory (relative to repo root)")] = None,
         libs_path: Annotated[str | None, Doc("Libraries directory (relative to repo root)")] = None,

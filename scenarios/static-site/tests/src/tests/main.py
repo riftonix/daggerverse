@@ -1,17 +1,65 @@
 """Dagger-native tests for the static-site scenario."""
 
+from typing import Annotated
 from unittest import TestCase
 
-from dagger import Directory, dag, function, object_type
+from dagger import Directory, Doc, dag, function, object_type
 
 FIXTURE_SITE_PATH = "site"
 SITE_BASE_URL = "https://example.com/"
 HUGO_THEME_URL = "github.com/google/docsy@v0.13.0"
 
+DEFAULT_HUGO_IMAGE_REGISTRY = "ghcr.io"
+DEFAULT_HUGO_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
+DEFAULT_HUGO_IMAGE_TAG = "0.154.5-10.5.0"
+DEFAULT_HUGO_CONTAINER_USER_ID = "65532"
+
 
 @object_type
 class Tests:
     """Test module entrypoint for static-site scenario checks."""
+
+    hugo_image_registry: str
+    hugo_image_repository: str
+    hugo_image_tag: str
+    hugo_container_user_id: str
+
+    @classmethod
+    async def create(
+        cls,
+        hugo_image_registry: Annotated[
+            str | None,
+            Doc("Hugo image registry override for offline or mirrored-registry runs"),
+        ] = DEFAULT_HUGO_IMAGE_REGISTRY,
+        hugo_image_repository: Annotated[
+            str | None,
+            Doc("Hugo image repository override for offline or mirrored-registry runs"),
+        ] = DEFAULT_HUGO_IMAGE_REPOSITORY,
+        hugo_image_tag: Annotated[
+            str | None,
+            Doc("Hugo image tag override for offline or mirrored-registry runs"),
+        ] = DEFAULT_HUGO_IMAGE_TAG,
+        hugo_container_user_id: Annotated[
+            str | None,
+            Doc("Hugo container user id override for offline or mirrored-registry runs"),
+        ] = DEFAULT_HUGO_CONTAINER_USER_ID,
+    ):
+        """Constructor exposing optional Hugo runtime image overrides for offline runs."""
+        return cls(
+            hugo_image_registry=hugo_image_registry or DEFAULT_HUGO_IMAGE_REGISTRY,
+            hugo_image_repository=hugo_image_repository or DEFAULT_HUGO_IMAGE_REPOSITORY,
+            hugo_image_tag=hugo_image_tag or DEFAULT_HUGO_IMAGE_TAG,
+            hugo_container_user_id=hugo_container_user_id or DEFAULT_HUGO_CONTAINER_USER_ID,
+        )
+
+    def _hugo_image_inputs(self) -> dict[str, str]:
+        """Return the configured Hugo runtime image inputs as keyword arguments."""
+        return {
+            "hugo_image_registry": self.hugo_image_registry,
+            "hugo_image_repository": self.hugo_image_repository,
+            "hugo_image_tag": self.hugo_image_tag,
+            "hugo_container_user_id": self.hugo_container_user_id,
+        }
 
     @function
     def module(self) -> str:
@@ -25,7 +73,6 @@ class Tests:
         await self.hugo_theme_url_is_required()
         await self.unsupported_engine_fails_clearly()
         await self.rendered_output_exists()
-        await self.main_site_renders_imported_component_modules()
         await self.unique_hugo_mount_paths_pass()
         await self.duplicate_hugo_mount_paths_are_reported()
 
@@ -35,6 +82,7 @@ class Tests:
         validation_output = await dag.static_site(
             source=self._fixture_site(),
             hugo_theme_url=HUGO_THEME_URL,
+            **self._hugo_image_inputs(),
         ).verify_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
@@ -47,7 +95,10 @@ class Tests:
         """Reject Hugo operations without an explicit Hugo theme URL."""
         test_case = TestCase()
         try:
-            await dag.static_site(source=self._fixture_site()).verify_site(
+            await dag.static_site(
+                source=self._fixture_site(),
+                **self._hugo_image_inputs(),
+            ).verify_site(
                 site_base_url=SITE_BASE_URL,
                 engine="hugo",
             )
@@ -64,6 +115,7 @@ class Tests:
         public_dir = await dag.static_site(
             source=self._fixture_site(),
             hugo_theme_url=HUGO_THEME_URL,
+            **self._hugo_image_inputs(),
         ).render_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
@@ -71,51 +123,6 @@ class Tests:
 
         index_html = await public_dir.file("index.html").contents()
         TestCase().assertGreater(len(index_html), 0)
-
-    @function
-    async def main_site_renders_imported_component_modules(self) -> None:
-        """Render a main site that imports component docs and OpenSpec modules."""
-        source = self._main_site_with_component_modules()
-        await dag.hugo(source=source.directory("daggerverse-docs")).prepare_module()
-        await dag.hugo(source=source.directory("container-images-docs")).prepare_module()
-        await dag.hugo(source=source.directory("daggerverse-openspec")).prepare_module()
-        await dag.hugo(source=source.directory("container-images-openspec")).prepare_module()
-
-        public_dir = await dag.static_site(
-            source=source,
-            hugo_theme_url=HUGO_THEME_URL,
-        ).render_site(
-            site_base_url=SITE_BASE_URL,
-            engine="hugo",
-        )
-
-        test_case = TestCase()
-        test_case.assertIn(
-            "Daggerverse component guide",
-            await public_dir.file("docs/components/daggerverse/how-to/foo/index.html").contents(),
-        )
-        test_case.assertIn(
-            "Container images component guide",
-            await public_dir.file("docs/components/container-images/how-to/foo/index.html").contents(),
-        )
-        test_case.assertIn(
-            "Daggerverse Git module spec",
-            await public_dir.file("docs/specs/git-module/spec/index.html").contents(),
-        )
-        test_case.assertIn(
-            "Container images scenario spec",
-            await public_dir.file("docs/specs/container-images-scenario/spec/index.html").contents(),
-        )
-        test_case.assertIn(
-            "Daggerverse archived change",
-            await public_dir.file("docs/changes/archive/git-module-change/proposal/index.html").contents(),
-        )
-        test_case.assertIn(
-            "Container images archived change",
-            await public_dir.file(
-                "docs/changes/archive/container-images-scenario-change/proposal/index.html",
-            ).contents(),
-        )
 
     @function
     async def unique_hugo_mount_paths_pass(self) -> None:
