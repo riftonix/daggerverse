@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Define the OpenTofu Dagger module contract for containerized IaC formatting,
+initialization, and validation.
+
+## Requirements
 
 ### Requirement: OpenTofu Runtime Image Inputs
 The OpenTofu module SHALL expose the standard runtime image inputs for the container used to execute the IaC tool.
@@ -23,3 +28,8 @@ The OpenTofu module SHALL keep the IaC command selection separate from runtime i
 - **WHEN** a caller creates the OpenTofu module with `executor`
 - **THEN** linting SHALL invoke that command inside the configured runtime image
 - **AND** the executor value SHALL NOT change image registry, repository, tag, or user
+
+#### Scenario: Executor command failure is reported against the configured image
+- **WHEN** the OpenTofu module test invokes `lint` with the default runtime image and a non-existent `executor` command
+- **THEN** the failure SHALL reference the non-existent executor command
+- **AND** the default runtime image SHALL remain the configured image, proving executor selection is separate from image identity

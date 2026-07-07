@@ -1,9 +1,6 @@
 """Dagger-native tests for the Git module."""
 
-from typing import Annotated
-
-import dagger
-from dagger import DefaultPath, Doc, function, object_type
+from dagger import function, object_type
 
 from .auth import AuthTests
 from .components import ComponentTests
@@ -24,16 +21,9 @@ class Tests:
         return "git-tests"
 
     @function
-    async def all(
-        self,
-        source: Annotated[
-            dagger.Directory,
-            DefaultPath("../../.."),
-            Doc("Git repository root directory"),
-        ],
-    ) -> None:
+    async def all(self) -> None:
         """Run all Git module tests."""
-        await MetadataTests().all(source=source)
+        await MetadataTests().all()
         await TagTests().all()
         await AuthTests().all()
         await RefTests().all()

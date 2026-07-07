@@ -72,13 +72,13 @@ Dagger test modules SHALL expose predictable public entrypoints for repository C
 
 #### Scenario: Test runtime user is configurable
 - **WHEN** a tested runtime or helper service image supports a configurable user
-- **THEN** the test module runtime image inputs SHALL include the matching optional `user_id` input
-- **AND** prefixed helper images SHALL use prefixed names such as `registry_user_id` when a user override is relevant
+- **THEN** the test module runtime image inputs SHALL include the matching optional container user input
+- **AND** prefixed helper images SHALL use prefixed names such as `registry_container_user_id` when a user override is relevant
 
 #### Scenario: Test module defaults match tested component defaults
 - **WHEN** a test module exposes runtime image inputs for a tested module or scenario
 - **THEN** the test module defaults SHALL match the tested component defaults
-- **AND** the implementation SHALL avoid independent version drift by using shared constants, Renovate-managed duplicate defaults, pass-through construction, or tests that assert the configured values are passed through
+- **AND** the implementation SHALL avoid independent version drift by using shared constants, Renovate-managed duplicate defaults, or pass-through construction
 
 #### Scenario: Renovate synchronizes duplicate runtime defaults
 - **WHEN** the same runtime image default appears in production code, scenario code, test code, documentation, or downstream workflow examples

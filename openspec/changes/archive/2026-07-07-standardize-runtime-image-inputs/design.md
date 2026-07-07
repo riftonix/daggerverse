@@ -61,15 +61,15 @@ The previous source-input standardization established that `source` is the prima
 
 8. Allow optional test runtime image overrides for offline runs.
 
-   Test modules should be runnable in environments without direct internet access when required images are mirrored into a local registry. To support that, image-backed test modules may expose optional constructor-level runtime image inputs for the tested module and helper services, including `user_id` fields when the underlying runtime supports them. The aggregate `all()` remains no-argument; offline callers configure image overrides once on the test object before invoking `all()`.
+   Test modules should be runnable in environments without direct internet access when required images are mirrored into a local registry. To support that, image-backed test modules may expose optional constructor-level runtime image inputs for the tested module and helper services, including container user fields when the underlying runtime supports them. Multi-tool scenarios use purpose-prefixed names such as `hugo_container_user_id`, `helm_container_user_id`, and `git_container_user_id` for these user fields. The aggregate `all()` remains no-argument; offline callers configure image overrides once on the test object before invoking `all()`.
 
 9. Keep tested-component defaults as the synchronization source.
 
-   Test module defaults should match the tested module or scenario defaults by importing shared constants or delegating through the tested component when practical. When a test must expose the same image inputs as the tested component, it should use the same default values and add pass-through tests so version drift is caught in the component test suite.
+   Test module defaults should match the tested module or scenario defaults by importing shared constants or delegating through the tested component when practical. When a test must expose the same image inputs as the tested component, it should use the same default values so version drift is caught by Renovate and by the shared constant source.
 
 10. Permit Renovate-synchronized duplicate defaults.
 
-   Default image tags do not have to live in constants. Duplicated constructor defaults are acceptable when every occurrence is tracked by Renovate with the same dependency identity, datasource, versioning, and extraction rule. Renovate should update the full runtime image tag atomically, including composite tags such as `0.154.5-10.5.0`. Tests should still exercise pass-through behavior so manual drift is caught.
+   Default image tags do not have to live in constants. Duplicated constructor defaults are acceptable when every occurrence is tracked by Renovate with the same dependency identity, datasource, versioning, and extraction rule. Renovate should update the full runtime image tag atomically, including composite tags such as `0.154.5-10.5.0`. Manual drift is caught by keeping test defaults synchronized with tested-component defaults through shared constants or Renovate-managed duplicate defaults.
 
 11. Use the runtime image source for Hugo minimum-version updates.
 
@@ -84,16 +84,16 @@ The previous source-input standardization established that `source` is the prima
 - Breaking `modules/opentofu` callers -> Document migration from `container_image` to split inputs and require a new release tag.
 - More scenario constructor inputs -> Use clear prefixes and defaults so basic calls remain ergonomic while CI can pin versions explicitly.
 - Inconsistent docs during transition -> Update root docs, reference docs, component READMEs, and examples in the same change.
-- Hidden image defaults may remain in tests or docs -> Add focused tests for static-site and Helm CI pass-through behavior and grep/audit public signatures before closing the change.
+- Hidden image defaults may remain in tests or docs -> Grep/audit public signatures and keep test defaults synchronized with tested-component defaults through shared constants or Renovate-managed duplicate defaults before closing the change.
 - Test module aggregates drift across components -> Document the default no-argument `all()` shape and keep exceptions explicit.
-- Test runtime image defaults drift from tested components -> Ensure duplicated defaults are Renovate-managed with the same source and add pass-through assertions for manual drift.
+- Test runtime image defaults drift from tested components -> Ensure duplicated defaults are Renovate-managed with the same source and synchronized with tested-component defaults through shared constants.
 - Hugo minimum version tracks a newer upstream release than the runtime image stream -> Configure Renovate to use the same Docker datasource/extractVersion as the runtime base image source.
 
 ## Migration Plan
 
-1. Update `scenarios/static-site` constructor, pass-through behavior, tests, and docs together.
-2. Update `scenarios/helm-ci` constructor/state, pass-through behavior, tests, and docs together.
-3. Update `modules/opentofu` runtime image inputs, tests if present, and docs together.
+1. Update `scenarios/static-site` constructor, offline test overrides, and docs together.
+2. Update `scenarios/helm-ci` constructor/state, offline test overrides, and docs together.
+3. Update `modules/opentofu` runtime image inputs and docs together; document the test module gap.
 4. Update repository guidance, Renovate examples, and downstream workflow guidance for runtime image and Hugo minimum-version synchronization.
 5. Hand off final lint, format, test, and OpenSpec validation commands for the user to run.
 6. Release changed modules/scenarios under new tags. Consumers migrate by pinning the new tags and replacing any old `container_image` or hidden default assumptions with explicit image inputs.

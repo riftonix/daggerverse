@@ -21,6 +21,22 @@ Any changed released module or scenario needs a new release tag so downstream
 workflows can opt into the new command shape. Consumers that cannot migrate yet
 should stay on the previous tag until their Dagger calls are updated.
 
+## Runtime Image Input Convention
+
+Image-backed modules expose the tool runtime image as `image_registry`,
+`image_repository`, `image_tag`, and `user_id`. Scenarios that compose
+image-backed modules use tool-prefixed inputs such as `hugo_image_tag`,
+`helm_image_tag`, and `git_image_tag`, with container user fields such as
+`hugo_container_user_id`.
+
+Docker build and publish metadata keeps build-specific names such as
+`image_ref`, `image_refs`, `tags`, `context_path`, `dockerfile_path`,
+`bake_path`, and `variable_overrides`.
+
+For Renovate synchronization, duplicate runtime image defaults are allowed when
+all occurrences are tracked from the same dependency source and Renovate updates
+the full tag. See [Runtime image input conventions](runtime-images.md).
+
 ## git
 
 Provides provider-neutral Git primitives for CI workflows, including refs, diffs, tags, components, repository metadata, authentication, and files-at-ref helpers.
@@ -57,6 +73,7 @@ Builds, validates, and prepares Hugo sites or Hugo modules in a containerized en
 - Main source: `modules/hugo/src/hugo/main.py`
 - Detailed reference: [Hugo module reference](hugo.md)
 - Typical command: `dagger -m ./modules/hugo call --source=./site build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
+- Reproducible command: `dagger -m ./modules/hugo call --source=./site --image-tag=0.154.5-10.5.0 build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
 
 ## kind
 
@@ -73,6 +90,7 @@ Runs OpenTofu or Terraform-compatible formatting, initialization, and validation
 - Path: `modules/opentofu`
 - Main source: `modules/opentofu/src/opentofu/main.py`
 - Typical command: `dagger -m ./modules/opentofu call lint --source=./iac`
+- Reproducible command: `dagger -m ./modules/opentofu call --image-tag=latest lint --source=./iac`
 
 ## ssh
 
@@ -96,6 +114,7 @@ and publication workflows.
 - How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
 - Typical verify command: `dagger -m ./scenarios/helm-ci call helm-verify --source=./charts/mychart`
 - Typical changed-chart command: `dagger -m ./scenarios/helm-ci call helm-verify-changed-charts --source=. --target-branch=master --charts-path=charts`
+- Reproducible changed-chart command: `dagger -m ./scenarios/helm-ci call --helm-image-tag=3.18.6 --git-image-tag=2.52.0 helm-verify-changed-charts --source=. --target-branch=master --charts-path=charts`
 - CI use cases: verify one chart, verify changed chart directories through provider-neutral Git inputs, and publish caller-selected chart versions to OCI registries.
 
 ## container-images scenario
@@ -121,4 +140,5 @@ rendering workflows.
 - Detailed reference: [Static site scenario reference](static-site.md)
 - Typical verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 verify-site --site-base-url=https://example.com/ --engine=hugo`
 - Typical render command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 render-site --site-base-url=https://example.com/ --engine=hugo --output=./public`
+- Reproducible verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 --hugo-image-tag=0.154.5-10.5.0 verify-site --site-base-url=https://example.com/ --engine=hugo`
 - CI use cases: verify and render caller-selected static sites, validate Hugo mount collisions, and keep provider-specific Pages lifecycle in workflow YAML.

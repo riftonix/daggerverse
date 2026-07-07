@@ -13,7 +13,7 @@ Scope: public Dagger module and scenario constructors/functions under `modules/`
 | `modules/ssh` | `image_registry`, `image_repository`, `image_tag`, `user_id` on constructor | Runtime image selection. Already follows the standard names. Doc strings still say Helm, but names match the convention. |
 | `modules/opentofu` | `container_image`, `executor` on constructor | Runtime image selection uses combined `container_image`, which violates the target convention. `executor` is unrelated command selection and must remain separate. |
 | `modules/docker` | `image_ref`, `image_refs`, `tags`, `context_path`, `dockerfile_path`, `bake_path`, `variable_overrides`, registry auth fields | Build/publish image metadata and registry authentication. These are not runtime tool image selectors and should keep their current names. |
-| `scenarios/static-site` | `source`, `hugo_theme_url`; calls `dag.hugo(source=...)` with hidden Hugo defaults | Scenario composes Hugo but does not expose Hugo runtime image selection. Needs prefixed `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, `hugo_user_id`. |
+| `scenarios/static-site` | `source`, `hugo_theme_url`; calls `dag.hugo(source=...)` with hidden Hugo defaults | Scenario composes Hugo but does not expose Hugo runtime image selection. Needs prefixed `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, `hugo_container_user_id`. |
 | `scenarios/helm-ci` | `source`; private `_helm()` accepts unprefixed Helm runtime image defaults; changed-chart detection calls `dag.git(source=...)` with hidden Git defaults | Scenario composes Helm and Git. Public API needs prefixed Helm and Git runtime image inputs; current public functions do not expose them. |
 | `scenarios/container-images` | `image_ref`, `publish_specs`, `context_path`, `dockerfile_path`, `bake_path`, `variable_overrides`, registry auth fields | Build/publish metadata and registry authentication. These are explicit exceptions, not runtime tool image selectors. |
 
@@ -49,10 +49,10 @@ Unrelated version or command inputs:
 | `modules/docker/tests` | `all()` without inputs | `image_ref`, `image_refs`, `tags`, registry auth examples | OK. These validate build/publish metadata, not runtime image selection. |
 | `modules/git/tests` | `all(source)` | None | Drift from no-argument aggregate convention. The only caller-provided source usage is metadata SHA shape checks, so task `6.1` should normalize this to `all()` by using an existing synthetic Git repository fixture instead of documenting an exception. |
 | `modules/helm/tests` | `all()` without inputs | `push(registry_image_registry, registry_image_repository, registry_image_tag)` | Helper service inputs are purpose-prefixed. `all()` currently calls `push()` with defaults, so the aggregate remains no-argument. Constructor-level offline overrides are not present yet. |
-| `modules/hugo/tests` | `all()` without inputs | None | OK for aggregate shape. No exposed runtime image overrides yet. |
+| `modules/hugo/tests` | `all()` without inputs | None | OK for aggregate shape. Uses constructor-level Hugo runtime image overrides for offline or mirrored-registry runs. |
 | `scenarios/container-images/tests` | `all()` without inputs | `image_ref`, `image_refs`, registry auth examples | OK. These validate build/publish metadata, not runtime image selection. |
-| `scenarios/helm-ci/tests` | `all()` without inputs | None | OK for aggregate shape. Needs constructor-level Helm/Git runtime overrides and pass-through assertions in tasks `3.3` and `3.4`. |
-| `scenarios/static-site/tests` | `all()` without inputs | None | OK for aggregate shape. Needs constructor-level Hugo runtime overrides and pass-through assertions in tasks `2.2` and `2.3`. |
+| `scenarios/helm-ci/tests` | `all()` without inputs | None | OK for aggregate shape. Needs constructor-level Helm/Git runtime overrides in task `3.4`. |
+| `scenarios/static-site/tests` | `all()` without inputs | None | OK for aggregate shape. Uses constructor-level Hugo runtime overrides for scenario calls; direct Hugo module integration coverage lives in `modules/hugo/tests`. |
 
 ### 1.4 Released API Impact
 

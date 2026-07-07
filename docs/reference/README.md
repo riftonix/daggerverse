@@ -10,5 +10,6 @@ Available reference pages:
 - [Hugo module reference](hugo.md)
 - [Container images scenario reference](container-images.md)
 - [Static site scenario reference](static-site.md)
+- [Runtime image input conventions](runtime-images.md)
 - [CI and module test conventions](ci.md)
 - [Repository layout](repository-layout.md)
