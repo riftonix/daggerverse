@@ -60,7 +60,7 @@ dagger -m ./scenarios/static-site call \
 ```
 
 Image-backed modules use `image_registry`, `image_repository`, `image_tag`, and
-`user_id` for their execution container. Scenarios that compose image-backed
+`container_user_id` for their execution container. Scenarios that compose image-backed
 modules prefix those fields with the tool name, such as `hugo_image_tag`,
 `helm_image_tag`, or `git_image_tag`. See
 [Runtime image input conventions](../reference/runtime-images.md).

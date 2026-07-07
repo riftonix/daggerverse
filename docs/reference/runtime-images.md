@@ -12,11 +12,22 @@ inputs:
 - `image_registry`
 - `image_repository`
 - `image_tag`
-- `user_id`
+- `container_user_id`
 
 The module builds the runtime image reference internally from registry,
 repository, and tag. Callers can override one field without parsing a combined
 image string.
+
+New image-backed modules define these defaults as module-level constants:
+
+- `DEFAULT_IMAGE_REGISTRY`
+- `DEFAULT_IMAGE_REPOSITORY`
+- `DEFAULT_IMAGE_TAG`
+- `DEFAULT_CONTAINER_USER_ID`
+
+Default runtime images should be public and `DEFAULT_IMAGE_TAG` should be pinned
+to a concrete tag instead of `latest`, unless a design explicitly documents a
+different choice.
 
 Example:
 
@@ -45,7 +56,7 @@ Examples:
 - `helm_image_registry`, `helm_image_repository`, `helm_image_tag`, `helm_container_user_id`
 - `git_image_registry`, `git_image_repository`, `git_image_tag`, `git_container_user_id`
 
-The prefixed container user field uses `container_user_id` because the user is a
+The container user field uses `container_user_id` because the user is a
 container execution setting, not part of the image reference.
 
 Example static-site pin:

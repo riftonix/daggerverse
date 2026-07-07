@@ -87,7 +87,7 @@ class HelmCi:
             image_registry=self.helm_image_registry,
             image_repository=self.helm_image_repository,
             image_tag=self.helm_image_tag,
-            user_id=self.helm_container_user_id,
+            container_user_id=self.helm_container_user_id,
         )
 
     async def _get_chart_metadata(self, source: dagger.Directory, chart_path: str) -> dict:

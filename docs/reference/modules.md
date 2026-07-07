@@ -24,7 +24,7 @@ should stay on the previous tag until their Dagger calls are updated.
 ## Runtime Image Input Convention
 
 Image-backed modules expose the tool runtime image as `image_registry`,
-`image_repository`, `image_tag`, and `user_id`. Scenarios that compose
+`image_repository`, `image_tag`, and `container_user_id`. Scenarios that compose
 image-backed modules use tool-prefixed inputs such as `hugo_image_tag`,
 `helm_image_tag`, and `git_image_tag`, with container user fields such as
 `hugo_container_user_id`.

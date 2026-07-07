@@ -1,8 +1,24 @@
+import json
 from typing import Annotated, Self
 
 import dagger
 import yaml
 from dagger import Doc, dag, function, object_type
+
+DEFAULT_IMAGE_REGISTRY = "docker.io"
+DEFAULT_IMAGE_REPOSITORY = "alpine/helm"
+DEFAULT_IMAGE_TAG = "3.18.6"
+DEFAULT_CONTAINER_USER_ID = "65532"
+
+
+@object_type
+class ChartMetadata:
+    """Structured metadata from a Helm chart."""
+
+    name: str
+    version: str
+    chart_type: str
+    annotations: list[str]
 
 
 @object_type
@@ -15,25 +31,25 @@ class Helm:
     image_registry: str
     image_repository: str
     image_tag: str
-    user_id: str
+    container_user_id: str
     container_: dagger.Container | None
 
     @classmethod
     async def create(
         cls,
         source: Annotated[dagger.Directory, Doc("Helm chart host path")],
-        image_registry: Annotated[str | None, Doc("Helm image registry")] = "docker.io",
-        image_repository: Annotated[str | None, Doc("Helm image repositroy")] = "alpine/helm",
-        image_tag: Annotated[str | None, Doc("Helm image tag")] = "3.18.6",
-        user_id: Annotated[str | None, Doc("Helm image user")] = "65532",
+        image_registry: Annotated[str | None, Doc("Helm image registry")] = DEFAULT_IMAGE_REGISTRY,
+        image_repository: Annotated[str | None, Doc("Helm image repository")] = DEFAULT_IMAGE_REPOSITORY,
+        image_tag: Annotated[str | None, Doc("Helm image tag")] = DEFAULT_IMAGE_TAG,
+        container_user_id: Annotated[str | None, Doc("Helm container user")] = DEFAULT_CONTAINER_USER_ID,
     ):
         """Constructor"""
         return cls(
             source=source,
-            image_registry=image_registry,
-            image_repository=image_repository,
-            image_tag=image_tag,
-            user_id=user_id,
+            image_registry=image_registry or DEFAULT_IMAGE_REGISTRY,
+            image_repository=image_repository or DEFAULT_IMAGE_REPOSITORY,
+            image_tag=image_tag or DEFAULT_IMAGE_TAG,
+            container_user_id=container_user_id or DEFAULT_CONTAINER_USER_ID,
             container_=None,
         )
 
@@ -45,7 +61,7 @@ class Helm:
         self.container_ = (
             dag.container()
             .from_(address=f"{self.image_registry}/{self.image_repository}:{self.image_tag}")
-            .with_user(self.user_id)
+            .with_user(self.container_user_id)
             .with_exec(["mkdir", "-p", "-m", "770", "/tmp/helm/registry"])
             .with_env_variable(
                 "HELM_REGISTRY_CONFIG",
@@ -58,12 +74,12 @@ class Helm:
             .with_new_file(
                 "$HELM_REGISTRY_CONFIG",
                 contents="{}",
-                owner=self.user_id,
+                owner=self.container_user_id,
                 permissions=0o600,
                 expand=True,
             )
             .with_env_variable("HELM_CHART_PATH", "/tmp/helm/chart")
-            .with_directory("$HELM_CHART_PATH", self.source, owner=self.user_id, expand=True)
+            .with_directory("$HELM_CHART_PATH", self.source, owner=self.container_user_id, expand=True)
             .with_workdir("$HELM_CHART_PATH", expand=True)
             .with_entrypoint(["/usr/bin/helm"])
         )
@@ -130,8 +146,8 @@ class Helm:
     ) -> str:
         """Templates helm chart"""
         await self.lint(strict=True)
-        chart_yaml = await self.source.file("Chart.yaml").contents()
-        if yaml.safe_load(chart_yaml).get("type") == "library":
+        metadata = await self.get_chart_metadata()
+        if metadata.chart_type == "library":
             print("Warning: helm template is not acceptable for library charts (type: library)")
             return ""
         container: dagger.Container = self.container()
@@ -183,7 +199,7 @@ class Helm:
         container: dagger.Container = self.container()
         container = (
             container.with_env_variable("HELM_CHART", "/tmp/chart.tgz")
-            .with_file("$HELM_CHART", chart, owner=self.user_id, expand=True)
+            .with_file("$HELM_CHART", chart, owner=self.container_user_id, expand=True)
             .with_exec(cmd, use_entrypoint=True, expand=True)
         )
 
@@ -193,12 +209,42 @@ class Helm:
     @function
     async def get_chart_version(self) -> str:
         """Return chart metadata from `helm show chart` as YAML string"""
+        metadata = await self.get_chart_metadata()
+        return metadata.version
+
+    @function
+    async def get_chart_metadata(self) -> ChartMetadata:
+        """Return structured chart metadata from `helm show chart`."""
+        metadata = await self._read_chart_metadata()
+        chart_type = str(metadata.get("type", "")).strip()
+        annotations = metadata.get("annotations") or {}
+        return ChartMetadata(
+            name=str(metadata.get("name", "")).strip(),
+            version=str(metadata.get("version", "")).strip(),
+            chart_type=chart_type,
+            annotations=[f"{key}={value}" for key, value in sorted(annotations.items())],
+        )
+
+    @function
+    async def get_chart_metadata_json(self) -> str:
+        """Return structured chart metadata as JSON."""
+        metadata = await self.get_chart_metadata()
+        return json.dumps(
+            {
+                "name": metadata.name,
+                "version": metadata.version,
+                "chart_type": metadata.chart_type,
+                "annotations": metadata.annotations,
+            },
+            sort_keys=True,
+        )
+
+    async def _read_chart_metadata(self) -> dict:
+        """Return raw chart metadata from `helm show chart`."""
         container: dagger.Container = self.container()
         cmd = ["show", "chart", "."]
         chart_yaml = await container.with_exec(cmd, use_entrypoint=True).stdout()
-        metadata = yaml.safe_load(chart_yaml) or {}
-        chart_version = str(metadata.get("version", "")).strip()
-        return chart_version
+        return yaml.safe_load(chart_yaml) or {}
 
     @function
     async def is_already_published(
