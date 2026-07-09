@@ -9,11 +9,12 @@ This documentation separates learning material, task-oriented guides, reference 
 3. Read [Run module and scenario checks](how-to/run-module-checks.md) to run local test, lint, and format commands.
 4. Read [Write Dagger CI modules and tests](how-to/write-dagger-ci-modules-and-tests.md) before adding or testing a module.
 5. Read [Git module reference](reference/git.md) when building Git-based CI decisions.
-6. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
-7. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
-8. Read [Runtime image input conventions](reference/runtime-images.md) when pinning or mirroring tool runtime images.
-9. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
-10. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
+6. Read [Helm unittest module reference](reference/helm-unittest.md) when adding chart unit tests.
+7. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
+8. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
+9. Read [Runtime image input conventions](reference/runtime-images.md) when pinning or mirroring tool runtime images.
+10. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
+11. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
 
 ## Documentation Structure
 

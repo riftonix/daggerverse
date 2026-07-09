@@ -2,12 +2,12 @@
 
 - [x] 1.1 Add a Helm module helper that returns structured chart metadata, reusing the existing chart version and library chart detection behavior, and including chart annotations.
 - [x] 1.1a Update the Helm module runtime image API to use `DEFAULT_CONTAINER_USER_ID` and `container_user_id`.
-- [ ] 1.2 Add `modules/helm-unittest` with public runtime image defaults based on `helmunittest/helm-unittest`.
-- [ ] 1.3 Implement a Helm unittest module function that runs unit tests for a supplied chart directory.
-- [ ] 1.4 Ensure Helm dependency update can be applied before lint, template, package, and unittest workflows without leaking provider-specific behavior.
+- [x] 1.2 Add `modules/helm-unittest` with public runtime image defaults based on `helmunittest/helm-unittest`.
+- [x] 1.3 Implement a Helm unittest module function that runs unit tests for a supplied chart directory.
+- [x] 1.4 Ensure Helm dependency update can be applied before lint, template, package, and unittest workflows without leaking provider-specific behavior.
 - [x] 1.5 Add Dagger-native Helm module tests for structured metadata detection, including chart name, version, chart type, and annotations.
 - [x] 1.6 Add Dagger-native Helm module tests for library chart template skip behavior.
-- [ ] 1.7 Add Dagger-native Helm unittest module tests for successful unittest execution and failing unittest execution.
+- [x] 1.7 Add Dagger-native Helm unittest module tests for successful unittest execution and failing unittest execution.
 
 ## 2. Helm CI Scenario Result Model
 

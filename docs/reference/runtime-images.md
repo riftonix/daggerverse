@@ -40,9 +40,11 @@ dagger -m ./modules/hugo call \
   --site-base-url=https://example.com/
 ```
 
-`modules/opentofu` follows the same split-input convention. Its `executor`
-input remains separate because it selects the command to run inside the image,
-such as `tofu` or `terraform`, not the image identity.
+`modules/helm-unittest` follows the same split-input convention and defaults to
+the public `helmunittest/helm-unittest` runtime. `modules/opentofu` also follows
+the convention. Its `executor` input remains separate because it selects the
+command to run inside the image, such as `tofu` or `terraform`, not the image
+identity.
 
 ## Multi-Tool Scenarios
 

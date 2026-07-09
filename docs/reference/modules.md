@@ -65,6 +65,16 @@ Runs Helm operations in a containerized environment.
 - Main source: `modules/helm/src/helm/main.py`
 - Typical command: `dagger -m ./modules/helm call lint --source=./charts/mychart`
 
+## helm-unittest
+
+Runs Helm chart unit tests in the public `helmunittest/helm-unittest` runtime.
+
+- Path: `modules/helm-unittest`
+- Main source: `modules/helm-unittest/src/helm_unittest/main.py`
+- Detailed reference: [Helm unittest module reference](helm-unittest.md)
+- Typical command: `dagger -m ./modules/helm-unittest call test --source=./charts/mychart`
+- CI use cases: direct chart unit test execution and reusable composition from Helm chart validation workflows.
+
 ## hugo
 
 Builds, validates, and prepares Hugo sites or Hugo modules in a containerized environment.

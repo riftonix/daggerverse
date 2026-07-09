@@ -18,6 +18,8 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/modules/git
 - **helm** - linting, templating, packaging, and publishing Helm charts.
   - https://github.com/riftonix/daggerverse/modules/helm
+- **helm-unittest** - run Helm chart unit tests with the public helm-unittest runtime.
+  - https://github.com/riftonix/daggerverse/modules/helm-unittest
 - **opentofu** - linting and validation for IaC via OpenTofu.
   - https://github.com/riftonix/daggerverse/modules/opentofu
 - **ssh** - SSH client in a container with key setup helpers.
