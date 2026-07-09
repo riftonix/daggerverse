@@ -75,14 +75,6 @@ Builds, validates, and prepares Hugo sites or Hugo modules in a containerized en
 - Typical command: `dagger -m ./modules/hugo call --source=./site build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
 - Reproducible command: `dagger -m ./modules/hugo call --source=./site --image-tag=0.154.5-10.5.0 build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
 
-## kind
-
-Provides a container with the `kind` CLI installed.
-
-- Path: `modules/kind`
-- Main source: `modules/kind/src/kind/main.py`
-- Typical command: `dagger -m ./modules/kind call container`
-
 ## opentofu
 
 Runs OpenTofu or Terraform-compatible formatting, initialization, and validation.
@@ -99,6 +91,12 @@ Runs SSH client operations in a container.
 - Path: `modules/ssh`
 - Main source: `modules/ssh/src/ssh/main.py`
 - Typical command: `dagger -m ./modules/ssh call exec --destination=example.com`
+
+## Kubernetes Cluster Lifecycle
+
+The previous Kind wrapper module has been removed. Future Kubernetes cluster
+lifecycle work should be introduced as a new module, for example a
+Talos-oriented module, with its own public contract.
 
 ## Scenario Note
 

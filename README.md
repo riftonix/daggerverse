@@ -18,8 +18,6 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/modules/git
 - **helm** - linting, templating, packaging, and publishing Helm charts.
   - https://github.com/riftonix/daggerverse/modules/helm
-- **kind** - base container with `kind` installed for local k8s usage.
-  - https://github.com/riftonix/daggerverse/modules/kind
 - **opentofu** - linting and validation for IaC via OpenTofu.
   - https://github.com/riftonix/daggerverse/modules/opentofu
 - **ssh** - SSH client in a container with key setup helpers.
