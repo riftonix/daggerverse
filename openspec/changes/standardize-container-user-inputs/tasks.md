@@ -51,10 +51,10 @@
 
 ## 7. Remove Kind Module
 
-- [ ] 7.1 Remove `modules/kind` source, metadata, README, and configuration files.
-- [ ] 7.2 Remove Kind from repository README, module reference docs, and any discovery examples.
-- [ ] 7.3 Confirm module discovery, lint, format, and publication logic no longer references Kind.
-- [ ] 7.4 Document that future Talos work should be introduced as a new module.
+- [x] 7.1 Remove `modules/kind` source, metadata, README, and configuration files.
+- [x] 7.2 Remove Kind from repository README, module reference docs, and any discovery examples.
+- [x] 7.3 Confirm module discovery, lint, format, and publication logic no longer references Kind.
+- [x] 7.4 Document that future Talos work should be introduced as a new module.
 
 ## 8. Repository Documentation
 
