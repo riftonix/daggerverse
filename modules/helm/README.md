@@ -17,7 +17,7 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - image_registry: `docker.io`
 - image_repository: `alpine/helm`
 - image_tag: `3.18.6`
-- container_user: `65532`
+- container_user_id: `65532`
 - Working directory in container: `/tmp/helm/chart`
 - Registry config path: `/tmp/helm/registry/config.json`
 
@@ -25,7 +25,7 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 
 All functions are exposed via the Dagger module and return either a configured container, a new module instance (to continue chaining), a string (command output), or a Dagger file artifact.
 
-- create(source, image_registry, image_repository, image_tag, container_user)
+- create(source, image_registry, image_repository, image_tag, container_user_id)
   - Returns a configured Helm module instance. `source` must point to a Helm chart directory (must contain `Chart.yaml`).
 
 - container() -> dagger.Container
@@ -53,7 +53,16 @@ All functions are exposed via the Dagger module and return either a configured c
   - Packages the chart and pushes it to `oci://<oci_url>` using `helm push`.
   - If `insecure` is true, `--plain-http` is used.
 
-- has_version(oci_url: str, version: str, insecure: bool = False) -> bool
+- get_chart_metadata() -> ChartMetadata
+  - Returns structured chart metadata with `name`, `version`, `chart_type`, and `annotations`.
+
+- get_chart_metadata_json() -> str
+  - Returns the same chart metadata as JSON for callers that prefer primitive outputs.
+
+- get_chart_version() -> str
+  - Returns the chart version from chart metadata.
+
+- is_already_published(oci_chart_url: str, version: str, insecure: bool = False) -> bool
   - Checks if a chart version exists in OCI registry using `helm show chart`.
 
 ## Usage (Python SDK)
@@ -133,9 +142,9 @@ dagger -m ./modules/helm call push \
 Check chart version in OCI:
 
 ```bash
-dagger -m ./modules/helm call has-version \
+dagger -m ./modules/helm call is-already-published \
   --source=./charts/mychart \
-  --oci-url=registry.example.com/mycharts/mychart \
+  --oci-chart-url=registry.example.com/mycharts/mychart \
   --version=0.1.0
 ```
 

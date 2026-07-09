@@ -1,4 +1,7 @@
 apiVersion: v2
+annotations:
+  category: application
+  owner: platform
 appVersion: 0.0.0
 description: A Helm chart for Kubernetes
 name: ns-configurator

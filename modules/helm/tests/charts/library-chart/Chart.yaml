@@ -1,0 +1,8 @@
+apiVersion: v2
+annotations:
+  category: library
+  owner: platform
+description: A Helm library chart for tests
+name: library-chart
+type: library
+version: 0.1.0

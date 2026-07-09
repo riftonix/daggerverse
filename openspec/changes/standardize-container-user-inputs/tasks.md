@@ -16,12 +16,12 @@
 
 ## 3. Helm Module And Tests
 
-- [ ] 3.1 Rename Helm module public constructor input `user_id` to `container_user_id`.
-- [ ] 3.2 Update Helm internal field names, container user, chart ownership, and package ownership to use `container_user_id`.
-- [ ] 3.3 Update Helm module tests in the same change for the new public input name and helper service image inputs.
-- [ ] 3.4 Keep registry authentication `username` unchanged.
-- [ ] 3.5 Update Helm README/reference docs and migration notes.
-- [ ] 3.6 Hand off `make tests module helm` for the user to run after the Helm changes.
+- [x] 3.1 Rename Helm module public constructor input `user_id` to `container_user_id`.
+- [x] 3.2 Update Helm internal field names, container user, chart ownership, and package ownership to use `container_user_id`.
+- [x] 3.3 Update Helm module tests in the same change for the new public input name and helper service image inputs.
+- [x] 3.4 Keep registry authentication `username` unchanged.
+- [x] 3.5 Update Helm README/reference docs and migration notes.
+- [x] 3.6 Hand off `make tests module helm` for the user to run after the Helm changes.
 
 ## 4. Hugo Module And Tests
 

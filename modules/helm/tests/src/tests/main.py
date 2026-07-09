@@ -1,5 +1,6 @@
 """Dagger-native tests for the Helm module."""
 
+import json
 from typing import Annotated
 from unittest import TestCase
 
@@ -9,6 +10,13 @@ from dagger import Directory, Doc, Service, dag, function, object_type
 FIXTURE_CHART_PATH = "charts/ns-configurator"
 FIXTURE_CHART_NAME = "ns-configurator"
 FIXTURE_CHART_VERSION = "1.0.0"
+FIXTURE_CHART_TYPE = "application"
+FIXTURE_CHART_ANNOTATIONS = ["category=application", "owner=platform"]
+LIBRARY_CHART_PATH = "charts/library-chart"
+LIBRARY_CHART_NAME = "library-chart"
+LIBRARY_CHART_VERSION = "0.1.0"
+LIBRARY_CHART_TYPE = "library"
+LIBRARY_CHART_ANNOTATIONS = ["category=library", "owner=platform"]
 LOCAL_REGISTRY_HOST = "registry"
 LOCAL_REGISTRY_PORT = 5000
 LOCAL_REGISTRY_NAMESPACE = "charts"
@@ -27,7 +35,9 @@ class Tests:
     async def all(self) -> None:
         """Run all Helm module tests."""
         await self.lint()
+        await self.chart_metadata()
         await self.template()
+        await self.library_chart_template()
         await self.package()
         await self.push()
 
@@ -64,6 +74,32 @@ class Tests:
             ],
             limit_range["spec"]["limits"],
         )
+
+    @function
+    async def chart_metadata(self) -> None:
+        """Assert structured chart metadata for application and library charts."""
+        app_metadata = json.loads(await dag.helm(source=self._fixture_chart()).get_chart_metadata_json())
+        library_metadata = json.loads(await dag.helm(source=self._library_chart()).get_chart_metadata_json())
+
+        test_case = TestCase()
+        test_case.assertEqual(FIXTURE_CHART_NAME, app_metadata["name"])
+        test_case.assertEqual(FIXTURE_CHART_VERSION, app_metadata["version"])
+        test_case.assertEqual(FIXTURE_CHART_TYPE, app_metadata["chart_type"])
+        test_case.assertEqual(FIXTURE_CHART_ANNOTATIONS, app_metadata["annotations"])
+        test_case.assertNotEqual("library", app_metadata["chart_type"])
+
+        test_case.assertEqual(LIBRARY_CHART_NAME, library_metadata["name"])
+        test_case.assertEqual(LIBRARY_CHART_VERSION, library_metadata["version"])
+        test_case.assertEqual(LIBRARY_CHART_TYPE, library_metadata["chart_type"])
+        test_case.assertEqual(LIBRARY_CHART_ANNOTATIONS, library_metadata["annotations"])
+        test_case.assertEqual("library", library_metadata["chart_type"])
+
+    @function
+    async def library_chart_template(self) -> None:
+        """Assert Helm template is skipped for library charts."""
+        rendered_template = await dag.helm(source=self._library_chart()).template()
+        test_case = TestCase()
+        test_case.assertEqual("", rendered_template)
 
     @function
     async def package(self) -> None:
@@ -105,6 +141,10 @@ class Tests:
     def _fixture_chart(self) -> Directory:
         """Return the fixture chart directory."""
         return dag.current_module().source().directory(FIXTURE_CHART_PATH)
+
+    def _library_chart(self) -> Directory:
+        """Return the fixture library chart directory."""
+        return dag.current_module().source().directory(LIBRARY_CHART_PATH)
 
     def _local_registry(
         self,
