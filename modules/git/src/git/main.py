@@ -12,6 +12,12 @@ from .metadata import Metadata
 from .refs import Refs
 from .tags import Tags
 
+DEFAULT_IMAGE_REGISTRY = "docker.io"
+DEFAULT_IMAGE_REPOSITORY = "alpine/git"
+# renovate: datasource=docker depName=alpine/git
+DEFAULT_IMAGE_TAG = "2.52.0"
+DEFAULT_CONTAINER_USER_ID = "65532"
+
 
 @object_type
 class Git:
@@ -36,10 +42,10 @@ class Git:
     async def create(
         cls,
         source: Annotated[dagger.Directory, DefaultPath("."), Doc("Git repository directory (must include .git)")],
-        image_registry: Annotated[str | None, Doc("Git image registry")] = "docker.io",
-        image_repository: Annotated[str | None, Doc("Git image repositroy")] = "alpine/git",
-        image_tag: Annotated[str | None, Doc("Git image tag")] = "2.52.0",
-        user_id: Annotated[str | None, Doc("Git image user")] = "65532",
+        image_registry: Annotated[str | None, Doc("Git image registry")] = DEFAULT_IMAGE_REGISTRY,
+        image_repository: Annotated[str | None, Doc("Git image repositroy")] = DEFAULT_IMAGE_REPOSITORY,
+        image_tag: Annotated[str | None, Doc("Git image tag")] = DEFAULT_IMAGE_TAG,
+        user_id: Annotated[str | None, Doc("Git image user")] = DEFAULT_CONTAINER_USER_ID,
     ):
         """Constructor"""
         return cls(

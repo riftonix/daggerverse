@@ -4,11 +4,6 @@ from unittest import TestCase
 
 from dagger import dag, function, object_type
 
-DEFAULT_IMAGE_REGISTRY = "ghcr.io"
-DEFAULT_IMAGE_REPOSITORY = "opentofu/opentofu"
-DEFAULT_IMAGE_TAG = "latest"
-DEFAULT_USER_ID = "65532"
-
 
 @object_type
 class Tests:
@@ -31,10 +26,6 @@ class Tests:
         test_case = TestCase()
         try:
             await dag.opentofu(
-                image_registry=DEFAULT_IMAGE_REGISTRY,
-                image_repository=DEFAULT_IMAGE_REPOSITORY,
-                image_tag=DEFAULT_IMAGE_TAG,
-                user_id=DEFAULT_USER_ID,
                 executor=bogus_executor,
             ).lint(source=dag.directory())
         except BaseException as exc:

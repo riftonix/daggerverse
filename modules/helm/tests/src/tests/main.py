@@ -20,6 +20,10 @@ LIBRARY_CHART_ANNOTATIONS = ["category=library", "owner=platform"]
 LOCAL_REGISTRY_HOST = "registry"
 LOCAL_REGISTRY_PORT = 5000
 LOCAL_REGISTRY_NAMESPACE = "charts"
+DEFAULT_REGISTRY_IMAGE_REGISTRY = "docker.io"
+DEFAULT_REGISTRY_IMAGE_REPOSITORY = "registry"
+# renovate: datasource=docker depName=registry
+DEFAULT_REGISTRY_IMAGE_TAG = "2"
 
 
 @object_type
@@ -112,9 +116,9 @@ class Tests:
     @function
     async def push(
         self,
-        registry_image_registry: Annotated[str, Doc("Registry image registry")] = "docker.io",
-        registry_image_repository: Annotated[str, Doc("Registry image repository")] = "registry",
-        registry_image_tag: Annotated[str, Doc("Registry image tag")] = "2",
+        registry_image_registry: Annotated[str, Doc("Registry image registry")] = DEFAULT_REGISTRY_IMAGE_REGISTRY,
+        registry_image_repository: Annotated[str, Doc("Registry image repository")] = DEFAULT_REGISTRY_IMAGE_REPOSITORY,
+        registry_image_tag: Annotated[str, Doc("Registry image tag")] = DEFAULT_REGISTRY_IMAGE_TAG,
     ) -> None:
         """Package and push the fixture chart to a local OCI registry service."""
         registry_service = self._local_registry(

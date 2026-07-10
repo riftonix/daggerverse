@@ -33,6 +33,16 @@
       "datasourceTemplate": "repology",
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)"
+    },
+    {
+      "customType": "regex",
+      "description": "Update Python runtime image tags",
+      "managerFilePatterns": [
+        "/^(modules|scenarios)/.*/(src|tests)/.*\\.py$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\s*\\n[A-Z][A-Z0-9_]*_IMAGE_TAG\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ]
     }
   ],
   "packageRules": [
