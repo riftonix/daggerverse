@@ -28,10 +28,20 @@
 ## 4. Development Publication Workflow
 
 - [ ] 4.1 Add a scenario function that discovers changed charts relative to caller-provided pull request refs.
-- [ ] 4.2 Compute development package versions by appending caller-provided SemVer build metadata to the chart version.
-- [ ] 4.3 Package and publish each selected chart to a caller-provided OCI registry destination.
-- [ ] 4.4 Return structured publication results for published, skipped, and failed charts.
-- [ ] 4.5 Add tests for development version calculation and changed dev publication behavior, using a local registry or dry-run path where appropriate.
+- [ ] 4.2 Support invoking development publication from pull request workflows after validation succeeds.
+- [ ] 4.3 Compute development package versions by appending caller-provided SemVer build metadata to the chart version, including a stable pull request marker such as `pr.<number>`.
+- [ ] 4.4 Package and publish each selected chart to a caller-provided OCI registry destination.
+- [ ] 4.5 Return structured publication results for published, skipped, and failed charts, including registry-visible OCI references suitable for cleanup and summaries.
+- [ ] 4.6 Add tests for development version calculation and changed dev publication behavior, using a local registry or dry-run path where appropriate.
+
+## 4a. Development Publication Cleanup Workflow
+
+- [ ] 4a.1 Add provider-neutral cleanup support for pull-request development chart versions using OCI registry APIs rather than GitHub Packages APIs.
+- [ ] 4a.2 Allow cleanup to select development versions by a caller-provided pull request marker such as `pr.<number>`.
+- [ ] 4a.3 Ensure cleanup skips release chart versions and reports deleted, skipped, and failed artifacts as structured results.
+- [ ] 4a.4 Support provider workflow retry by accepting explicit cleanup inputs such as registry destination, package or chart scope, and pull request marker.
+- [ ] 4a.5 Add a reusable `skopeo`-based module if direct OCI registry API operations require a containerized helper.
+- [ ] 4a.6 Add tests for cleanup selection, release-version protection, and retry inputs using a local registry or dry-run path where appropriate.
 
 ## 5. Release Publication Workflow
 
@@ -39,7 +49,11 @@
 - [ ] 5.2 Add optional metadata path gating so release publication can skip when no matching `Chart.yaml` files changed.
 - [ ] 5.3 Package release charts using the version from `Chart.yaml` without appending build metadata.
 - [ ] 5.4 Add optional idempotent behavior that skips pushing chart versions already present in the destination registry.
-- [ ] 5.5 Add tests for metadata gating, unchanged no-op behavior, release version publication, and already-published skips.
+- [ ] 5.5 Detect chart version bumps from changed `Chart.yaml` metadata and publish release charts automatically when the provider workflow invokes the release function after a default-branch merge.
+- [ ] 5.6 Create and push chart-scoped release Git tags through the Git module after successful release publication.
+- [ ] 5.7 Fail release publication when the target release Git tag already exists.
+- [ ] 5.8 Fail release publication when Git credentials cannot create or push the release Git tag.
+- [ ] 5.9 Add tests for metadata gating, unchanged no-op behavior, release version publication, already-published skips, release tag creation, existing-tag failure, and tag permission failure where practical.
 
 ## 6. Documentation Content Validation
 

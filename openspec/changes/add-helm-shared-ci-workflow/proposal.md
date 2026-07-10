@@ -9,6 +9,9 @@
 - Extend Helm CI to compose `modules/helm-unittest` while keeping charts without tests valid.
 - Add baseline repository requirements for new image-backed module runtime defaults and `container_user_id` naming.
 - Add structured chart workflow results for checked, skipped, failed, and published charts.
+- Allow provider workflows to publish development chart versions from pull requests before merge.
+- Add provider-neutral OCI cleanup support for pull-request development chart versions, with provider workflows deciding when to trigger cleanup.
+- Automatically publish release chart versions and create Git tags through the Git module after default-branch merges when chart versions are raised.
 - Support chart roots matching the `helm-shared` layout, including `charts/*` application charts and `libs/*` library charts.
 - Support documentation validation as repository content validation only, without rendering or publishing the external main site.
 - Keep GitHub Actions, GitLab CI, and other provider mechanics outside Dagger; provider workflows pass explicit refs, paths, run ids, registry destinations, and secrets.
@@ -27,7 +30,7 @@
 ## Impact
 
 - Affected scenario: `scenarios/helm-ci`
-- Affected modules: add `modules/helm-unittest`; `modules/helm` may need chart metadata helpers; `modules/git` should be reused without provider-specific behavior changes.
+- Affected modules: add `modules/helm-unittest`; `modules/helm` may need chart metadata helpers; `modules/git` should be reused without provider-specific behavior changes; an OCI cleanup helper module such as `modules/skopeo` may be added if registry API operations need a reusable runtime.
 - Affected tests: add Dagger-native tests under `modules/helm-unittest/tests` and update tests under `scenarios/helm-ci/tests` and `modules/helm/tests` for new public behavior.
 - Affected docs: update Helm CI scenario README and repository docs to describe the new provider-neutral workflow and the `helm-shared` GitHub Actions call pattern.
 - External consumer: `riftonix/helm-shared` can use GitHub Actions to call the released scenario with explicit `master` branch refs, chart roots `charts/*` and `libs/*`, and its own OCI registry credentials.
