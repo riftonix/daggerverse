@@ -85,7 +85,7 @@ The usual pattern is:
 4. Set a stable workdir.
 5. Use `with_exec(...)` in public functions.
 
-Keep image registry, repository, tag, and user configurable when that helps tests or downstream users. Use conservative defaults that work without external credentials.
+Keep image registry, repository, tag, and user configurable when that helps tests or downstream users. Use conservative defaults that work without external credentials. Define runtime image defaults with the constants and Renovate annotation convention from [Runtime image input conventions](../reference/runtime-images.md).
 
 Avoid relying on host tools. Dagger functions should run inside Dagger containers unless the function is only assembling Dagger objects.
 
@@ -178,6 +178,8 @@ class Tests:
 ```
 
 Do not test the parent module by shelling out to the Dagger CLI. Calling the public API through the generated dependency catches the same integration points that downstream Dagger users will use.
+
+When a test exercises the parent module default runtime image, call the parent module without duplicating image arguments. Add test-local image constants only for distinct fixture images that are not the parent module default.
 
 ## Test Design
 
@@ -274,6 +276,7 @@ Before considering a module ready:
 - Public functions have typed inputs and useful `Doc(...)` annotations.
 - Tool execution happens inside Dagger containers.
 - Images and tool versions are pinned or intentionally configurable.
+- Runtime image defaults follow [Runtime image input conventions](../reference/runtime-images.md).
 - Secrets use `dagger.Secret`.
 - Returned artifacts are files or directories, not host paths.
 - Tests live in `modules/<name>/tests`.

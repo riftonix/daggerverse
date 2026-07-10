@@ -6,6 +6,11 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 
 DEFAULT_ENGINE = "hugo"
 SUPPORTED_ENGINES = (DEFAULT_ENGINE,)
+DEFAULT_HUGO_IMAGE_REGISTRY = "ghcr.io"
+DEFAULT_HUGO_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
+# renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer
+DEFAULT_HUGO_IMAGE_TAG = "0.154.5-10.5.0"
+DEFAULT_HUGO_CONTAINER_USER_ID = "65532"
 
 
 @object_type
@@ -27,21 +32,19 @@ class StaticSite:
             str | None,
             Doc("Hugo theme module URL, required when engine is hugo"),
         ] = None,
-        hugo_image_registry: Annotated[str | None, Doc("Hugo image registry")] = "ghcr.io",
-        hugo_image_repository: Annotated[
-            str | None, Doc("Hugo image repository")
-        ] = "riftonix/container-images/hugo-autoprefixer",
-        hugo_image_tag: Annotated[str | None, Doc("Hugo image tag")] = "0.154.5-10.5.0",
-        hugo_container_user_id: Annotated[str | None, Doc("Hugo container user")] = "65532",
+        hugo_image_registry: Annotated[str | None, Doc("Hugo image registry")] = DEFAULT_HUGO_IMAGE_REGISTRY,
+        hugo_image_repository: Annotated[str | None, Doc("Hugo image repository")] = DEFAULT_HUGO_IMAGE_REPOSITORY,
+        hugo_image_tag: Annotated[str | None, Doc("Hugo image tag")] = DEFAULT_HUGO_IMAGE_TAG,
+        hugo_container_user_id: Annotated[str | None, Doc("Hugo container user")] = DEFAULT_HUGO_CONTAINER_USER_ID,
     ):
         """Constructor."""
         return cls(
             source=source,
             hugo_theme_url=hugo_theme_url,
-            hugo_image_registry=hugo_image_registry or "ghcr.io",
-            hugo_image_repository=hugo_image_repository or "riftonix/container-images/hugo-autoprefixer",
-            hugo_image_tag=hugo_image_tag or "0.154.5-10.5.0",
-            hugo_container_user_id=hugo_container_user_id or "65532",
+            hugo_image_registry=hugo_image_registry or DEFAULT_HUGO_IMAGE_REGISTRY,
+            hugo_image_repository=hugo_image_repository or DEFAULT_HUGO_IMAGE_REPOSITORY,
+            hugo_image_tag=hugo_image_tag or DEFAULT_HUGO_IMAGE_TAG,
+            hugo_container_user_id=hugo_container_user_id or DEFAULT_HUGO_CONTAINER_USER_ID,
         )
 
     @function
