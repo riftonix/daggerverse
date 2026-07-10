@@ -47,7 +47,7 @@ The `scenarios/helm-ci` scenario SHALL support Helm unittest validation by compo
 - **AND** callers SHALL be able to override registry, repository, tag, and container user values through inputs such as `helm_unittest_image_registry`, `helm_unittest_image_repository`, `helm_unittest_image_tag`, and `helm_unittest_container_user_id` without changing provider workflow logic
 
 ### Requirement: Helm CI scenario publishes development chart versions
-The `scenarios/helm-ci` scenario SHALL publish development versions of changed charts using caller-provided registry settings and version metadata.
+The `scenarios/helm-ci` scenario SHALL publish development versions of changed charts from caller-selected workflows, including pull request workflows, using caller-provided registry settings and version metadata.
 
 #### Scenario: Publish changed dev charts
 - **WHEN** a caller invokes development publication with repository source, base ref, head ref, chart roots, registry destination, credentials, and a build metadata suffix
@@ -55,6 +55,12 @@ The `scenarios/helm-ci` scenario SHALL publish development versions of changed c
 - **AND** it SHALL package each changed chart with version `<chart-version>+<build-metadata-suffix>`
 - **AND** it SHALL push each package to the caller-provided OCI registry destination
 - **AND** it SHALL return structured publication results for every selected chart
+
+#### Scenario: Publish pull request development charts after validation
+- **WHEN** a provider workflow invokes development publication for a pull request after changed-chart validation succeeds
+- **THEN** the provider workflow SHALL pass explicit pull request refs and build metadata containing a stable pull request marker such as `pr.<number>`
+- **AND** the scenario SHALL publish the selected development chart versions without inspecting provider-specific pull request environment variables
+- **AND** it SHALL return registry-visible OCI references for the published artifacts
 
 #### Scenario: Dev publication does not decide manual policy
 - **WHEN** a provider workflow wants development publication to be manual or optional
@@ -66,6 +72,30 @@ The `scenarios/helm-ci` scenario SHALL publish development versions of changed c
 - **THEN** the scenario SHALL return a successful no-op publication result
 - **AND** it SHALL NOT attempt registry login or chart push unless required by implementation order after chart selection
 
+### Requirement: Helm CI scenario cleans pull request development chart versions
+The `scenarios/helm-ci` scenario SHALL support provider-neutral cleanup of pull-request development chart versions through OCI registry APIs when requested by the caller.
+
+#### Scenario: Cleanup pull request development charts
+- **WHEN** a caller invokes development cleanup with registry destination, credentials, chart or package scope, and a pull request marker such as `pr.<number>`
+- **THEN** the scenario SHALL discover matching development chart versions through OCI registry APIs
+- **AND** it SHALL delete artifacts that match the pull request marker
+- **AND** it SHALL return structured cleanup results for deleted, skipped, and failed artifacts
+
+#### Scenario: Cleanup does not use provider package APIs
+- **WHEN** development cleanup runs for charts stored in an OCI registry such as GHCR
+- **THEN** the scenario SHALL use OCI registry APIs or a reusable OCI registry helper runtime
+- **AND** it SHALL NOT require GitHub Packages API behavior or other provider-specific package APIs
+
+#### Scenario: Cleanup protects release versions
+- **WHEN** cleanup evaluates chart versions in the destination registry
+- **THEN** it SHALL skip versions that do not match the caller-provided pull request marker
+- **AND** it SHALL NOT delete release versions published from `Chart.yaml` without development build metadata
+
+#### Scenario: Cleanup supports provider workflow retry
+- **WHEN** a provider workflow needs to retry cleanup after a failed pull request close cleanup
+- **THEN** the provider workflow can call cleanup again with explicit inputs such as registry destination, chart or package scope, and pull request marker
+- **AND** the scenario SHALL NOT depend on a provider close event being present
+
 ### Requirement: Helm CI scenario publishes release chart versions
 The `scenarios/helm-ci` scenario SHALL publish release versions of changed charts after default-branch merges using explicit refs and caller-provided registry settings.
 
@@ -76,6 +106,11 @@ The `scenarios/helm-ci` scenario SHALL publish release versions of changed chart
 - **AND** it SHALL push each package to the caller-provided OCI registry destination
 - **AND** it SHALL return structured publication results for every selected chart
 
+#### Scenario: Automatically publish release chart after version bump
+- **WHEN** a provider workflow invokes release publication after a default-branch merge and a changed `Chart.yaml` raises a chart version
+- **THEN** the scenario SHALL publish the release chart version from `Chart.yaml`
+- **AND** it SHALL treat the release as automatic for that invocation without requiring a separate manual approval input
+
 #### Scenario: Gate release publication by chart metadata changes
 - **WHEN** a caller provides metadata path filters such as `charts/*/Chart.yaml` and `libs/*/Chart.yaml`
 - **THEN** the release publication workflow SHALL skip publication when no matching metadata files changed
@@ -85,6 +120,21 @@ The `scenarios/helm-ci` scenario SHALL publish release versions of changed chart
 - **WHEN** idempotent release publication is enabled and the destination registry already contains a chart version
 - **THEN** the scenario SHALL skip pushing that chart
 - **AND** it SHALL report the chart as already published instead of failing
+
+#### Scenario: Create release Git tag after successful publication
+- **WHEN** release publication succeeds for a chart whose version was raised
+- **THEN** the scenario SHALL create and push a chart-scoped Git tag through the Git module
+- **AND** the tag SHALL include the chart scope and version, for example `charts/appchart/v1.2.3` or `libs/common/v0.4.0`
+
+#### Scenario: Fail when release Git tag already exists
+- **WHEN** release publication detects that the target chart-scoped Git tag already exists
+- **THEN** the release workflow SHALL fail
+- **AND** it SHALL report that the release tag already exists instead of skipping tag creation
+
+#### Scenario: Fail when release Git tag cannot be pushed
+- **WHEN** the scenario attempts to create or push a release Git tag through the Git module and the provided Git credentials do not allow it
+- **THEN** the release workflow SHALL fail
+- **AND** it SHALL report the Git tag push failure without falling back to provider-specific APIs
 
 #### Scenario: Provider controls release branch policy
 - **WHEN** a provider workflow wants release publication only on a default branch such as `master`
@@ -101,7 +151,12 @@ The `scenarios/helm-ci` scenario SHALL return structured results for multi-chart
 
 #### Scenario: Publication result contains package references
 - **WHEN** a publication workflow packages or pushes one or more charts
-- **THEN** each publication result SHALL include chart path, chart name, chart version, published version, package file name when available, destination OCI reference, status, and message
+- **THEN** each publication result SHALL include chart path, chart name, chart version, published version, package file name when available, destination OCI reference, release Git tag when applicable, status, and message
+- **AND** registry credentials SHALL NOT appear in any returned result
+
+#### Scenario: Cleanup result contains safe artifact references
+- **WHEN** a cleanup workflow deletes or skips one or more development artifacts
+- **THEN** each cleanup result SHALL include package or chart name when available, registry-visible version or tag when available, destination OCI reference when available, status, and message
 - **AND** registry credentials SHALL NOT appear in any returned result
 
 ### Requirement: Helm CI scenario validates repository documentation content without site publication
@@ -125,7 +180,17 @@ The `scenarios/helm-ci` scenario SHALL expose inputs and behavior suitable for t
 - **THEN** the workflow can pass explicit refs and chart roots `charts/*` and `libs/*`
 - **AND** the scenario SHALL validate changed charts without reading GitHub-specific environment variables
 
+#### Scenario: Publish helm-shared pull request development charts
+- **WHEN** a GitHub Actions workflow in `riftonix/helm-shared` calls development publication for a pull request targeting `master`
+- **THEN** the workflow can pass explicit refs, chart roots `charts/*` and `libs/*`, registry destination, credentials, and build metadata containing the pull request number
+- **AND** the scenario SHALL publish development chart versions without hardcoding the repository name or provider
+
+#### Scenario: Cleanup helm-shared pull request development charts
+- **WHEN** a GitHub Actions workflow in `riftonix/helm-shared` calls development cleanup on pull request close or manual retry
+- **THEN** the workflow can pass registry destination, credentials, chart or package scope, and the pull request marker
+- **AND** the scenario SHALL clean matching development artifacts through OCI registry behavior without using GitHub-specific package APIs
+
 #### Scenario: Publish helm-shared release charts
 - **WHEN** a GitHub Actions workflow in `riftonix/helm-shared` calls release publication after a merge to `master`
-- **THEN** the workflow can pass explicit previous and head refs, chart roots `charts/*` and `libs/*`, registry destination, and credentials
-- **AND** the scenario SHALL publish changed chart versions without hardcoding the repository name or provider
+- **THEN** the workflow can pass explicit previous and head refs, chart roots `charts/*` and `libs/*`, registry destination, registry credentials, and Git credentials for pushing tags
+- **AND** the scenario SHALL publish changed chart versions and create chart-scoped release Git tags without hardcoding the repository name or provider
