@@ -15,7 +15,7 @@ from .tags import Tags
 DEFAULT_IMAGE_REGISTRY = "docker.io"
 DEFAULT_IMAGE_REPOSITORY = "alpine/git"
 # renovate: datasource=docker depName=alpine/git
-DEFAULT_IMAGE_TAG = "2.52.0"
+DEFAULT_IMAGE_TAG = "v2.54.0"
 DEFAULT_CONTAINER_USER_ID = "65532"
 
 
