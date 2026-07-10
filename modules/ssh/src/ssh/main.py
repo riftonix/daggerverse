@@ -6,7 +6,7 @@ from dagger import Container, Doc, dag, function, object_type
 DEFAULT_IMAGE_REGISTRY = "docker.io"
 DEFAULT_IMAGE_REPOSITORY = "kroniak/ssh-client"
 # renovate: datasource=docker depName=kroniak/ssh-client
-DEFAULT_IMAGE_TAG = "3.21"
+DEFAULT_IMAGE_TAG = "3.23"
 DEFAULT_CONTAINER_USER_ID = "65532"
 
 
