@@ -6,11 +6,13 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 
 DEFAULT_HELM_IMAGE_REGISTRY = "docker.io"
 DEFAULT_HELM_IMAGE_REPOSITORY = "alpine/helm"
+# renovate: datasource=docker depName=alpine/helm
 DEFAULT_HELM_IMAGE_TAG = "3.18.6"
 DEFAULT_HELM_CONTAINER_USER_ID = "65532"
 
 DEFAULT_GIT_IMAGE_REGISTRY = "docker.io"
 DEFAULT_GIT_IMAGE_REPOSITORY = "alpine/git"
+# renovate: datasource=docker depName=alpine/git
 DEFAULT_GIT_IMAGE_TAG = "2.52.0"
 DEFAULT_GIT_CONTAINER_USER_ID = "65532"
 

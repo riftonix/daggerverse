@@ -1,65 +1,17 @@
 """Dagger-native tests for the static-site scenario."""
 
-from typing import Annotated
 from unittest import TestCase
 
-from dagger import Directory, Doc, dag, function, object_type
+from dagger import Directory, dag, function, object_type
 
 FIXTURE_SITE_PATH = "site"
 SITE_BASE_URL = "https://example.com/"
 HUGO_THEME_URL = "github.com/google/docsy@v0.13.0"
 
-DEFAULT_HUGO_IMAGE_REGISTRY = "ghcr.io"
-DEFAULT_HUGO_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
-DEFAULT_HUGO_IMAGE_TAG = "0.154.5-10.5.0"
-DEFAULT_HUGO_CONTAINER_USER_ID = "65532"
-
 
 @object_type
 class Tests:
     """Test module entrypoint for static-site scenario checks."""
-
-    hugo_image_registry: str
-    hugo_image_repository: str
-    hugo_image_tag: str
-    hugo_container_user_id: str
-
-    @classmethod
-    async def create(
-        cls,
-        hugo_image_registry: Annotated[
-            str | None,
-            Doc("Hugo image registry override for offline or mirrored-registry runs"),
-        ] = DEFAULT_HUGO_IMAGE_REGISTRY,
-        hugo_image_repository: Annotated[
-            str | None,
-            Doc("Hugo image repository override for offline or mirrored-registry runs"),
-        ] = DEFAULT_HUGO_IMAGE_REPOSITORY,
-        hugo_image_tag: Annotated[
-            str | None,
-            Doc("Hugo image tag override for offline or mirrored-registry runs"),
-        ] = DEFAULT_HUGO_IMAGE_TAG,
-        hugo_container_user_id: Annotated[
-            str | None,
-            Doc("Hugo container user id override for offline or mirrored-registry runs"),
-        ] = DEFAULT_HUGO_CONTAINER_USER_ID,
-    ):
-        """Constructor exposing optional Hugo runtime image overrides for offline runs."""
-        return cls(
-            hugo_image_registry=hugo_image_registry or DEFAULT_HUGO_IMAGE_REGISTRY,
-            hugo_image_repository=hugo_image_repository or DEFAULT_HUGO_IMAGE_REPOSITORY,
-            hugo_image_tag=hugo_image_tag or DEFAULT_HUGO_IMAGE_TAG,
-            hugo_container_user_id=hugo_container_user_id or DEFAULT_HUGO_CONTAINER_USER_ID,
-        )
-
-    def _hugo_image_inputs(self) -> dict[str, str]:
-        """Return the configured Hugo runtime image inputs as keyword arguments."""
-        return {
-            "hugo_image_registry": self.hugo_image_registry,
-            "hugo_image_repository": self.hugo_image_repository,
-            "hugo_image_tag": self.hugo_image_tag,
-            "hugo_container_user_id": self.hugo_container_user_id,
-        }
 
     @function
     def module(self) -> str:
@@ -82,7 +34,6 @@ class Tests:
         validation_output = await dag.static_site(
             source=self._fixture_site(),
             hugo_theme_url=HUGO_THEME_URL,
-            **self._hugo_image_inputs(),
         ).verify_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
@@ -97,7 +48,6 @@ class Tests:
         try:
             await dag.static_site(
                 source=self._fixture_site(),
-                **self._hugo_image_inputs(),
             ).verify_site(
                 site_base_url=SITE_BASE_URL,
                 engine="hugo",
@@ -115,7 +65,6 @@ class Tests:
         public_dir = await dag.static_site(
             source=self._fixture_site(),
             hugo_theme_url=HUGO_THEME_URL,
-            **self._hugo_image_inputs(),
         ).render_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
