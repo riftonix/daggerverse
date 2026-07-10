@@ -7,7 +7,7 @@ from dagger import Directory, dag, function, object_type
 FIXTURE_GIT_IMAGE_REGISTRY = "docker.io"
 FIXTURE_GIT_IMAGE_REPOSITORY = "alpine/git"
 # renovate: datasource=docker depName=alpine/git
-FIXTURE_GIT_IMAGE_TAG = "2.52.0"
+FIXTURE_GIT_IMAGE_TAG = "v2.54.0"
 
 
 @object_type
