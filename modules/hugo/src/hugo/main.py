@@ -3,6 +3,12 @@ from typing import Annotated
 import dagger
 from dagger import DefaultPath, Doc, dag, function, object_type
 
+DEFAULT_IMAGE_REGISTRY = "ghcr.io"
+DEFAULT_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
+# renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer
+DEFAULT_IMAGE_TAG = "0.154.5-10.5.0"
+DEFAULT_CONTAINER_USER_ID = "65532"
+
 
 @object_type
 class Hugo:
@@ -21,12 +27,10 @@ class Hugo:
             DefaultPath("."),
             Doc("Hugo site directory"),
         ],
-        image_registry: Annotated[str | None, Doc("Hugo image registry")] = "ghcr.io",
-        image_repository: Annotated[
-            str | None, Doc("Hugo image repository")
-        ] = "riftonix/container-images/hugo-autoprefixer",
-        image_tag: Annotated[str | None, Doc("Hugo image tag")] = "0.154.5-10.5.0",
-        user_id: Annotated[str | None, Doc("Hugo image user")] = "65532",
+        image_registry: Annotated[str | None, Doc("Hugo image registry")] = DEFAULT_IMAGE_REGISTRY,
+        image_repository: Annotated[str | None, Doc("Hugo image repository")] = DEFAULT_IMAGE_REPOSITORY,
+        image_tag: Annotated[str | None, Doc("Hugo image tag")] = DEFAULT_IMAGE_TAG,
+        user_id: Annotated[str | None, Doc("Hugo image user")] = DEFAULT_CONTAINER_USER_ID,
     ):
         """Constructor"""
         return cls(

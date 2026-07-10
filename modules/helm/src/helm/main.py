@@ -7,6 +7,7 @@ from dagger import Doc, dag, function, object_type
 
 DEFAULT_IMAGE_REGISTRY = "docker.io"
 DEFAULT_IMAGE_REPOSITORY = "alpine/helm"
+# renovate: datasource=docker depName=alpine/helm
 DEFAULT_IMAGE_TAG = "3.18.6"
 DEFAULT_CONTAINER_USER_ID = "65532"
 

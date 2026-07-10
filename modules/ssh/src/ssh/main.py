@@ -3,6 +3,12 @@ from typing import Annotated
 import dagger
 from dagger import Container, Doc, dag, function, object_type
 
+DEFAULT_IMAGE_REGISTRY = "docker.io"
+DEFAULT_IMAGE_REPOSITORY = "kroniak/ssh-client"
+# renovate: datasource=docker depName=kroniak/ssh-client
+DEFAULT_IMAGE_TAG = "3.21"
+DEFAULT_CONTAINER_USER_ID = "65532"
+
 
 @object_type
 class Ssh:
@@ -17,10 +23,10 @@ class Ssh:
     @classmethod
     async def create(
         cls,
-        image_registry: Annotated[str | None, Doc("Helm image registry")] = "docker.io",
-        image_repository: Annotated[str | None, Doc("Helm image repositroy")] = "kroniak/ssh-client",
-        image_tag: Annotated[str | None, Doc("Helm image tag")] = "3.21",
-        user_id: Annotated[str | None, Doc("Helm image user")] = "65532",
+        image_registry: Annotated[str | None, Doc("Helm image registry")] = DEFAULT_IMAGE_REGISTRY,
+        image_repository: Annotated[str | None, Doc("Helm image repositroy")] = DEFAULT_IMAGE_REPOSITORY,
+        image_tag: Annotated[str | None, Doc("Helm image tag")] = DEFAULT_IMAGE_TAG,
+        user_id: Annotated[str | None, Doc("Helm image user")] = DEFAULT_CONTAINER_USER_ID,
     ):
         """Constructor"""
         return cls(

@@ -5,6 +5,7 @@ from dagger import Doc, dag, function, object_type
 
 DEFAULT_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_IMAGE_REPOSITORY = "opentofu/opentofu"
+# renovate: datasource=docker depName=ghcr.io/opentofu/opentofu
 DEFAULT_IMAGE_TAG = "latest"
 DEFAULT_USER_ID = "65532"
 
