@@ -23,7 +23,7 @@ LOCAL_REGISTRY_NAMESPACE = "charts"
 DEFAULT_REGISTRY_IMAGE_REGISTRY = "docker.io"
 DEFAULT_REGISTRY_IMAGE_REPOSITORY = "registry"
 # renovate: datasource=docker depName=registry
-DEFAULT_REGISTRY_IMAGE_TAG = "2"
+DEFAULT_REGISTRY_IMAGE_TAG = "3"
 
 
 @object_type
