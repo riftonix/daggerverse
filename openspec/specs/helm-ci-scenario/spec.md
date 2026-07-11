@@ -34,16 +34,15 @@ The `scenarios/helm-ci` scenario SHALL publish a Helm chart supplied through the
 The `scenarios/helm-ci` scenario SHALL verify changed Helm chart directories selected through provider-neutral Git and path inputs, with the repository checkout supplied through the public input named `source`.
 
 #### Scenario: Verify changed chart directories
-- **WHEN** a caller provides a repository source, target branch, and chart path to the `helm-verify-changed-charts` function
-- **THEN** the scenario SHALL ask the Git module for changed directories since the merge base with the target branch
+- **WHEN** a caller provides a repository source, base ref, head ref, and repeatable chart component root patterns to the `verify-charts` function
+- **THEN** the scenario SHALL ask the Git module for changed components between the refs
 - **AND** it SHALL run Helm verification for each changed chart directory
 - **AND** it SHALL return an empty list when no chart directories changed
-- **AND** `charts_path` SHALL remain a secondary path inside the repository source rather than a replacement for `source`
+- **AND** `charts_path` SHALL remain a secondary component root pattern inside the repository source rather than a replacement for `source`
 
-#### Scenario: Verify changed library directories
-- **WHEN** a caller provides a library path as an additional diff root
-- **THEN** the scenario SHALL include changed directories under that library path when selecting charts to verify
-- **AND** `libs_path` SHALL remain a secondary path inside the repository source rather than a replacement for `source`
+#### Scenario: Verify changed library chart components
+- **WHEN** a caller provides a library chart component root pattern such as `libs/*`
+- **THEN** the scenario SHALL include changed library chart components when selecting charts to verify
 
 #### Scenario: Skip charts without required metadata
 - **WHEN** a changed chart directory has no chart name or version in `Chart.yaml`

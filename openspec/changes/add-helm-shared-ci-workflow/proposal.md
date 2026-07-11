@@ -8,7 +8,7 @@
 - Add a dedicated `modules/helm-unittest` module based on the public `helmunittest/helm-unittest` image for charts that contain test suites.
 - Extend Helm CI to compose `modules/helm-unittest` while keeping charts without tests valid.
 - Add baseline repository requirements for new image-backed module runtime defaults and `container_user_id` naming.
-- Add structured chart workflow results for checked, skipped, failed, and published charts.
+- Add structured chart workflow results for publication and cleanup outcomes, including registry-visible OCI references without credentials.
 - Allow provider workflows to publish development chart versions from pull requests before merge.
 - Add provider-neutral OCI cleanup support for pull-request development chart versions, with provider workflows deciding when to trigger cleanup.
 - Automatically publish release chart versions and create Git tags through the Git module after default-branch merges when chart versions are raised.

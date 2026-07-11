@@ -22,22 +22,24 @@ class Tests:
     @function
     async def all(self) -> None:
         """Run all Helm CI scenario tests."""
-        await self.helm_verify_changed_charts_uses_merge_base()
+        await self.verify_charts_discovers_changed_chart_components()
 
     @function
-    async def helm_verify_changed_charts_uses_merge_base(self) -> None:
-        """Verify only feature-branch chart changes, not base-branch drift."""
+    async def verify_charts_discovers_changed_chart_components(self) -> None:
+        """Verify changed chart components from caller-provided root patterns."""
         helm_ci = dag.helm_ci()
-        outputs = await helm_ci.helm_verify_changed_charts(
+        outputs = await helm_ci.verify_charts(
             source=self._repo_with_pull_request_chart_changes(),
-            target_branch="main",
-            charts_path="charts",
+            base_ref="main",
+            head_ref="feature",
+            charts_path=["charts/*", "libs/*"],
         )
 
         output = "\n".join(outputs)
         test_case = TestCase()
-        test_case.assertEqual(1, len(outputs))
+        test_case.assertEqual(2, len(outputs))
         test_case.assertIn("charts/changed:", output)
+        test_case.assertIn("libs/common:", output)
         test_case.assertNotIn("charts/base-only:", output)
 
     def _repo_with_pull_request_chart_changes(self) -> Directory:
@@ -51,6 +53,7 @@ class Tests:
             .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
             .with_directory("/work/repo/charts/changed", self._fixture_chart())
             .with_directory("/work/repo/charts/base-only", self._fixture_chart())
+            .with_directory("/work/repo/libs/common", self._fixture_chart())
             .with_exec(["git", "add", "."])
             .with_exec(["git", "commit", "-m", "base"])
             .with_exec(["git", "checkout", "-b", "feature"])
@@ -58,7 +61,9 @@ class Tests:
                 [
                     "sh",
                     "-c",
-                    "printf '\\nfeature: true\\n' >> charts/changed/values.yaml && git add . && git commit -m feature",
+                    "printf '\nfeature: true\n' >> charts/changed/values.yaml && "
+                    "printf '\nfeature: true\n' >> libs/common/values.yaml && "
+                    "git add . && git commit -m feature",
                 ]
             )
             .with_exec(["git", "checkout", "main"])
@@ -66,10 +71,9 @@ class Tests:
                 [
                     "sh",
                     "-c",
-                    "printf '\\nbaseOnly: true\\n' >> charts/base-only/values.yaml && git add . && git commit -m main",
+                    "printf '\nbaseOnly: true\n' >> charts/base-only/values.yaml && git add . && git commit -m main",
                 ]
             )
-            .with_exec(["git", "checkout", "feature"])
             .directory("/work/repo")
         )
 

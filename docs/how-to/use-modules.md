@@ -22,9 +22,9 @@ not from the module directory.
 
 Use `source` for the main tree being operated on: a repository checkout, chart,
 site, image build tree, or IaC project. Keep secondary inputs descriptive. For
-example, Helm CI keeps `charts_path`, `libs_path`, `target_branch`, and
-`values`; Docker and container image calls keep `context_path`,
-`dockerfile_path`, and `bake_path`.
+example, Helm CI keeps `charts_path`, `base_ref`, `head_ref`, and `values`;
+Docker and container image calls keep `context_path`, `dockerfile_path`, and
+`bake_path`.
 
 `source` only identifies the directory tree passed to Dagger. CI provider
 workflows stay responsible for event rules, checkout depth and refs, preview URL
