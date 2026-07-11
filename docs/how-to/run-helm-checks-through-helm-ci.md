@@ -18,21 +18,23 @@ dagger -m ./scenarios/helm-ci call \
 
 The command runs Helm lint and template through the local Helm module dependency.
 
-## Verify Changed Chart Directories
+## Verify Changed Chart Components
 
-Use `helm-verify-changed-charts` when the repository is a Git checkout and you want to check only changed chart directories under a path:
+Use `verify-charts` when the repository is a Git checkout and you want to check only changed chart components under caller-provided component roots:
 
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
   --git-image-tag=2.52.0 \
-  helm-verify-changed-charts \
+  verify-charts \
   --source=. \
-  --target-branch=master \
-  --charts-path=modules/helm/tests/charts
+  --base-ref=origin/master \
+  --head-ref=HEAD \
+  --charts-path='charts/*' \
+  --charts-path='libs/*'
 ```
 
-The command asks the Git module for changed chart directories, then verifies each returned chart directory. Pull request workflows should use merge-base diff behavior so base-branch drift does not trigger unrelated chart checks.
+The command asks the Git module for changed components matching the chart roots, then verifies each returned chart directory. Caller-provided refs and path patterns keep provider event policy outside the scenario.
 
 `helm-verify` and `helm-publish` use Helm runtime image inputs only. Changed-chart
 operations also use Git runtime image inputs. Pin both tags in CI when the

@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Helm CI scenario validates changed chart repositories
-The `scenarios/helm-ci` scenario SHALL provide a provider-neutral validation workflow for changed Helm chart repositories using explicit repository source, refs, and chart roots supplied by the caller.
+The `scenarios/helm-ci` scenario SHALL provide a provider-neutral validation workflow for changed Helm chart repositories using explicit repository source, refs, and glob-like chart component roots supplied by the caller.
 
 #### Scenario: Validate changed charts from application and library roots
-- **WHEN** a caller invokes the changed repository validation workflow with `source`, `base_ref`, `head_ref`, and chart roots such as `charts/*` and `libs/*`
-- **THEN** the scenario SHALL discover changed chart directories under those roots using provider-neutral Git inputs
+- **WHEN** a caller invokes the changed repository validation workflow with `source`, `base_ref`, `head_ref`, and repeatable `charts_path` values such as `charts/*` and `libs/*`
+- **THEN** the scenario SHALL pass those chart component roots to the Git module to discover changed chart directories using provider-neutral Git inputs
 - **AND** it SHALL validate each discovered chart directory that contains a `Chart.yaml`
 - **AND** it SHALL return a successful no-op result when no chart directories changed
 
@@ -28,21 +28,21 @@ The `scenarios/helm-ci` scenario SHALL provide a provider-neutral validation wor
 - **THEN** the scenario SHALL skip that directory
 - **AND** it SHALL include a structured skip result identifying the path and reason
 
-### Requirement: Helm CI scenario runs optional Helm unittest checks
-The `scenarios/helm-ci` scenario SHALL support Helm unittest validation by composing the dedicated Helm unittest module for charts that contain test suites while allowing charts without tests to pass validation.
+### Requirement: Helm CI scenario auto-detects Helm unittest checks
+The `scenarios/helm-ci` scenario SHALL support Helm unittest validation by composing the dedicated Helm unittest module for charts that contain test suites while allowing charts without tests to pass validation. The validation workflow SHALL NOT require a public enable, disable, or override input for Helm unittest execution.
 
-#### Scenario: Run unittest for chart with tests directory
-- **WHEN** unittest validation is enabled and a chart directory contains a `tests` directory
+#### Scenario: Run unittest for chart with suite files
+- **WHEN** a chart directory contains Helm unittest suite files under `tests/`
 - **THEN** the scenario SHALL run Helm unittest for that chart through `modules/helm-unittest`
 - **AND** a unittest failure SHALL fail the validation workflow
 
-#### Scenario: Skip unittest for chart without tests directory
-- **WHEN** unittest validation is enabled and a chart directory does not contain a `tests` directory
+#### Scenario: Skip unittest for chart without suite files
+- **WHEN** a chart directory does not contain Helm unittest suite files under `tests/`
 - **THEN** the scenario SHALL skip Helm unittest for that chart
 - **AND** it SHALL report the unittest step as skipped without failing validation
 
 #### Scenario: Caller configures Helm unittest module runtime image
-- **WHEN** a caller configures Helm unittest validation through the Helm CI scenario
+- **WHEN** a caller configures Helm CI runtime images
 - **THEN** the scenario SHALL expose prefixed public runtime image inputs for the `modules/helm-unittest` runtime
 - **AND** callers SHALL be able to override registry, repository, tag, and container user values through inputs such as `helm_unittest_image_registry`, `helm_unittest_image_repository`, `helm_unittest_image_tag`, and `helm_unittest_container_user_id` without changing provider workflow logic
 
@@ -141,22 +141,24 @@ The `scenarios/helm-ci` scenario SHALL publish release versions of changed chart
 - **THEN** the provider workflow SHALL decide whether to call the release publication function
 - **AND** the scenario SHALL NOT hardcode `main`, `master`, or provider-specific branch variables
 
-### Requirement: Helm CI scenario returns structured chart workflow results
-The `scenarios/helm-ci` scenario SHALL return structured results for multi-chart validation and publication workflows.
+### Requirement: Helm CI scenario returns structured publication and cleanup results
+The `scenarios/helm-ci` scenario SHALL return structured results for multi-chart publication and cleanup workflows.
 
-#### Scenario: Validation result contains chart step statuses
-- **WHEN** a validation workflow checks one or more chart directories
-- **THEN** each chart result SHALL include chart path, chart name when available, chart version when available, workflow action, status, and message
-- **AND** each chart result SHALL distinguish passed, failed, and skipped steps without requiring callers to parse shell output
+#### Scenario: Result collections are ordered lists
+- **WHEN** a publication or cleanup workflow returns results for one or more charts or artifacts
+- **THEN** the workflow SHALL return a deterministic ordered list of result records
+- **AND** it SHALL NOT return a dictionary keyed by chart path, OCI repository, OCI tag, or another artifact identity
 
 #### Scenario: Publication result contains package references
 - **WHEN** a publication workflow packages or pushes one or more charts
-- **THEN** each publication result SHALL include chart path, chart name, chart version, published version, package file name when available, destination OCI reference, release Git tag when applicable, status, and message
+- **THEN** each publication result SHALL include chart path, chart name, chart version, published version, package file name when available, release Git tag when applicable, status, and message
+- **AND** each publication result SHALL include registry-visible OCI fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available
 - **AND** registry credentials SHALL NOT appear in any returned result
 
 #### Scenario: Cleanup result contains safe artifact references
 - **WHEN** a cleanup workflow deletes or skips one or more development artifacts
-- **THEN** each cleanup result SHALL include package or chart name when available, registry-visible version or tag when available, destination OCI reference when available, status, and message
+- **THEN** each cleanup result SHALL include package or chart name when available, registry-visible version or tag when available, status, and message
+- **AND** each cleanup result SHALL include registry-visible OCI fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available
 - **AND** registry credentials SHALL NOT appear in any returned result
 
 ### Requirement: Helm CI scenario validates repository documentation content without site publication

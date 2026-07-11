@@ -44,9 +44,21 @@ The archived static-site design established that component documentation is inte
 
    `helm-shared` will likely call this scenario from GitHub Actions, but the scenario will accept explicit refs, chart roots, run id or version suffix, registry destination, and credentials. It will not inspect `GITHUB_*`, `CI_*`, or provider event variables. This matches the existing static-site and Helm CI provider boundary.
 
-3. Model chart selection as chart roots plus explicit diff mode.
+3. Model chart selection as caller-provided chart component roots plus explicit diff mode.
 
-   Pull request validation should use merge-base diff behavior against a caller-provided base ref. Release publication should compare a caller-provided previous ref against a caller-provided head ref. This avoids encoding `master`, `main`, `HEAD^`, or provider checkout assumptions in Dagger while still supporting the `helm-shared` default branch.
+   Pull request validation should use merge-base diff behavior against a caller-provided base ref. Release publication should compare a caller-provided previous ref against a caller-provided head ref. The caller provides glob-like chart component roots, for example `charts/*` and `libs/*`, through repeatable `charts_path` inputs. The scenario passes those roots to the Git module for changed component detection, then validates or publishes the returned chart component directories. This avoids encoding `master`, `main`, `HEAD^`, provider checkout assumptions, or repository-specific root expansion in Dagger while still supporting the `helm-shared` default branch.
+
+   Example changed validation call:
+
+   ```bash
+   dagger -m ./scenarios/helm-ci call verify-charts \
+     --source=. \
+     --base-ref=origin/master \
+     --head-ref=HEAD \
+     --charts-path='charts/*' \
+     --charts-path='libs/*' \
+     --release-name=ci-release
+   ```
 
 4. Treat application and library charts differently during verification.
 
@@ -54,7 +66,7 @@ The archived static-site design established that component documentation is inte
 
 5. Add Helm unittest as a separate module and compose it from Helm CI.
 
-   `modules/helm-unittest` should wrap the public `helmunittest/helm-unittest` image and expose a small public API for running chart unit tests. `scenarios/helm-ci` should compose that module when unittest validation is enabled. A chart that contains a `tests` directory should run Helm unittest. A chart without `tests` should be marked as skipped for unittest and still pass the rest of verification. This keeps `modules/helm` focused on Helm CLI primitives and keeps unittest reusable for callers that do not need the full CI scenario.
+   `modules/helm-unittest` should wrap the public `helmunittest/helm-unittest` image and expose a small public API for running chart unit tests. `scenarios/helm-ci` should auto-detect Helm unittest suites without requiring a public enable or disable flag. A chart that contains suite files under `tests/` should run Helm unittest. A chart without suite files under `tests/` should skip unittest and still pass the rest of verification. This keeps `modules/helm` focused on Helm CLI primitives and keeps unittest reusable for callers that do not need the full CI scenario.
 
 6. Add multi-chart publication at the scenario layer.
 
@@ -76,9 +88,33 @@ The archived static-site design established that component documentation is inte
 
    A repository can publish multiple charts independently, so release tags should include chart scope rather than using only `v<version>`. A stable default format such as `<chart-path>/v<chart-version>` allows `charts/appchart/v1.2.3` and `libs/common/v1.2.3` to coexist. The scenario may expose an override for tag formatting only if the implementation can keep the default safe and deterministic.
 
-11. Return structured result objects or JSON-compatible records.
+11. Return structured publication and cleanup result objects or JSON-compatible records.
 
-    Current changed verification returns a list of strings. New functions should return typed Dagger objects or JSON-compatible values containing chart path, chart name, chart version, action, status, message, package name, and OCI reference where applicable. Provider adapters can render summaries from these values without parsing command output.
+    Validation workflows can remain fail-fast and use normal command failures for lint, template, and unittest checks. Publication and cleanup workflows need typed Dagger objects or JSON-compatible values containing chart path, chart name, chart version, published version, action, status, message, package name, release tag where applicable, and registry-visible OCI fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available. Functions should return deterministic ordered lists of result records rather than dictionaries keyed by chart path, OCI repository, or tag. Provider adapters can render summaries and cleanup logs from these values without parsing command output. Returned values must not include registry credentials or secret-derived values.
+
+    Example publication result list:
+
+    ```json
+    [
+      {
+        "chart_path": "charts/appchart",
+        "chart_name": "appchart",
+        "chart_version": "1.2.3",
+        "published_version": "1.2.3+pr.42.run.100.sha.abc1234",
+        "status": "published",
+        "action": "dev_published",
+        "package_name": "appchart-1.2.3+pr.42.run.100.sha.abc1234.tgz",
+        "oci_reference": "oci://ghcr.io/riftonix/charts/appchart:1.2.3_pr.42.run.100.sha.abc1234",
+        "oci_registry": "ghcr.io",
+        "oci_repository": "riftonix/charts/appchart",
+        "oci_tag": "1.2.3_pr.42.run.100.sha.abc1234",
+        "oci_digest": "sha256:0123456789abcdef",
+        "release_tag": "",
+        "message": "Development chart published",
+        "warnings": []
+      }
+    ]
+    ```
 
 12. Validate docs as repository content only.
 

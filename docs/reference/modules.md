@@ -5,9 +5,8 @@
 New and updated modules and scenarios use `source` for the primary caller
 provided directory: a repository checkout, chart, site, image build tree, IaC
 project, or other main input tree. Secondary inputs keep descriptive names, for
-example `values`, `charts_path`, `libs_path`, `context_path`,
-`dockerfile_path`, `bake_path`, `target_branch`, and registry or output
-arguments.
+example `values`, `charts_path`, `base_ref`, `head_ref`, `context_path`,
+`dockerfile_path`, `bake_path`, and registry or output arguments.
 
 The `source` convention does not move CI provider behavior into modules or
 scenarios. GitHub Actions, GitLab CI, and other workflow adapters continue to
@@ -121,8 +120,8 @@ and publication workflows.
 - Main source: `scenarios/helm-ci/src/helm_ci/main.py`
 - How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
 - Typical verify command: `dagger -m ./scenarios/helm-ci call helm-verify --source=./charts/mychart`
-- Typical changed-chart command: `dagger -m ./scenarios/helm-ci call helm-verify-changed-charts --source=. --target-branch=master --charts-path=charts`
-- Reproducible changed-chart command: `dagger -m ./scenarios/helm-ci call --helm-image-tag=3.18.6 --git-image-tag=2.52.0 helm-verify-changed-charts --source=. --target-branch=master --charts-path=charts`
+- Typical changed-chart command: `dagger -m ./scenarios/helm-ci call verify-charts --source=. --base-ref=origin/master --head-ref=HEAD --charts-path='charts/*'`
+- Reproducible changed-chart command: `dagger -m ./scenarios/helm-ci call --helm-image-tag=3.18.6 --git-image-tag=2.52.0 verify-charts --source=. --base-ref=origin/master --head-ref=HEAD --charts-path='charts/*'`
 - CI use cases: verify one chart, verify changed chart directories through provider-neutral Git inputs, and publish caller-selected chart versions to OCI registries.
 
 ## container-images scenario

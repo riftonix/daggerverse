@@ -11,17 +11,19 @@
 
 ## 2. Helm CI Scenario Result Model
 
-- [ ] 2.1 Define scenario-owned structured result objects or JSON-compatible records for chart validation results.
-- [ ] 2.2 Define scenario-owned structured result objects or JSON-compatible records for chart publication results.
-- [ ] 2.3 Ensure result fields use only primitive values and do not expose Helm or Git module object types.
-- [ ] 2.4 Ensure returned results never include registry credentials or secret-derived values.
+- [x] 2.1 Define scenario-owned structured result objects or JSON-compatible records for chart publication results.
+- [x] 2.2 Define scenario-owned structured result objects or JSON-compatible records for development publication cleanup results.
+- [x] 2.3 Ensure publication and cleanup workflows return deterministic ordered lists of result records rather than dictionaries keyed by chart or artifact identity.
+- [x] 2.4 Ensure publication and cleanup results include registry-visible OCI reference fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available.
+- [x] 2.5 Ensure result fields use only primitive values and do not expose Helm, Git, or registry helper module object types.
+- [x] 2.6 Ensure returned results never include registry credentials or secret-derived values.
 
 ## 3. Changed Chart Validation Workflow
 
-- [ ] 3.1 Extend `scenarios/helm-ci` to accept chart root patterns such as `charts/*` and `libs/*` for repository validation.
-- [ ] 3.2 Implement changed-chart discovery from explicit `base_ref` and `head_ref` inputs using the Git module.
-- [ ] 3.3 Implement validation for changed application charts with dependency update, strict lint, template, and optional unittest through `modules/helm-unittest`.
-- [ ] 3.4 Implement validation for changed library charts with dependency update, strict lint, template skip, and optional unittest through `modules/helm-unittest`.
+- [x] 3.1 Extend `scenarios/helm-ci` to accept caller-provided glob-like chart component roots such as `charts/*` and `libs/*` through repeatable `charts_path` inputs for repository validation.
+- [x] 3.2 Implement changed-chart discovery from explicit `base_ref` and `head_ref` inputs using the Git module.
+- [ ] 3.3 Implement validation for changed application charts with dependency update, strict lint, template, and auto-detected unittest through `modules/helm-unittest`.
+- [ ] 3.4 Implement validation for changed library charts with dependency update, strict lint, template skip, and auto-detected unittest through `modules/helm-unittest`.
 - [ ] 3.5 Return successful no-op results when no chart directories changed.
 - [ ] 3.6 Add Dagger-native scenario tests for application chart validation, library chart validation, non-chart skips, and no-op changed validation.
 

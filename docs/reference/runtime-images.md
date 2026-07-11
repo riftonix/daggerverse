@@ -107,10 +107,11 @@ Example Helm CI pins:
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
   --git-image-tag=2.52.0 \
-  helm-verify-changed-charts \
+  verify-charts \
   --source=. \
-  --target-branch=master \
-  --charts-path=charts
+  --base-ref=origin/master \
+  --head-ref=HEAD \
+  --charts-path='charts/*'
 ```
 
 Single-chart Helm operations do not use the Git module, but the Git runtime
