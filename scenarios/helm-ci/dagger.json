@@ -12,6 +12,10 @@
     {
       "name": "git",
       "source": "../../modules/git"
+    },
+    {
+      "name": "helm-unittest",
+      "source": "../../modules/helm-unittest"
     }
   ]
 }

@@ -23,6 +23,8 @@ class Tests:
     async def all(self) -> None:
         """Run all Helm CI scenario tests."""
         await self.verify_charts_discovers_changed_chart_components()
+        await self.verify_charts_skips_non_chart_directories()
+        await self.verify_charts_returns_successful_noop()
 
     @function
     async def verify_charts_discovers_changed_chart_components(self) -> None:
@@ -41,6 +43,32 @@ class Tests:
         test_case.assertIn("charts/changed:", output)
         test_case.assertIn("libs/common:", output)
         test_case.assertNotIn("charts/base-only:", output)
+
+    @function
+    async def verify_charts_skips_non_chart_directories(self) -> None:
+        """Verify changed directories without Chart.yaml are skipped."""
+        helm_ci = dag.helm_ci()
+        outputs = await helm_ci.verify_charts(
+            source=self._repo_with_non_chart_change(),
+            base_ref="main",
+            head_ref="feature",
+            charts_path=["charts/*"],
+        )
+
+        TestCase().assertEqual(["charts/not-a-chart: skipped (not a Helm chart)"], outputs)
+
+    @function
+    async def verify_charts_returns_successful_noop(self) -> None:
+        """Verify unchanged chart roots return an explicit successful no-op."""
+        helm_ci = dag.helm_ci()
+        outputs = await helm_ci.verify_charts(
+            source=self._repo_without_chart_changes(),
+            base_ref="main",
+            head_ref="feature",
+            charts_path=["charts/*"],
+        )
+
+        TestCase().assertEqual(["No changed chart directories found"], outputs)
 
     def _repo_with_pull_request_chart_changes(self) -> Directory:
         """Return a repo where main and feature both changed charts after the merge base."""
@@ -74,6 +102,48 @@ class Tests:
                     "printf '\nbaseOnly: true\n' >> charts/base-only/values.yaml && git add . && git commit -m main",
                 ]
             )
+            .directory("/work/repo")
+        )
+
+    def _repo_with_non_chart_change(self) -> Directory:
+        """Return a repo with a changed directory that is not a chart."""
+        return (
+            dag.container()
+            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_new_file("/work/repo/charts/not-a-chart/README.md", "not a chart")
+            .with_exec(["git", "add", "."])
+            .with_exec(["git", "commit", "-m", "base"])
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_exec(
+                [
+                    "sh",
+                    "-c",
+                    "printf '\nchanged\n' >> charts/not-a-chart/README.md && git add . && git commit -m feature",
+                ]
+            )
+            .directory("/work/repo")
+        )
+
+    def _repo_without_chart_changes(self) -> Directory:
+        """Return a repo whose feature branch does not change chart roots."""
+        return (
+            dag.container()
+            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
+            .with_workdir("/work/repo")
+            .with_exec(["git", "init", "--initial-branch", "main", "."])
+            .with_exec(["git", "config", "user.name", "Dagger Test"])
+            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_new_file("/work/repo/README.md", "repo")
+            .with_exec(["git", "add", "."])
+            .with_exec(["git", "commit", "-m", "base"])
+            .with_exec(["git", "checkout", "-b", "feature"])
+            .with_new_file("/work/repo/docs/README.md", "docs")
+            .with_exec(["git", "add", "."])
+            .with_exec(["git", "commit", "-m", "feature"])
             .directory("/work/repo")
         )
 
