@@ -1,6 +1,6 @@
 ## 1. Shared Automation Home
 
-- [ ] 1.1 Decide whether the shared automation home is `riftonix/platform-automation` or `riftonix/.github` and document the rationale.
+- [x] 1.1 Decide whether the shared automation home is `riftonix/platform-automation` or `riftonix/.github` and document the rationale.
 - [ ] 1.2 Create the shared automation repository structure for Renovate presets, reusable workflows, composite actions, examples, and documentation.
 - [ ] 1.3 Add repository overview documentation explaining the boundary between Renovate presets, GitHub Actions workflows, composite actions, and Dagger scenarios.
 - [ ] 1.4 Add release/versioning documentation for shared workflow, composite action, and Renovate preset references.
