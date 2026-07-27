@@ -22,56 +22,45 @@ class Tests:
     @function
     async def all(self) -> None:
         """Run all Helm CI scenario tests."""
-        await self.verify_charts_discovers_changed_chart_components()
-        await self.verify_charts_skips_non_chart_directories()
-        await self.verify_charts_returns_successful_noop()
+        await self.verify_chart()
+        await self.verify_library_chart()
+        await self.verify_chart_rejects_non_chart_directory()
 
     @function
-    async def verify_charts_discovers_changed_chart_components(self) -> None:
-        """Verify changed chart components from caller-provided root patterns."""
+    async def verify_chart(self) -> None:
+        """Verify one application chart selected by its repository path."""
         helm_ci = dag.helm_ci()
-        outputs = await helm_ci.verify_charts(
-            source=self._repo_with_pull_request_chart_changes(),
-            base_ref="main",
-            head_ref="feature",
-            charts_path=["charts/*", "libs/*"],
+        output = await helm_ci.verify_chart(
+            source=self._repo_with_chart(),
+            chart_path="charts/app",
         )
 
-        output = "\n".join(outputs)
-        test_case = TestCase()
-        test_case.assertEqual(2, len(outputs))
-        test_case.assertIn("charts/changed:", output)
-        test_case.assertIn("libs/common:", output)
-        test_case.assertNotIn("charts/base-only:", output)
+        TestCase().assertIn("charts/app:", output)
 
     @function
-    async def verify_charts_skips_non_chart_directories(self) -> None:
-        """Verify changed directories without Chart.yaml are skipped."""
+    async def verify_library_chart(self) -> None:
+        """Verify a library chart skips templating."""
         helm_ci = dag.helm_ci()
-        outputs = await helm_ci.verify_charts(
-            source=self._repo_with_non_chart_change(),
-            base_ref="main",
-            head_ref="feature",
-            charts_path=["charts/*"],
+        output = await helm_ci.verify_chart(
+            source=self._repo_with_library_chart(),
+            chart_path="libs/common",
         )
 
-        TestCase().assertEqual(["charts/not-a-chart: skipped (not a Helm chart)"], outputs)
+        TestCase().assertIn("template: skipped (library chart)", output)
 
     @function
-    async def verify_charts_returns_successful_noop(self) -> None:
-        """Verify unchanged chart roots return an explicit successful no-op."""
+    async def verify_chart_rejects_non_chart_directory(self) -> None:
+        """Verify a directory without Chart.yaml is rejected."""
         helm_ci = dag.helm_ci()
-        outputs = await helm_ci.verify_charts(
-            source=self._repo_without_chart_changes(),
-            base_ref="main",
-            head_ref="feature",
-            charts_path=["charts/*"],
-        )
+        try:
+            await helm_ci.verify_chart(source=self._repo_with_non_chart(), chart_path="charts/not-a-chart")
+        except Exception as error:
+            TestCase().assertIn("not a Helm chart", str(error))
+        else:
+            raise AssertionError("Expected non-chart directory validation to fail")
 
-        TestCase().assertEqual(["No changed chart directories found"], outputs)
-
-    def _repo_with_pull_request_chart_changes(self) -> Directory:
-        """Return a repo where main and feature both changed charts after the merge base."""
+    def _repo_with_chart(self) -> Directory:
+        """Return a repository containing an application chart."""
         return (
             dag.container()
             .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
@@ -79,74 +68,42 @@ class Tests:
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
             .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
-            .with_directory("/work/repo/charts/changed", self._fixture_chart())
-            .with_directory("/work/repo/charts/base-only", self._fixture_chart())
-            .with_directory("/work/repo/libs/common", self._fixture_chart())
-            .with_exec(["git", "add", "."])
-            .with_exec(["git", "commit", "-m", "base"])
-            .with_exec(["git", "checkout", "-b", "feature"])
-            .with_exec(
-                [
-                    "sh",
-                    "-c",
-                    "printf '\nfeature: true\n' >> charts/changed/values.yaml && "
-                    "printf '\nfeature: true\n' >> libs/common/values.yaml && "
-                    "git add . && git commit -m feature",
-                ]
-            )
-            .with_exec(["git", "checkout", "main"])
-            .with_exec(
-                [
-                    "sh",
-                    "-c",
-                    "printf '\nbaseOnly: true\n' >> charts/base-only/values.yaml && git add . && git commit -m main",
-                ]
-            )
+            .with_directory("/work/repo/charts/app", self._fixture_chart())
             .directory("/work/repo")
         )
 
-    def _repo_with_non_chart_change(self) -> Directory:
-        """Return a repo with a changed directory that is not a chart."""
+    def _repo_with_library_chart(self) -> Directory:
+        """Return a repository containing a library chart."""
         return (
             dag.container()
             .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
             .with_workdir("/work/repo")
-            .with_exec(["git", "init", "--initial-branch", "main", "."])
-            .with_exec(["git", "config", "user.name", "Dagger Test"])
-            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
+            .with_directory("/work/repo/libs/common", self._fixture_library_chart())
+            .directory("/work/repo")
+        )
+
+    def _repo_with_non_chart(self) -> Directory:
+        """Return a repository containing a non-chart directory."""
+        return (
+            dag.container()
+            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
+            .with_workdir("/work/repo")
             .with_new_file("/work/repo/charts/not-a-chart/README.md", "not a chart")
-            .with_exec(["git", "add", "."])
-            .with_exec(["git", "commit", "-m", "base"])
-            .with_exec(["git", "checkout", "-b", "feature"])
-            .with_exec(
-                [
-                    "sh",
-                    "-c",
-                    "printf '\nchanged\n' >> charts/not-a-chart/README.md && git add . && git commit -m feature",
-                ]
-            )
-            .directory("/work/repo")
-        )
-
-    def _repo_without_chart_changes(self) -> Directory:
-        """Return a repo whose feature branch does not change chart roots."""
-        return (
-            dag.container()
-            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
-            .with_workdir("/work/repo")
-            .with_exec(["git", "init", "--initial-branch", "main", "."])
-            .with_exec(["git", "config", "user.name", "Dagger Test"])
-            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
-            .with_new_file("/work/repo/README.md", "repo")
-            .with_exec(["git", "add", "."])
-            .with_exec(["git", "commit", "-m", "base"])
-            .with_exec(["git", "checkout", "-b", "feature"])
-            .with_new_file("/work/repo/docs/README.md", "docs")
-            .with_exec(["git", "add", "."])
-            .with_exec(["git", "commit", "-m", "feature"])
             .directory("/work/repo")
         )
 
     def _fixture_chart(self) -> Directory:
         """Return the fixture chart directory."""
         return dag.current_module().source().directory("charts/ns-configurator")
+
+    def _fixture_library_chart(self) -> Directory:
+        """Return a copy of the fixture chart with library type metadata."""
+        return (
+            dag.current_module()
+            .source()
+            .directory("charts/ns-configurator")
+            .with_new_file(
+                "Chart.yaml",
+                "apiVersion: v2\nname: ns-configurator\nversion: 0.1.0\ntype: library\n",
+            )
+        )

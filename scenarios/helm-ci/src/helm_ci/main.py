@@ -86,31 +86,6 @@ class HelmCi:
             helm_unittest_container_user_id=helm_unittest_container_user_id or DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID,
         )
 
-    async def _get_changed_chart_paths(
-        self,
-        source: dagger.Directory,
-        base_ref: str,
-        head_ref: str,
-        charts_path: list[str],
-    ) -> list[str]:
-        if not charts_path:
-            msg = "At least one chart path pattern is required"
-            raise ValueError(msg)
-
-        git = dag.git(
-            source=source,
-            image_registry=self.git_image_registry,
-            image_repository=self.git_image_repository,
-            image_tag=self.git_image_tag,
-            user_id=self.git_container_user_id,
-        )
-        merge_base = await git.get_merge_base(base_ref=base_ref, head_ref=head_ref)
-        return await git.get_changed_components(
-            base_ref=merge_base,
-            head_ref=head_ref,
-            component_roots=charts_path,
-        )
-
     def _helm(self, source: dagger.Directory):
         """Return configured Helm module instance from the helm module dependency."""
         return dag.helm(
@@ -199,42 +174,21 @@ class HelmCi:
         )
 
     @function
-    async def verify_charts(
+    async def verify_chart(
         self,
         source: Annotated[dagger.Directory, DefaultPath("."), Doc("Repository root directory")],
-        base_ref: Annotated[str, Doc("Base ref to compare changed chart components against")],
-        head_ref: Annotated[str, Doc("Head ref to compare changed chart components from")] = "HEAD",
-        charts_path: Annotated[
-            list[str] | None,
-            Doc(
-                "Glob-like chart component root pattern relative to source, for example charts/*; repeat for multiple roots"
-            ),
-        ] = None,
+        chart_path: Annotated[str, Doc("Chart directory relative to repository root")],
         values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
         release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
-    ) -> list[str]:
-        """Verify changed chart components discovered from caller-provided chart root patterns."""
-        chart_paths = await self._get_changed_chart_paths(
-            source=source,
-            base_ref=base_ref,
-            head_ref=head_ref,
-            charts_path=charts_path or [],
-        )
-        if not chart_paths:
-            return ["No changed chart directories found"]
+    ) -> str:
+        """Verify one Helm chart selected by the caller."""
+        chart_dir = source.directory(chart_path)
+        if not await chart_dir.glob("Chart.yaml"):
+            raise ValueError(f"{chart_path}: not a Helm chart")
 
-        outputs: list[str] = []
-        for chart_path in chart_paths:
-            chart_dir = source.directory(chart_path)
-            if not await chart_dir.glob("Chart.yaml"):
-                outputs.append(f"{chart_path}: skipped (not a Helm chart)")
-                continue
-            outputs.append(
-                await self._verify_changed_chart(
-                    chart_dir=chart_dir,
-                    chart_path=chart_path,
-                    values=values,
-                    release_name=release_name,
-                )
-            )
-        return outputs
+        return await self._verify_changed_chart(
+            chart_dir=chart_dir,
+            chart_path=chart_path,
+            values=values,
+            release_name=release_name,
+        )
