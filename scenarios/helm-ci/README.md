@@ -28,18 +28,14 @@ dagger -m ./scenarios/helm-ci call \
   --source=./modules/helm/tests/charts/ns-configurator
 ```
 
-Verify changed chart components:
+Verify one chart selected by the CI matrix:
 
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  --git-image-tag=2.52.0 \
-  verify-charts \
+  verify-chart \
   --source=. \
-  --base-ref=origin/master \
-  --head-ref=HEAD \
-  --charts-path='charts/*' \
-  --charts-path='libs/*'
+  --chart-path=charts/app
 ```
 
 ## Runtime Image Inputs

@@ -21,10 +21,10 @@
 ## 3. Changed Chart Validation Workflow
 
 - [x] 3.1 Extend `scenarios/helm-ci` to accept caller-provided glob-like chart component roots such as `charts/*` and `libs/*` through repeatable `charts_path` inputs for repository validation.
-- [x] 3.2 Implement changed-chart discovery from explicit `base_ref` and `head_ref` inputs using the Git module.
-- [x] 3.3 Implement validation for changed charts with dependency update, strict lint, conditional template execution for non-library charts, and auto-detected unittest through `modules/helm-unittest`.
-- [x] 3.4 Return successful no-op results when no chart directories changed.
-- [x] 3.5 Add Dagger-native scenario tests for application and library chart validation, non-chart skips, and no-op changed validation.
+- [x] 3.2 Define CI-side changed-chart discovery using the Git module's `get_changed_components` function with explicit `base_ref`, `head_ref`, and chart roots.
+- [x] 3.3 Implement single-chart validation with dependency update, strict lint, conditional template execution for non-library charts, and auto-detected unittest through `modules/helm-unittest`.
+- [x] 3.4 Move changed-chart fan-out and no-op handling to the provider workflow matrix; the scenario validates only the selected chart directory.
+- [x] 3.5 Add Dagger-native scenario tests for application and library chart validation and rejection of non-chart directories.
 
 ## 4. Development Publication Workflow
 
