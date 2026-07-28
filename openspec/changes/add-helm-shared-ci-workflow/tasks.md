@@ -8,13 +8,15 @@
 - [x] 1.5 Add Dagger-native Helm module tests for structured metadata detection, including chart name, version, chart type, and annotations.
 - [x] 1.6 Add Dagger-native Helm module tests for library chart template skip behavior.
 - [x] 1.7 Add Dagger-native Helm unittest module tests for successful unittest execution and failing unittest execution.
+- [x] 1.8 Add optional repeatable suite file filters to the Helm unittest module while preserving unfiltered and color behavior.
+- [x] 1.9 Add Dagger-native Helm unittest tests for one and multiple filters, excluded valid suites, and selected failures.
+- [x] 1.10 Move default suite patterns and suite discovery into the Helm unittest module and use the defaults when `test` is called without filters.
+- [x] 1.11 Add Dagger-native Helm unittest tests for default discovery, custom discovery, empty selection, and default filtered execution.
 
 ## 2. Helm CI Scenario Result Model
 
 - [x] 2.1 Define scenario-owned structured result objects or JSON-compatible records for chart publication results.
-- [x] 2.2 Define scenario-owned structured result objects or JSON-compatible records for development publication cleanup results.
-- [x] 2.3 Ensure publication and cleanup workflows return deterministic ordered lists of result records rather than dictionaries keyed by chart or artifact identity.
-- [x] 2.4 Ensure publication and cleanup results include registry-visible OCI reference fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available.
+- [x] 2.2 Ensure publication results use primitive fields and include registry-visible OCI reference fields when available.
 - [x] 2.5 Ensure result fields use only primitive values and do not expose Helm, Git, or registry helper module object types.
 - [x] 2.6 Ensure returned results never include registry credentials or secret-derived values.
 
@@ -25,36 +27,21 @@
 - [x] 3.3 Implement single-chart validation with dependency update, strict lint, conditional template execution for non-library charts, and auto-detected unittest through `modules/helm-unittest`.
 - [x] 3.4 Move changed-chart fan-out and no-op handling to the provider workflow matrix; the scenario validates only the selected chart directory.
 - [x] 3.5 Add Dagger-native scenario tests for application and library chart validation and rejection of non-chart directories.
-
-## 4. Development Publication Workflow
-
-- [ ] 4.1 Add a scenario function that discovers changed charts relative to caller-provided pull request refs.
-- [ ] 4.2 Support invoking development publication from pull request workflows after validation succeeds.
-- [ ] 4.3 Compute development package versions by appending caller-provided SemVer build metadata to the chart version, including a stable pull request marker such as `pr.<number>`.
-- [ ] 4.4 Package and publish each selected chart to a caller-provided OCI registry destination.
-- [ ] 4.5 Return structured publication results for published, skipped, and failed charts, including registry-visible OCI references suitable for cleanup and summaries.
-- [ ] 4.6 Add tests for development version calculation and changed dev publication behavior, using a local registry or dry-run path where appropriate.
-
-## 5. Development Publication Cleanup Workflow
-
-- [ ] 5.1 Add provider-neutral cleanup support for pull-request development chart versions using OCI registry APIs rather than GitHub Packages APIs.
-- [ ] 5.2 Allow cleanup to select development versions by a caller-provided pull request marker such as `pr.<number>`.
-- [ ] 5.3 Ensure cleanup skips release chart versions and reports deleted, skipped, and failed artifacts as structured results.
-- [ ] 5.4 Support provider workflow retry by accepting explicit cleanup inputs such as registry destination, package or chart scope, and pull request marker.
-- [ ] 5.5 Add a reusable `skopeo`-based module if direct OCI registry API operations require a containerized helper.
-- [ ] 5.6 Add tests for cleanup selection, release-version protection, and retry inputs using a local registry or dry-run path where appropriate.
+- [x] 3.6 Restrict Helm CI unittest discovery to `*_test.yaml` and `*_test.yml` defaults and allow callers to replace them with repeatable suite file patterns.
+- [x] 3.7 Add Dagger-native scenario tests for unrelated YAML, default and custom patterns, empty selection, skipped execution, and selected failures.
+- [x] 3.8 Delegate Helm CI suite discovery and default pattern ownership to the Helm unittest module.
 
 ## 6. Release Publication Workflow
 
-- [ ] 6.1 Add a scenario function that discovers changed charts between caller-provided previous and head refs.
-- [ ] 6.2 Add optional metadata path gating so release publication can skip when no matching `Chart.yaml` files changed.
-- [ ] 6.3 Package release charts using the version from `Chart.yaml` without appending build metadata.
-- [ ] 6.4 Add optional idempotent behavior that skips pushing chart versions already present in the destination registry.
-- [ ] 6.5 Detect chart version bumps from changed `Chart.yaml` metadata and publish release charts automatically when the provider workflow invokes the release function after a default-branch merge.
-- [ ] 6.6 Create and push chart-scoped release Git tags through the Git module after successful release publication.
-- [ ] 6.7 Fail release publication when the target release Git tag already exists.
-- [ ] 6.8 Fail release publication when Git credentials cannot create or push the release Git tag.
-- [ ] 6.9 Add tests for metadata gating, unchanged no-op behavior, release version publication, already-published skips, release tag creation, existing-tag failure, and tag permission failure where practical.
+- [x] 6.1 Change `publish_chart` into the single release publication entrypoint that publishes one chart and pushes its Git release tag in one Dagger call.
+- [x] 6.2 Keep scenario-level `source` as the Git repository directory and add optional `chart_source: dagger.Directory | None` to `verify_chart` and `publish_chart`, resolving the chart as `chart_source or self.source`.
+- [x] 6.3 Use the resolved chart source for Helm and Helm unittest operations while always using scenario-level `source` for Git operations.
+- [x] 6.4 Package the release chart using the version from `Chart.yaml` by default, allow an optional explicit version override, and run dependency update by default with an opt-out input.
+- [x] 6.5 Compute a chart-scoped release tag from caller-provided `git_tag_prefix` and the effective chart version, for example `charts/appchart/v1.2.3`.
+- [x] 6.6 Accept an OCI base URL plus registry and Git authentication inputs on `publish_chart`, preserve `git_tag_prefix` as the chart repository path, publish the chart, and create and push the release tag through the Git module within the same function invocation.
+- [x] 6.7 Check the target release tag before publication, return a successful no-op when it already exists, and create and push a missing tag only after successful chart publication.
+- [x] 6.8 Fail when Git credentials cannot create or push the release tag, without falling back to provider-specific APIs.
+- [x] 6.9 Add tests for chart source fallback and override behavior, release version publication, release tag calculation and push, existing-tag no-op before publication, and tag permission failure where practical.
 
 ## 7. Documentation Content Validation
 
@@ -64,15 +51,15 @@
 
 ## 8. Documentation And Consumer Guidance
 
-- [ ] 8.1 Update `scenarios/helm-ci/README.md` with changed validation, dev publication, release publication, unittest, result output, and provider boundary examples.
+- [ ] 8.1 Update `scenarios/helm-ci/README.md` with changed validation, release publication, unittest, result output, and provider boundary examples.
 - [ ] 8.2 Update repository docs for Helm CI usage, including `riftonix/helm-shared` guidance with default branch `master` and chart roots `charts/*` and `libs/*`.
 - [ ] 8.3 Document that `helm-shared` documentation is externally published by the main site and that this workflow only validates repository content.
 - [ ] 8.4 Document public runtime image defaults and mirror override inputs for Helm, Git, Helm unittest, and any documentation validation runtime, including `container_user_id` naming for new modules.
 
 ## 9. Verification
 
-- [ ] 9.1 Run `make tests module helm`.
-- [ ] 9.2 Run `make tests module helm-unittest`.
+- [x] 9.1 Run `make tests module helm`.
+- [x] 9.2 Run `make tests module helm-unittest`.
 - [ ] 9.3 Run `make tests scenario helm-ci`.
 - [ ] 9.4 Run `make lint-check module helm`, `make lint-check module helm-unittest`, and `make lint-check scenario helm-ci`.
 - [ ] 9.5 Run `make format-check module helm`, `make format-check module helm-unittest`, and `make format-check scenario helm-ci`.

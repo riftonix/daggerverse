@@ -109,21 +109,48 @@ class HelmCi:
             container_user_id=self.helm_unittest_container_user_id,
         )
 
-    async def _has_unittest_suites(self, chart_dir: dagger.Directory) -> bool:
-        """Return whether a chart contains Helm unittest suite files."""
-        return bool(await chart_dir.glob("tests/**/*.yaml")) or bool(await chart_dir.glob("tests/**/*.yml"))
+    async def _git_with_optional_auth(
+        self,
+        git_token: dagger.Secret | None,
+        git_host: str,
+        git_username: str,
+    ):
+        """Return the repository Git module with optional HTTPS authentication."""
+        git = dag.git(
+            source=self.source,
+            image_registry=self.git_image_registry,
+            image_repository=self.git_image_repository,
+            image_tag=self.git_image_tag,
+            user_id=self.git_container_user_id,
+        )
+        if git_token:
+            git = await git.with_https_token_auth(
+                host=git_host,
+                username=git_username,
+                token=git_token,
+            )
+        return git
 
     @function
     async def verify_chart(
         self,
         values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
         release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
+        chart_source: Annotated[
+            dagger.Directory | None,
+            Doc("Optional Helm chart directory; defaults to the scenario source"),
+        ] = None,
+        unittest_suite_files: Annotated[
+            list[str] | None,
+            Doc("Optional Helm unittest suite file glob patterns"),
+        ] = None,
     ) -> str:
         """Verify the Helm chart supplied as the scenario source."""
-        if not await self.source.glob("Chart.yaml"):
+        chart_source = chart_source or self.source
+        if not await chart_source.glob("Chart.yaml"):
             raise ValueError("source: not a Helm chart")
 
-        chart = self._helm(source=self.source).with_dependency_update()
+        chart = self._helm(source=chart_source).with_dependency_update()
         metadata = json.loads(await chart.get_chart_metadata_json())
         if not metadata.get("name") or not metadata.get("version"):
             return "skipped (missing name/version in Chart.yaml)"
@@ -137,30 +164,112 @@ class HelmCi:
             template_stdout = await chart.template(values=values, release_name=release_name)
             steps.append(f"template:\n{template_stdout}")
 
-        if await self._has_unittest_suites(self.source):
-            unittest_stdout = await self._helm_unittest(source=self.source).with_dependency_update().test()
+        unittest = self._helm_unittest(source=chart_source)
+        if await unittest.has_suites(suite_files=unittest_suite_files):
+            unittest_stdout = await unittest.with_dependency_update().test(suite_files=unittest_suite_files)
             steps.append(f"unittest:\n{unittest_stdout}")
         else:
-            steps.append("unittest: skipped (no suite files under tests/)")
+            steps.append("unittest: skipped (no suite files matched configured patterns)")
         return "\n\n".join(steps)
+
+    @function
+    async def get_chart_release_tag(
+        self,
+        git_tag_prefix: Annotated[str, Doc("Git release tag prefix for the chart")],
+        chart_source: Annotated[
+            dagger.Directory | None,
+            Doc("Optional Helm chart directory; defaults to the scenario source"),
+        ] = None,
+        version: Annotated[str | None, Doc("Optional chart version override")] = None,
+    ) -> str:
+        """Return the chart-scoped Git release tag."""
+        normalized_git_tag_prefix = git_tag_prefix.strip("/")
+        if not normalized_git_tag_prefix:
+            raise ValueError("git_tag_prefix: must not be empty")
+
+        chart_source = chart_source or self.source
+        if not await chart_source.glob("Chart.yaml"):
+            raise ValueError("chart_source: not a Helm chart (missing Chart.yaml)")
+
+        chart_version = await self._helm(source=chart_source).get_chart_version()
+        if not chart_version:
+            raise ValueError("chart_source: missing version in Chart.yaml")
+        return f"{normalized_git_tag_prefix}/v{version or chart_version}"
+
+    @function
+    def get_chart_oci_url(
+        self,
+        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
+        git_tag_prefix: Annotated[str, Doc("Git release tag prefix for the chart")],
+    ) -> str:
+        """Return the chart OCI namespace URL derived from its Git tag prefix."""
+        normalized_oci_base_url = oci_base_url.removeprefix("oci://").rstrip("/")
+        if not normalized_oci_base_url:
+            raise ValueError("oci_base_url: must not be empty")
+
+        normalized_git_tag_prefix = git_tag_prefix.strip("/")
+        if not normalized_git_tag_prefix:
+            raise ValueError("git_tag_prefix: must not be empty")
+        return f"{normalized_oci_base_url}/{normalized_git_tag_prefix}"
 
     @function
     async def publish_chart(
         self,
-        oci_url: Annotated[str, Doc("Destination OCI registry URL without chart name")],
-        version: Annotated[str, Doc("Chart semver to publish")],
+        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
+        git_tag_prefix: Annotated[str, Doc("Git release tag prefix for the chart")],
+        git_token: Annotated[dagger.Secret | None, Doc("Optional HTTPS token used to push the release Git tag")] = None,
+        chart_source: Annotated[
+            dagger.Directory | None,
+            Doc("Optional Helm chart directory; defaults to the scenario source"),
+        ] = None,
+        version: Annotated[str | None, Doc("Optional chart version override")] = None,
         app_version: Annotated[str | None, Doc("Optional appVersion override")] = None,
+        with_dependency_update: Annotated[
+            bool,
+            Doc("Run Helm dependency update before publishing"),
+        ] = True,
         username: Annotated[str | None, Doc("Registry username for login")] = None,
         password: Annotated[dagger.Secret | None, Doc("Registry password")] = None,
         insecure: Annotated[bool | None, Doc("Allow plain http pushes")] = False,
+        git_host: Annotated[str, Doc("HTTPS Git host used for release tag authentication")] = "github.com",
+        git_username: Annotated[str, Doc("HTTPS Git username used for release tag authentication")] = "x-access-token",
+        git_remote: Annotated[str, Doc("Git remote that receives the release tag")] = "origin",
     ) -> str:
-        """Package and push helm chart via local helm module"""
-        chart = self._helm(source=self.source)
+        """Publish one Helm chart and push its Git release tag."""
+        chart_source = chart_source or self.source
+        oci_url = self.get_chart_oci_url(
+            oci_base_url=oci_base_url,
+            git_tag_prefix=git_tag_prefix,
+        )
+        release_tag = await self.get_chart_release_tag(
+            git_tag_prefix=git_tag_prefix,
+            chart_source=chart_source,
+            version=version,
+        )
+        if bool(username) != bool(password):
+            raise ValueError("username and password must be supplied together")
+
+        git = await self._git_with_optional_auth(
+            git_token=git_token,
+            git_host=git_host,
+            git_username=git_username,
+        )
+        git = git.with_fetched_tags(remote=git_remote)
+        if await git.has_tag(tag=release_tag):
+            return f"skipped: release tag already exists\nrelease tag: {release_tag}"
+
+        chart = self._helm(source=chart_source)
+        if with_dependency_update:
+            chart = chart.with_dependency_update()
+
         if username and password:
             chart = chart.with_registry_login(username=username, password=password)
-        return await chart.push(
+        package_name = await chart.push(
             oci_url=oci_url,
-            version=version,
+            version=version or "",
             app_version=app_version or "",
             insecure=insecure,
         )
+
+        await git.create_tag(tag=release_tag).push_tag(tag=release_tag, remote=git_remote).container().sync()
+        return f"published: {package_name}\nrelease tag: {release_tag}"

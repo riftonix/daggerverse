@@ -13,6 +13,7 @@ For task-oriented Helm CI usage, see
 ## Features
 
 - Helm chart lint + template
+- Helm unittest execution for selected suite files
 - Helm chart publish to OCI
 - Run checks only for changed directories through the Git module
 - Verify changed charts from charts/libs directories
@@ -37,6 +38,26 @@ dagger -m ./scenarios/helm-ci call \
   verify-chart
 ```
 
+`source` must point directly to one Helm chart directory containing
+`Chart.yaml`. The scenario keeps one chart per Dagger container and does not
+select a nested chart from a repository root.
+
+By default, the composed Helm unittest module discovers and runs files matching
+`tests/**/*_test.yaml` or `tests/**/*_test.yml`. Select different suites by
+repeating `--unittest-suite-files`:
+
+```bash
+dagger -m ./scenarios/helm-ci call \
+  --source=charts/app \
+  verify-chart \
+  --unittest-suite-files='tests/units/*_test.yaml' \
+  --unittest-suite-files='tests/components/*_test.yml'
+```
+
+Custom patterns replace the defaults. An explicit empty list skips Helm
+unittest. Other YAML files, such as `tests/e2e/kind.yaml`, do not enable the
+unittest step.
+
 ## Runtime Image Inputs
 
 Helm operations use these constructor inputs:
@@ -52,6 +73,13 @@ Changed-chart operations also use Git runtime inputs:
 - `git_image_repository`: `alpine/git`
 - `git_image_tag`: `2.52.0`
 - `git_container_user_id`: `65532`
+
+Helm unittest operations use these constructor inputs:
+
+- `helm_unittest_image_registry`: `docker.io`
+- `helm_unittest_image_repository`: `helmunittest/helm-unittest`
+- `helm_unittest_image_tag`: `4.2.0-1.1.0`
+- `helm_unittest_container_user_id`: `65532`
 
 `verify-chart` and `publish-chart` do not invoke Git. Each call operates on the
 chart directory supplied through the scenario-level `source` input.

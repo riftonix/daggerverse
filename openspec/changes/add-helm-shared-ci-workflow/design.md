@@ -17,9 +17,9 @@ The archived static-site design established that component documentation is inte
 - Support `charts/*` and `libs/*` chart roots, including application and library chart differences.
 - Run Helm dependency update, lint, template, and optional unittest checks through public runtime images.
 - Add a dedicated Helm unittest module that can be reused outside the Helm CI scenario.
-- Publish changed dev charts from pull request workflows with caller-provided build metadata and changed release charts with the version from `Chart.yaml`.
-- Support cleanup of pull-request development chart versions through OCI registry APIs when provider workflows request cleanup.
-- Create release Git tags through the Git module after successful release publication when a chart version is raised by a default-branch merge.
+- Publish one caller-selected release chart per `publish_chart` invocation using the version from `Chart.yaml` by default, with an optional explicit version override.
+- Run Helm dependency update before release publication by default, with an explicit `with_dependency_update=false` opt-out for callers that use already prepared or vendored dependencies.
+- Create release Git tags through the Git module within the same `publish_chart` invocation after successful release publication.
 - Return structured results that provider adapters can turn into summaries, comments, or logs without parsing free-form shell output.
 - Validate repository documentation content only when requested, without invoking the static-site scenario or publishing a site.
 - Add tests and docs so the workflow can be safely consumed by `riftonix/helm-shared`.
@@ -28,7 +28,6 @@ The archived static-site design established that component documentation is inte
 
 - Add GitHub Actions YAML to `riftonix/helm-shared` in this daggerverse change.
 - Implement GitHub Releases, GitHub Pages, GitLab Pages, environments, deployment comments, or PR comment lifecycle inside Dagger.
-- Implement cleanup through the GitHub Packages API or other provider-specific package APIs.
 - Render the external main documentation site from the chart repository.
 - Introduce private runtime image defaults.
 - Replace caller-owned branching, tagging, versioning, or registry repository policy.
@@ -38,11 +37,11 @@ The archived static-site design established that component documentation is inte
 
 1. Extend `scenarios/helm-ci` instead of creating a new scenario.
 
-   The existing scenario already owns provider-neutral Helm chart orchestration and composes the correct low-level modules. Adding changed dev publish, release publish, unittest validation, and structured results there preserves a single workflow-facing module for chart repositories. A new `helm-shared-ci` scenario would overfit one downstream repository and duplicate most of the existing Helm CI surface.
+   The existing scenario already owns provider-neutral Helm chart orchestration and composes the correct low-level modules. Adding release publication, unittest validation, and structured results there preserves a single workflow-facing module for chart repositories. A new `helm-shared-ci` scenario would overfit one downstream repository and duplicate most of the existing Helm CI surface.
 
 2. Keep GitHub Actions as an adapter, not part of the Dagger contract.
 
-   `helm-shared` will likely call this scenario from GitHub Actions, but the scenario will accept explicit refs, chart roots, run id or version suffix, registry destination, and credentials. It will not inspect `GITHUB_*`, `CI_*`, or provider event variables. This matches the existing static-site and Helm CI provider boundary.
+   `helm-shared` will likely call this scenario from GitHub Actions, but the scenario will accept explicit refs and chart roots for validation and explicit chart, registry, and Git inputs for publication. It will not inspect `GITHUB_*`, `CI_*`, or provider event variables. This matches the existing static-site and Helm CI provider boundary.
 
 3. Model chart selection as provider workflow matrix preparation.
 
@@ -65,70 +64,60 @@ The archived static-site design established that component documentation is inte
 
    `modules/helm-unittest` should wrap the public `helmunittest/helm-unittest` image and expose a small public API for running chart unit tests. `scenarios/helm-ci` should auto-detect Helm unittest suites without requiring a public enable or disable flag. A chart that contains suite files under `tests/` should run Helm unittest. A chart without suite files under `tests/` should skip unittest and still pass the rest of verification. This keeps `modules/helm` focused on Helm CLI primitives and keeps unittest reusable for callers that do not need the full CI scenario.
 
-6. Add multi-chart publication at the scenario layer.
+6. Create release tags through the Git module, not provider APIs.
 
-    The Helm module should continue to own one-chart package and push primitives. The Helm unittest module should own one-chart unittest execution. The scenario should own selecting changed charts, computing dev versions, checking idempotency, and aggregating validation and publication results across charts. This keeps reusable tool modules small while giving CI one stable workflow function.
+   `publish_chart` is the single release entrypoint. It checks the chart-scoped release tag before registry login or chart publication. An existing tag means the release is already complete, so the function returns a successful no-op without publishing or tagging again. When the tag is missing, one invocation publishes one caller-selected chart and only then creates and pushes its release Git tag through the Git module. This keeps tagging provider-neutral, avoids separate Dagger calls, and avoids GitHub-specific release APIs. If the repository token lacks permission to create or push the tag after publication, the workflow should fail.
 
-7. Allow pull request workflows to publish development chart versions.
+7. Use chart-scoped release tags.
 
-   Development publication is useful before merge when downstream consumers need to install or test the exact chart changes from a pull request. Provider workflows may call development publication after changed-chart validation succeeds on pull request events. The provider supplies refs, registry destination, credentials, and build metadata such as `pr.<number>.run.<run>.sha.<short-sha>`. The scenario computes chart versions as `<chart-version>+<build-metadata>` and returns registry-visible references so workflow summaries can point to the published artifacts.
+   A repository can publish multiple charts independently, so release tags should include chart scope rather than using only `v<version>`. `publish_chart` accepts a caller-provided `git_tag_prefix` and computes `<git-tag-prefix>/v<chart-version>`, allowing `charts/appchart/v1.2.3` and `libs/common/v1.2.3` to coexist.
 
-8. Clean pull request development versions through OCI registry APIs.
+   The same prefix is preserved as the OCI chart repository path. With `oci_base_url=ghcr.io/riftonix`, `charts/appchart` publishes under `ghcr.io/riftonix/charts/appchart`, `libs/common` publishes under `ghcr.io/riftonix/libs/common`, and `libs/test/common` publishes under `ghcr.io/riftonix/libs/test/common`. This keeps repository-specific shell parsing out of provider workflows.
 
-   Development artifacts should be removable when the pull request closes. Cleanup should be provider-neutral and operate through the OCI registry API rather than the GitHub Packages API. Provider workflows remain responsible for deciding when cleanup runs, for example on `pull_request.closed` or by manual retry with a pull request number. The cleanup operation should select development versions by a caller-provided marker such as `pr.<number>` and must not delete release versions. If direct OCI registry API usage needs a containerized tool, a reusable module based on `skopeo` may be added for listing and deleting OCI tags or manifests.
+8. Separate repository and chart directory inputs without path reconstruction.
 
-9. Create release tags through the Git module, not provider APIs.
+   Scenario-level `source` remains the full Git repository directory and is always passed to the Git module. `verify_chart` and `publish_chart` accept optional `chart_source: dagger.Directory | None` and resolve Helm input as `chart_source or self.source`. This avoids adding string chart path handling or changing the Helm module mount model. The caller supplies a Dagger directory for a nested chart when needed. Local Helm dependencies outside that directory remain unsupported by this model.
 
-   Release publication after a default-branch merge should be automatic when the provider workflow calls the release publication function and the chart version was raised. For each successfully published chart version, the scenario should create and push a Git tag through the Git module. This keeps tagging provider-neutral and avoids GitHub-specific release or package APIs. If the repository token lacks permission to create or push the tag, the workflow should fail. If the target tag already exists, the workflow should fail instead of silently skipping, because an existing tag for a newly detected version bump indicates an inconsistent release state.
+9. Return a structured publication result.
 
-10. Use chart-scoped release tags.
+    Validation workflows can remain fail-fast and use normal command failures for lint, template, and unittest checks. `publish_chart` needs a typed Dagger object or JSON-compatible value containing chart path, chart name, chart version, published version, action, status, message, package name, release tag, and registry-visible OCI fields when available. Provider adapters can render summaries from this value without parsing command output. The returned value must not include registry credentials or secret-derived values.
 
-   A repository can publish multiple charts independently, so release tags should include chart scope rather than using only `v<version>`. A stable default format such as `<chart-path>/v<chart-version>` allows `charts/appchart/v1.2.3` and `libs/common/v1.2.3` to coexist. The scenario may expose an override for tag formatting only if the implementation can keep the default safe and deterministic.
-
-11. Return structured publication and cleanup result objects or JSON-compatible records.
-
-    Validation workflows can remain fail-fast and use normal command failures for lint, template, and unittest checks. Publication and cleanup workflows need typed Dagger objects or JSON-compatible values containing chart path, chart name, chart version, published version, action, status, message, package name, release tag where applicable, and registry-visible OCI fields: `oci_reference`, `oci_registry`, `oci_repository`, `oci_tag`, and `oci_digest` when available. Functions should return deterministic ordered lists of result records rather than dictionaries keyed by chart path, OCI repository, or tag. Provider adapters can render summaries and cleanup logs from these values without parsing command output. Returned values must not include registry credentials or secret-derived values.
-
-    Example publication result list:
+    Example publication result:
 
     ```json
-    [
-      {
+    {
         "chart_path": "charts/appchart",
         "chart_name": "appchart",
         "chart_version": "1.2.3",
-        "published_version": "1.2.3+pr.42.run.100.sha.abc1234",
+        "published_version": "1.2.3",
         "status": "published",
-        "action": "dev_published",
-        "package_name": "appchart-1.2.3+pr.42.run.100.sha.abc1234.tgz",
-        "oci_reference": "oci://ghcr.io/riftonix/charts/appchart:1.2.3_pr.42.run.100.sha.abc1234",
+        "action": "release_published",
+        "package_name": "appchart-1.2.3.tgz",
+        "oci_reference": "oci://ghcr.io/riftonix/charts/appchart:1.2.3",
         "oci_registry": "ghcr.io",
         "oci_repository": "riftonix/charts/appchart",
-        "oci_tag": "1.2.3_pr.42.run.100.sha.abc1234",
+        "oci_tag": "1.2.3",
         "oci_digest": "sha256:0123456789abcdef",
-        "release_tag": "",
-        "message": "Development chart published",
+        "release_tag": "charts/appchart/v1.2.3",
+        "message": "Release chart published and tagged",
         "warnings": []
-      }
-    ]
+    }
     ```
 
-12. Validate docs as repository content only.
+10. Validate docs as repository content only.
 
     The `helm-shared` chart tree includes documentation content, but publication belongs to the main site that imports external component docs. Helm CI can validate that required documentation files exist, are non-empty when required, or are generated consistently if the repository defines such a check. It must not call `scenarios/static-site` for site rendering unless a future change explicitly adds a docs site to `helm-shared`.
 
-13. Use public runtime defaults with mirror overrides.
+11. Use public runtime defaults with mirror overrides.
 
    Helm and Git already default to public images. The Helm unittest module should default to the public `helmunittest/helm-unittest` image. Any documentation validation runtime must also default to a public image and expose prefixed runtime inputs so consumers can use mirrors without changing scenario behavior.
 
 ## Risks / Trade-offs
 
 - Changed-chart detection may select directories that are not chart roots -> Validate `Chart.yaml` before running Helm and report skipped paths clearly.
-- Release publication could republish existing chart versions -> Provide an idempotent mode that checks `is_already_published` before pushing and reports skipped existing versions.
+- A chart can be published but its Git tag push can still fail -> Fail the call and leave recovery to a later explicit invocation; OCI and Git operations cannot be transactional.
 - Release tag creation can fail because the provider token lacks permission -> Let the workflow fail so repository permissions are fixed explicitly.
-- Existing release tags can indicate already-completed or inconsistent releases -> Fail when a release tag already exists for a detected version bump instead of skipping tag creation.
-- Pull request development publications can leave stale artifacts after failed cleanup -> Support explicit cleanup by pull request marker so provider workflows can retry cleanup manually, including from local `act` runs.
-- OCI tag normalization can differ from SemVer build metadata -> Return registry-visible references and have cleanup match the marker in registry-visible tags or metadata.
+- Existing release tags identify an already-completed release -> Check before registry login or publication and return a successful no-op.
 - Helm unittest image tags can lag Helm tags -> Keep Helm and Helm unittest runtime inputs separate and test the default combination.
 - Structured result objects can be awkward in Dagger CLI output -> Prefer simple JSON-compatible records or scenario-owned object types with stable primitive fields.
 - Documentation validation requirements may be too weak at first -> Keep validation minimal and explicit, then add stronger doc checks in a future capability if `helm-shared` defines a concrete doc generation contract.
@@ -141,14 +130,11 @@ The archived static-site design established that component documentation is inte
 3. Release or pin the updated modules and scenario version for downstream consumers.
 4. Update `helm-shared` GitHub Actions to call the scenario with explicit `master` refs, chart roots `charts/*` and `libs/*`, and registry credentials.
 5. Ensure the release workflow passes Git credentials that can create and push chart-scoped release tags.
-6. Add `helm-shared` provider workflow cleanup on pull request close and a manual retry path that can be invoked with a pull request number, including from local `act` runs.
-7. Keep existing one-chart verification and publication functions available so existing callers are not forced to migrate immediately.
+6. Keep the provider workflow responsible for selecting one chart per release publication job.
 
 ## Open Questions
 
-- Which OCI registry and repository should `helm-shared` use for dev and release chart publication?
-- Should dev publication be idempotent or always push a unique build-metadata version?
-- Which OCI registry API capabilities are available for deleting pull-request development chart versions, and is a `skopeo` module needed for portable cleanup?
+- Which OCI registry and repository should `helm-shared` use for release chart publication?
 - Should the chart-scoped release tag format be fixed to `<chart-path>/v<chart-version>` or made caller-configurable with that default?
 - Which documentation files are required for `helm-shared` charts, and should validation only check presence or also generated consistency?
 - Should chart-testing be added in this change, or should Helm lint, template, dependency update, and unittest be the initial public workflow?

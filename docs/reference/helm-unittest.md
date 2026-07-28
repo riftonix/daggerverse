@@ -8,7 +8,7 @@
 - Main source: `modules/helm-unittest/src/helm_unittest/main.py`
 - Default image registry: `docker.io`
 - Default image repository: `helmunittest/helm-unittest`
-- Default image tag: `4.1.4-1.1.0`
+- Default image tag: `4.2.0-1.1.0`
 - Default container user: `65532`
 - Chart workdir: `/tmp/helm-unittest/chart`
 
@@ -18,7 +18,14 @@ The module exposes `image_registry`, `image_repository`, `image_tag`, and `conta
 
 - `container()` returns the configured runtime container with the chart mounted at `/tmp/helm-unittest/chart`.
 - `with_dependency_update()` runs `helm dependency update .` before later Helm unittest calls and returns the module instance for chaining.
-- `test(color: bool = False)` runs `helm unittest .` for the supplied chart directory and returns command output on success.
+- `has_suites(suite_files: list[str] | None = None)` reports whether the chart contains a suite matching the effective patterns.
+- `test(color: bool = False, suite_files: list[str] | None = None)` runs Helm unittest for the supplied chart directory and returns command output on success.
+
+When `suite_files` is omitted, both discovery and execution use
+`tests/**/*_test.yaml` and `tests/**/*_test.yml`. Custom patterns replace those
+defaults. Each effective pattern is passed through a separate `-f` option. An
+explicit empty list makes `has_suites()` return false so composing workflows can
+skip execution.
 
 ## Example
 
@@ -35,6 +42,16 @@ dagger -m ./modules/helm-unittest call \
   --source=./charts/mychart \
   with-dependency-update \
   test
+```
+
+Select one or more suite patterns:
+
+```bash
+dagger -m ./modules/helm-unittest call \
+  --source=./charts/mychart \
+  test \
+  --suite-files='tests/units/*_test.yaml' \
+  --suite-files='tests/components/*_test.yml'
 ```
 
 ## Tests

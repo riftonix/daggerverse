@@ -17,6 +17,27 @@ dagger -m ./scenarios/helm-ci call \
 ```
 
 The command runs Helm lint and template through the local Helm module dependency.
+`source` must point directly to one chart directory containing `Chart.yaml`.
+The scenario does not select a nested chart from a repository root.
+
+By default, the Helm unittest module discovers and runs only files matching
+`tests/**/*_test.yaml` or `tests/**/*_test.yml`. Helm CI uses the module's
+discovery result to run or skip the step. Files such as `tests/e2e/kind.yaml`
+do not enable the unittest step.
+
+To replace the defaults, repeat `--unittest-suite-files` for each glob:
+
+```bash
+dagger -m ./scenarios/helm-ci call \
+  --source=charts/app \
+  verify-chart \
+  --unittest-suite-files='tests/units/*_test.yaml' \
+  --unittest-suite-files='tests/components/*_test.yml'
+```
+
+An explicit empty list selects no suites and skips Helm unittest. If no files
+match the effective patterns, verification reports the unittest step as
+skipped.
 
 ## Verify Changed Chart Components
 
@@ -53,7 +74,7 @@ dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
   --source=./modules/helm/tests/charts/ns-configurator \
   publish-chart \
-  --oci-url=registry.example.com/mycharts \
+  --oci-base-url=registry.example.com/mycharts \
   --version=0.1.0 \
   --app-version=1.0.0 \
   --username=myuser \
