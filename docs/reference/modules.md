@@ -120,9 +120,9 @@ and publication workflows.
 - Main source: `scenarios/helm-ci/src/helm_ci/main.py`
 - How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
 - Typical verify command: `dagger -m ./scenarios/helm-ci call helm-verify --source=./charts/mychart`
-- Typical changed-chart command: `dagger -m ./scenarios/helm-ci call verify-charts --source=. --base-ref=origin/master --head-ref=HEAD --charts-path='charts/*'`
-- Reproducible changed-chart command: `dagger -m ./scenarios/helm-ci call --helm-image-tag=3.18.6 --git-image-tag=2.52.0 verify-charts --source=. --base-ref=origin/master --head-ref=HEAD --charts-path='charts/*'`
-- CI use cases: verify one chart, verify changed chart directories through provider-neutral Git inputs, and publish caller-selected chart versions to OCI registries.
+- Typical chart command: `dagger -m ./scenarios/helm-ci call --source=. verify-chart --chart-path=charts/mychart`
+- Reproducible chart command: `dagger -m ./scenarios/helm-ci call --source=. --helm-image-tag=3.18.6 verify-chart --chart-path=charts/mychart`
+- CI use cases: verify one chart per matrix job and publish caller-selected chart versions to OCI registries.
 
 ## container-images scenario
 

@@ -25,6 +25,7 @@ DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID = "65532"
 
 @object_type
 class HelmCi:
+    source: dagger.Directory
     helm_image_registry: str
     helm_image_repository: str
     helm_image_tag: str
@@ -43,6 +44,7 @@ class HelmCi:
     @classmethod
     async def create(
         cls,
+        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Repository root directory")],
         helm_image_registry: Annotated[str | None, Doc("Helm image registry")] = DEFAULT_HELM_IMAGE_REGISTRY,
         helm_image_repository: Annotated[str | None, Doc("Helm image repository")] = DEFAULT_HELM_IMAGE_REPOSITORY,
         helm_image_tag: Annotated[str | None, Doc("Helm image tag")] = DEFAULT_HELM_IMAGE_TAG,
@@ -72,6 +74,7 @@ class HelmCi:
     ):
         """Constructor exposing Helm and Git runtime image inputs with prefixed names."""
         return cls(
+            source=source,
             helm_image_registry=helm_image_registry or DEFAULT_HELM_IMAGE_REGISTRY,
             helm_image_repository=helm_image_repository or DEFAULT_HELM_IMAGE_REPOSITORY,
             helm_image_tag=helm_image_tag or DEFAULT_HELM_IMAGE_TAG,
@@ -176,13 +179,12 @@ class HelmCi:
     @function
     async def verify_chart(
         self,
-        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Repository root directory")],
         chart_path: Annotated[str, Doc("Chart directory relative to repository root")],
         values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
         release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
     ) -> str:
         """Verify one Helm chart selected by the caller."""
-        chart_dir = source.directory(chart_path)
+        chart_dir = self.source.directory(chart_path)
         if not await chart_dir.glob("Chart.yaml"):
             raise ValueError(f"{chart_path}: not a Helm chart")
 
