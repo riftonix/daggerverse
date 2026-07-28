@@ -44,19 +44,16 @@ The archived static-site design established that component documentation is inte
 
    `helm-shared` will likely call this scenario from GitHub Actions, but the scenario will accept explicit refs, chart roots, run id or version suffix, registry destination, and credentials. It will not inspect `GITHUB_*`, `CI_*`, or provider event variables. This matches the existing static-site and Helm CI provider boundary.
 
-3. Model chart selection as caller-provided chart component roots plus explicit diff mode.
+3. Model chart selection as provider workflow matrix preparation.
 
-   Pull request validation should use merge-base diff behavior against a caller-provided base ref. Release publication should compare a caller-provided previous ref against a caller-provided head ref. The caller provides glob-like chart component roots, for example `charts/*` and `libs/*`, through repeatable `charts_path` inputs. The scenario passes those roots to the Git module for changed component detection, then validates or publishes the returned chart component directories. This avoids encoding `master`, `main`, `HEAD^`, provider checkout assumptions, or repository-specific root expansion in Dagger while still supporting the `helm-shared` default branch.
+   Pull request validation uses `modules/git.get_changed_components` with explicit refs and component roots such as `charts/*` and `libs/*`. The provider workflow builds one matrix job per returned chart and supplies that chart directory as the Helm CI scenario-level `source`. This avoids encoding `master`, `main`, `HEAD^`, provider checkout assumptions, repository-specific root expansion, or multi-chart log aggregation in Helm CI.
 
    Example changed validation call:
 
    ```bash
-   dagger -m ./scenarios/helm-ci call verify-charts \
-     --source=. \
-     --base-ref=origin/master \
-     --head-ref=HEAD \
-     --charts-path='charts/*' \
-     --charts-path='libs/*' \
+   dagger -m ./scenarios/helm-ci call \
+     --source=charts/app \
+     verify-chart \
      --release-name=ci-release
    ```
 

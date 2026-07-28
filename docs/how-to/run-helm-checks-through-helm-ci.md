@@ -12,33 +12,38 @@ publish timing. Pass those decisions into the scenario as explicit inputs.
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  helm-verify \
-  --source=./modules/helm/tests/charts/ns-configurator
+  --source=./modules/helm/tests/charts/ns-configurator \
+  verify-chart
 ```
 
 The command runs Helm lint and template through the local Helm module dependency.
 
 ## Verify Changed Chart Components
 
-Use `verify-charts` when the repository is a Git checkout and you want to check only changed chart components under caller-provided component roots:
+Use the Git module to discover changed chart directories, then pass each directory to a separate `verify-chart` matrix job:
+
+```bash
+dagger -m ./modules/git call --silent --json \
+  --source=. \
+  get-changed-components \
+  --base-ref=origin/master \
+  --head-ref=HEAD \
+  --component-roots='charts/*' \
+  --component-roots='libs/*'
+```
+
+For each returned path, run:
 
 ```bash
 dagger -m ./scenarios/helm-ci call \
-  --helm-image-tag=3.18.6 \
-  --git-image-tag=2.52.0 \
-  verify-charts \
-  --source=. \
-  --base-ref=origin/master \
-  --head-ref=HEAD \
-  --charts-path='charts/*' \
-  --charts-path='libs/*'
+  --source=charts/app \
+  verify-chart
 ```
 
-The command asks the Git module for changed components matching the chart roots, then verifies each returned chart directory. Caller-provided refs and path patterns keep provider event policy outside the scenario.
+The CI provider owns matrix fan-out, retries, and per-chart logs.
 
-`helm-verify` and `helm-publish` use Helm runtime image inputs only. Changed-chart
-operations also use Git runtime image inputs. Pin both tags in CI when the
-workflow must be reproducible or must use mirrored images.
+`verify-chart` and `publish-chart` use Helm runtime image inputs only. Configure Git
+runtime image inputs on the separate Git module discovery call.
 
 ## Publish A Chart
 
@@ -46,8 +51,8 @@ workflow must be reproducible or must use mirrored images.
 REGISTRY_PASSWORD=secret \
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  helm-publish \
   --source=./modules/helm/tests/charts/ns-configurator \
+  publish-chart \
   --oci-url=registry.example.com/mycharts \
   --version=0.1.0 \
   --app-version=1.0.0 \
