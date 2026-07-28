@@ -124,7 +124,7 @@ class HelmCi:
             user_id=self.git_container_user_id,
         )
         if git_token:
-            git = await git.with_https_token_auth(
+            git = git.with_https_token_auth(
                 host=git_host,
                 username=git_username,
                 token=git_token,
