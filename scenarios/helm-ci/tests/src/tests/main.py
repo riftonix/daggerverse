@@ -29,31 +29,25 @@ class Tests:
     @function
     async def verify_chart(self) -> None:
         """Verify one application chart selected by its repository path."""
-        helm_ci = dag.helm_ci()
-        output = await helm_ci.verify_chart(
-            source=self._repo_with_chart(),
-            chart_path="charts/app",
-        )
+        helm_ci = dag.helm_ci(source=self._repo_with_chart())
+        output = await helm_ci.verify_chart(chart_path="charts/app")
 
         TestCase().assertIn("charts/app:", output)
 
     @function
     async def verify_library_chart(self) -> None:
         """Verify a library chart skips templating."""
-        helm_ci = dag.helm_ci()
-        output = await helm_ci.verify_chart(
-            source=self._repo_with_library_chart(),
-            chart_path="libs/common",
-        )
+        helm_ci = dag.helm_ci(source=self._repo_with_library_chart())
+        output = await helm_ci.verify_chart(chart_path="libs/common")
 
         TestCase().assertIn("template: skipped (library chart)", output)
 
     @function
     async def verify_chart_rejects_non_chart_directory(self) -> None:
         """Verify a directory without Chart.yaml is rejected."""
-        helm_ci = dag.helm_ci()
+        helm_ci = dag.helm_ci(source=self._repo_with_non_chart())
         try:
-            await helm_ci.verify_chart(source=self._repo_with_non_chart(), chart_path="charts/not-a-chart")
+            await helm_ci.verify_chart(chart_path="charts/not-a-chart")
         except Exception as error:
             TestCase().assertIn("not a Helm chart", str(error))
         else:

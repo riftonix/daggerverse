@@ -33,8 +33,8 @@ Verify one chart selected by the CI matrix:
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  verify-chart \
   --source=. \
+  verify-chart \
   --chart-path=charts/app
 ```
 
