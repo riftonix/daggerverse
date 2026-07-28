@@ -106,16 +106,12 @@ Example Helm CI pins:
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  --git-image-tag=2.52.0 \
-  verify-charts \
-  --source=. \
-  --base-ref=origin/master \
-  --head-ref=HEAD \
-  --charts-path='charts/*'
+  --source=./charts/mychart \
+  verify-chart
 ```
 
-Single-chart Helm operations do not use the Git module, but the Git runtime
-image inputs remain on the scenario constructor for changed-chart operations.
+Chart discovery is performed separately through the Git module before CI matrix
+jobs invoke `verify-chart` for individual chart directories.
 
 ## Docker Build Metadata Exceptions
 

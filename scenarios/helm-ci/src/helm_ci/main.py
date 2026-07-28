@@ -114,32 +114,22 @@ class HelmCi:
         return bool(await chart_dir.glob("tests/**/*.yaml")) or bool(await chart_dir.glob("tests/**/*.yml"))
 
     @function
-    async def helm_verify(
+    async def verify_chart(
         self,
-        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Helm chart directory")],
         values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
         release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
     ) -> str:
-        """Run Helm lint and template via local helm module"""
-        chart = self._helm(source=source)
-        lint_stdout = await chart.lint(strict=True)
-        template_stdout = await chart.template(values=values, release_name=release_name)
-        return f"lint:\n{lint_stdout}\n\ntemplate:\n{template_stdout}"
+        """Verify the Helm chart supplied as the scenario source."""
+        if not await self.source.glob("Chart.yaml"):
+            raise ValueError("source: not a Helm chart")
 
-    async def _verify_changed_chart(
-        self,
-        chart_dir: dagger.Directory,
-        chart_path: str,
-        values: dagger.File | None,
-        release_name: str,
-    ) -> str:
-        chart = self._helm(source=chart_dir).with_dependency_update()
+        chart = self._helm(source=self.source).with_dependency_update()
         metadata = json.loads(await chart.get_chart_metadata_json())
         if not metadata.get("name") or not metadata.get("version"):
-            return f"{chart_path}: skipped (missing name/version in Chart.yaml)"
+            return "skipped (missing name/version in Chart.yaml)"
 
         lint_stdout = await chart.lint(strict=True)
-        steps = [f"{chart_path}:", f"lint:\n{lint_stdout}"]
+        steps = [f"lint:\n{lint_stdout}"]
 
         if metadata.get("chart_type") == "library":
             steps.append("template: skipped (library chart)")
@@ -147,17 +137,16 @@ class HelmCi:
             template_stdout = await chart.template(values=values, release_name=release_name)
             steps.append(f"template:\n{template_stdout}")
 
-        if await self._has_unittest_suites(chart_dir):
-            unittest_stdout = await self._helm_unittest(source=chart_dir).with_dependency_update().test()
+        if await self._has_unittest_suites(self.source):
+            unittest_stdout = await self._helm_unittest(source=self.source).with_dependency_update().test()
             steps.append(f"unittest:\n{unittest_stdout}")
         else:
             steps.append("unittest: skipped (no suite files under tests/)")
         return "\n\n".join(steps)
 
     @function
-    async def helm_publish(
+    async def publish_chart(
         self,
-        source: Annotated[dagger.Directory, DefaultPath("."), Doc("Helm chart directory")],
         oci_url: Annotated[str, Doc("Destination OCI registry URL without chart name")],
         version: Annotated[str, Doc("Chart semver to publish")],
         app_version: Annotated[str | None, Doc("Optional appVersion override")] = None,
@@ -166,7 +155,7 @@ class HelmCi:
         insecure: Annotated[bool | None, Doc("Allow plain http pushes")] = False,
     ) -> str:
         """Package and push helm chart via local helm module"""
-        chart = self._helm(source=source)
+        chart = self._helm(source=self.source)
         if username and password:
             chart = chart.with_registry_login(username=username, password=password)
         return await chart.push(
@@ -174,23 +163,4 @@ class HelmCi:
             version=version,
             app_version=app_version or "",
             insecure=insecure,
-        )
-
-    @function
-    async def verify_chart(
-        self,
-        chart_path: Annotated[str, Doc("Chart directory relative to repository root")],
-        values: Annotated[dagger.File | None, Doc("Optional values.yaml file")] = None,
-        release_name: Annotated[str, Doc("Helm release name for templating")] = "ci-release",
-    ) -> str:
-        """Verify one Helm chart selected by the caller."""
-        chart_dir = self.source.directory(chart_path)
-        if not await chart_dir.glob("Chart.yaml"):
-            raise ValueError(f"{chart_path}: not a Helm chart")
-
-        return await self._verify_changed_chart(
-            chart_dir=chart_dir,
-            chart_path=chart_path,
-            values=values,
-            release_name=release_name,
         )

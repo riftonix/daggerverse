@@ -1,14 +1,14 @@
 # helm-ci-scenario Specification
 
 ## Purpose
-Describe the current Helm CI scenario behavior for portable chart verification,
-changed-chart verification, and OCI chart publication.
+Describe the current Helm CI scenario behavior for portable chart verification
+and OCI chart publication.
 ## Requirements
 ### Requirement: Helm CI scenario verifies one chart
 The `scenarios/helm-ci` scenario SHALL verify a Helm chart directory supplied explicitly by the caller through the public input named `source`.
 
 #### Scenario: Verify one chart
-- **WHEN** a caller provides a Helm chart directory to the `helm-verify` function as `source`
+- **WHEN** a caller provides a Helm chart directory through the scenario-level `source` input and invokes `verify-chart`
 - **THEN** the scenario SHALL run Helm lint through the Helm module
 - **AND** it SHALL run Helm template through the Helm module
 - **AND** lint or template failures SHALL fail the scenario function call
@@ -21,7 +21,7 @@ The `scenarios/helm-ci` scenario SHALL verify a Helm chart directory supplied ex
 The `scenarios/helm-ci` scenario SHALL publish a Helm chart supplied through the public input named `source` to an OCI registry using destination and version inputs supplied explicitly by the caller.
 
 #### Scenario: Publish one chart
-- **WHEN** a caller provides a chart directory as `source`, OCI registry URL, and chart version to the `helm-publish` function
+- **WHEN** a caller provides a chart directory through the scenario-level `source` input and invokes `publish-chart` with an OCI registry URL and chart version
 - **THEN** the scenario SHALL package and push the chart through the Helm module
 - **AND** publication failures SHALL fail the scenario function call
 
@@ -30,23 +30,21 @@ The `scenarios/helm-ci` scenario SHALL publish a Helm chart supplied through the
 - **THEN** the scenario SHALL authenticate through the Helm module before pushing
 - **AND** the scenario SHALL NOT expose registry secrets in returned output
 
-### Requirement: Helm CI scenario verifies changed charts
-The `scenarios/helm-ci` scenario SHALL verify changed Helm chart directories selected through provider-neutral Git and path inputs, with the repository checkout supplied through the public input named `source`.
+### Requirement: Helm CI scenario supports per-chart matrix validation
+The `scenarios/helm-ci` scenario SHALL verify one chart directory per invocation so provider workflows can isolate changed charts in separate matrix jobs.
 
-#### Scenario: Verify changed chart directories
-- **WHEN** a caller provides a repository source, base ref, head ref, and repeatable chart component root patterns to the `verify-charts` function
-- **THEN** the scenario SHALL ask the Git module for changed components between the refs
-- **AND** it SHALL run Helm verification for each changed chart directory
-- **AND** it SHALL return an empty list when no chart directories changed
-- **AND** `charts_path` SHALL remain a secondary component root pattern inside the repository source rather than a replacement for `source`
+#### Scenario: Verify a chart selected by a provider matrix
+- **WHEN** a provider workflow discovers changed components through `modules/git.get_changed_components`
+- **THEN** each matrix job SHALL supply one returned chart directory through the Helm CI scenario-level `source` input
+- **AND** it SHALL invoke `verify-chart` without a secondary chart path input
 
-#### Scenario: Verify changed library chart components
-- **WHEN** a caller provides a library chart component root pattern such as `libs/*`
-- **THEN** the scenario SHALL include changed library chart components when selecting charts to verify
+#### Scenario: Verify a selected library chart
+- **WHEN** the scenario-level `source` is a library chart
+- **THEN** `verify-chart` SHALL lint the chart and skip templating
 
 #### Scenario: Skip charts without required metadata
-- **WHEN** a changed chart directory has no chart name or version in `Chart.yaml`
-- **THEN** the scenario SHALL skip that chart directory
+- **WHEN** the selected chart has no chart name or version in `Chart.yaml`
+- **THEN** the scenario SHALL skip that chart
 - **AND** it SHALL include a returned message explaining that required metadata is missing
 
 ### Requirement: Helm CI scenario remains CI-provider portable
@@ -103,7 +101,7 @@ The Helm CI scenario SHALL expose runtime image inputs for the Helm and Git modu
 - **THEN** the scenario SHALL use `git_image_registry`, `git_image_repository`, `git_image_tag`, and `git_container_user_id` when creating the Git module
 
 #### Scenario: Single-chart workflow does not require Git image inputs
-- **WHEN** a caller invokes `helm-verify` or `helm-publish` for one chart directory
+- **WHEN** a caller invokes `verify-chart` or `publish-chart` for one chart directory
 - **THEN** Git runtime image inputs SHALL remain available on the scenario API
 - **AND** the scenario SHALL NOT invoke the Git module for those operations
 

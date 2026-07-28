@@ -28,62 +28,39 @@ class Tests:
 
     @function
     async def verify_chart(self) -> None:
-        """Verify one application chart selected by its repository path."""
-        helm_ci = dag.helm_ci(source=self._repo_with_chart())
-        output = await helm_ci.verify_chart(chart_path="charts/app")
+        """Verify one application chart supplied as scenario source."""
+        helm_ci = dag.helm_ci(source=self._fixture_chart())
+        output = await helm_ci.verify_chart()
 
-        TestCase().assertIn("charts/app:", output)
+        TestCase().assertIn("lint:", output)
+        TestCase().assertIn("template:", output)
 
     @function
     async def verify_library_chart(self) -> None:
         """Verify a library chart skips templating."""
-        helm_ci = dag.helm_ci(source=self._repo_with_library_chart())
-        output = await helm_ci.verify_chart(chart_path="libs/common")
+        helm_ci = dag.helm_ci(source=self._fixture_library_chart())
+        output = await helm_ci.verify_chart()
 
         TestCase().assertIn("template: skipped (library chart)", output)
 
     @function
     async def verify_chart_rejects_non_chart_directory(self) -> None:
         """Verify a directory without Chart.yaml is rejected."""
-        helm_ci = dag.helm_ci(source=self._repo_with_non_chart())
+        helm_ci = dag.helm_ci(source=self._non_chart_directory())
         try:
-            await helm_ci.verify_chart(chart_path="charts/not-a-chart")
+            await helm_ci.verify_chart()
         except Exception as error:
             TestCase().assertIn("not a Helm chart", str(error))
         else:
             raise AssertionError("Expected non-chart directory validation to fail")
 
-    def _repo_with_chart(self) -> Directory:
-        """Return a repository containing an application chart."""
+    def _non_chart_directory(self) -> Directory:
+        """Return a directory without Chart.yaml."""
         return (
             dag.container()
             .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
-            .with_workdir("/work/repo")
-            .with_exec(["git", "init", "--initial-branch", "main", "."])
-            .with_exec(["git", "config", "user.name", "Dagger Test"])
-            .with_exec(["git", "config", "user.email", "dagger-test@example.local"])
-            .with_directory("/work/repo/charts/app", self._fixture_chart())
-            .directory("/work/repo")
-        )
-
-    def _repo_with_library_chart(self) -> Directory:
-        """Return a repository containing a library chart."""
-        return (
-            dag.container()
-            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
-            .with_workdir("/work/repo")
-            .with_directory("/work/repo/libs/common", self._fixture_library_chart())
-            .directory("/work/repo")
-        )
-
-    def _repo_with_non_chart(self) -> Directory:
-        """Return a repository containing a non-chart directory."""
-        return (
-            dag.container()
-            .from_(f"{FIXTURE_GIT_IMAGE_REGISTRY}/{FIXTURE_GIT_IMAGE_REPOSITORY}:{FIXTURE_GIT_IMAGE_TAG}")
-            .with_workdir("/work/repo")
-            .with_new_file("/work/repo/charts/not-a-chart/README.md", "not a chart")
-            .directory("/work/repo")
+            .with_new_file("/work/chart/README.md", "not a chart")
+            .directory("/work/chart")
         )
 
     def _fixture_chart(self) -> Directory:

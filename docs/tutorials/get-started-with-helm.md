@@ -33,8 +33,9 @@ The output should contain the rendered Kubernetes manifests for the sample chart
 Run the higher-level Helm CI scenario, which calls the Helm module internally:
 
 ```bash
-dagger -m ./scenarios/helm-ci call helm-verify \
-  --source=./modules/helm/tests/charts/ns-configurator
+dagger -m ./scenarios/helm-ci call \
+  --source=./modules/helm/tests/charts/ns-configurator \
+  verify-chart
 ```
 
 Use this command shape when you want the same lint and template check through

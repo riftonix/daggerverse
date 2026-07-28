@@ -24,8 +24,8 @@ Verify a single chart:
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  helm-verify \
-  --source=./modules/helm/tests/charts/ns-configurator
+  --source=./modules/helm/tests/charts/ns-configurator \
+  verify-chart
 ```
 
 Verify one chart selected by the CI matrix:
@@ -33,9 +33,8 @@ Verify one chart selected by the CI matrix:
 ```bash
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  --source=. \
-  verify-chart \
-  --chart-path=charts/app
+  --source=charts/app \
+  verify-chart
 ```
 
 ## Runtime Image Inputs
@@ -54,8 +53,8 @@ Changed-chart operations also use Git runtime inputs:
 - `git_image_tag`: `2.52.0`
 - `git_container_user_id`: `65532`
 
-`helm-verify` and `helm-publish` do not invoke Git. Pin both Helm and Git image
-tags for reproducible changed-chart checks or mirrored-registry runs.
+`verify-chart` and `publish-chart` do not invoke Git. Each call operates on the
+chart directory supplied through the scenario-level `source` input.
 
 Because these inputs are part of the public scenario API, release changes to
 them under a new scenario tag.
