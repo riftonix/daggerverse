@@ -9,6 +9,11 @@ DEFAULT_IMAGE_REPOSITORY = "helmunittest/helm-unittest"
 DEFAULT_IMAGE_TAG = "4.2.0-1.1.0"
 DEFAULT_CONTAINER_USER_ID = "65532"
 
+DEFAULT_SUITE_FILES = [
+    "tests/**/*_test.yaml",
+    "tests/**/*_test.yml",
+]
+
 
 @object_type
 class HelmUnittest:
@@ -75,12 +80,29 @@ class HelmUnittest:
         return self
 
     @function
+    async def has_suites(
+        self,
+        suite_files: Annotated[list[str] | None, Doc("Optional suite file glob patterns")] = None,
+    ) -> bool:
+        """Return whether the chart contains a selected Helm unittest suite."""
+        patterns = DEFAULT_SUITE_FILES if suite_files is None else suite_files
+        for pattern in patterns:
+            if await self.source.glob(pattern):
+                return True
+        return False
+
+    @function
     async def test(
         self,
         color: Annotated[bool | None, Doc("Enable color output")] = False,
+        suite_files: Annotated[list[str] | None, Doc("Optional suite file glob patterns")] = None,
     ) -> str:
         """Run Helm unittest for the configured chart directory."""
-        cmd = ["helm", "unittest", "."]
+        patterns = DEFAULT_SUITE_FILES if suite_files is None else suite_files
+        cmd = ["helm", "unittest"]
+        for suite_file in patterns:
+            cmd.extend(["-f", suite_file])
+        cmd.append(".")
         if color:
             cmd.append("--color")
         return await self.container().with_exec(cmd).stdout()

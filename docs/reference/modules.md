@@ -71,8 +71,8 @@ Runs Helm chart unit tests in the public `helmunittest/helm-unittest` runtime.
 - Path: `modules/helm-unittest`
 - Main source: `modules/helm-unittest/src/helm_unittest/main.py`
 - Detailed reference: [Helm unittest module reference](helm-unittest.md)
-- Typical command: `dagger -m ./modules/helm-unittest call test --source=./charts/mychart`
-- CI use cases: direct chart unit test execution and reusable composition from Helm chart validation workflows.
+- Typical command: `dagger -m ./modules/helm-unittest call test --source=./charts/mychart --suite-files='tests/**/*_test.yaml'`
+- CI use cases: default or custom suite discovery, direct chart unit test execution, optional repeatable suite glob filters, and reusable composition from Helm chart validation workflows.
 
 ## hugo
 
@@ -121,7 +121,8 @@ and publication workflows.
 - How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
 - Typical verify command: `dagger -m ./scenarios/helm-ci call --source=./charts/mychart verify-chart`
 - Reproducible chart command: `dagger -m ./scenarios/helm-ci call --source=./charts/mychart --helm-image-tag=3.18.6 verify-chart`
-- CI use cases: verify one chart per matrix job and publish caller-selected chart versions to OCI registries.
+- Optional unittest selection: repeat `--unittest-suite-files` to replace the Helm unittest module defaults `tests/**/*_test.yaml` and `tests/**/*_test.yml`.
+- CI use cases: verify one chart directory per matrix job and publish caller-selected chart versions to OCI registries.
 
 ## container-images scenario
 
