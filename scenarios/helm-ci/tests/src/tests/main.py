@@ -295,6 +295,15 @@ class Tests:
 
         TestCase().assertEqual("ghcr.io/riftonix/libs/test/common", oci_url)
 
+    @function
+    async def gets_oci_registry_host(self) -> None:
+        """Verify registry authentication uses the host from the OCI URL."""
+        registry_host = await dag.helm_ci(source=self._fixture_chart()).get_oci_registry_host(
+            oci_base_url="oci://ghcr.io/riftonix/"
+        )
+
+        TestCase().assertEqual("ghcr.io", registry_host)
+
     def _non_chart_directory(self) -> Directory:
         """Return a directory without Chart.yaml."""
         return (
