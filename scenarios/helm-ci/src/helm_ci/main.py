@@ -213,6 +213,17 @@ class HelmCi:
         return f"{normalized_oci_base_url}/{normalized_git_tag_prefix}"
 
     @function
+    def get_oci_registry_host(
+        self,
+        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
+    ) -> str:
+        """Return the registry host from a base OCI URL."""
+        normalized_oci_base_url = oci_base_url.removeprefix("oci://").rstrip("/")
+        if not normalized_oci_base_url:
+            raise ValueError("oci_base_url: must not be empty")
+        return normalized_oci_base_url.split("/", 1)[0]
+
+    @function
     async def publish_chart(
         self,
         oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
@@ -263,7 +274,11 @@ class HelmCi:
             chart = chart.with_dependency_update()
 
         if username and password:
-            chart = chart.with_registry_login(username=username, password=password)
+            chart = chart.with_registry_login(
+                username=username,
+                password=password,
+                address=self.get_oci_registry_host(oci_base_url=oci_base_url),
+            )
         package_name = await chart.push(
             oci_url=oci_url,
             version=version or "",
