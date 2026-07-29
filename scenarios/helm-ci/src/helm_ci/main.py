@@ -243,8 +243,8 @@ class HelmCi:
             bool,
             Doc("Run Helm dependency update before publishing"),
         ] = True,
-        username: Annotated[str | None, Doc("Registry username for login")] = None,
-        password: Annotated[dagger.Secret | None, Doc("Registry password")] = None,
+        registry_login: Annotated[str | None, Doc("Registry login used to publish the chart")] = None,
+        registry_password: Annotated[dagger.Secret | None, Doc("Registry password used to publish the chart")] = None,
         insecure: Annotated[bool | None, Doc("Allow plain http pushes")] = False,
         git_host: Annotated[str, Doc("HTTPS Git host used for release tag authentication")] = "github.com",
         git_username: Annotated[str, Doc("HTTPS Git username used for release tag authentication")] = "x-access-token",
@@ -261,8 +261,8 @@ class HelmCi:
             chart_source=chart_source,
             version=version,
         )
-        if bool(username) != bool(password):
-            raise ValueError("username and password must be supplied together")
+        if bool(registry_login) != bool(registry_password):
+            raise ValueError("registry_login and registry_password must be supplied together")
 
         git = await self._git_with_optional_auth(
             git_token=git_token,
@@ -277,10 +277,10 @@ class HelmCi:
         if with_dependency_update:
             chart = chart.with_dependency_update()
 
-        if username and password:
+        if registry_login and registry_password:
             chart = chart.with_registry_login(
-                username=username,
-                password=password,
+                username=registry_login,
+                password=registry_password,
                 address=self.get_oci_registry_host(oci_base_url=oci_base_url),
             )
         package_name = await chart.push(
@@ -290,5 +290,5 @@ class HelmCi:
             insecure=insecure,
         )
 
-        await git.create_tag(tag=release_tag).push_tag(tag=release_tag, remote=git_remote).container().sync()
+        await git.ensure_pushed_tag(tag=release_tag, remote=git_remote)
         return f"published: {package_name}\nrelease tag: {release_tag}"

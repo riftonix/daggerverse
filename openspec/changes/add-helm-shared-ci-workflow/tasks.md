@@ -42,6 +42,7 @@
 - [x] 6.7 Check the target release tag before publication, return a successful no-op when it already exists, and create and push a missing tag only after successful chart publication.
 - [x] 6.8 Fail when Git credentials cannot create or push the release tag, without falling back to provider-specific APIs.
 - [x] 6.9 Add tests for chart source fallback and override behavior, release version publication, release tag calculation and push, existing-tag no-op before publication, and tag permission failure where practical.
+- [x] 6.10 Rename registry publication inputs to `registry_login` and `registry_password`, and delegate post-publication tag creation and push to the Git module's `ensure_pushed_tag` function within the same call.
 
 ## 7. Documentation Content Validation
 

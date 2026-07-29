@@ -241,12 +241,15 @@ class Tests:
     async def publish_chart_requires_registry_credentials_together(self) -> None:
         """Verify registry authentication inputs are supplied as a pair."""
         helm_ci = dag.helm_ci(source=self._fixture_chart())
-        with TestCase().assertRaisesRegex(Exception, "username and password must be supplied together"):
+        with TestCase().assertRaisesRegex(
+            Exception,
+            "registry_login and registry_password must be supplied together",
+        ):
             await helm_ci.publish_chart(
                 oci_base_url="registry.invalid",
                 git_tag_prefix="charts/ns-configurator",
                 git_token=dag.set_secret("helm-ci-paired-auth-git-token", "unused"),
-                username="registry-user",
+                registry_login="registry-user",
                 with_dependency_update=False,
             )
 

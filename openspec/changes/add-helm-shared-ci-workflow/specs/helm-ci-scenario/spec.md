@@ -87,7 +87,8 @@ The `scenarios/helm-ci` scenario SHALL expose `publish_chart` as the single rele
 - **AND** it SHALL compute the chart-scoped release tag
 - **AND** it SHALL create and push that Git tag through the Git module before the function returns
 - **AND** it SHALL authenticate to the registry host derived from the resulting OCI URL unless the caller supplies an explicit registry address
-- **AND** it SHALL require registry username and password inputs to be supplied together
+- **AND** it SHALL expose registry credentials as `registry_login` and `registry_password`
+- **AND** it SHALL require `registry_login` and `registry_password` to be supplied together
 - **AND** all publication and tagging operations SHALL occur within the same `publish_chart` Dagger call
 
 #### Scenario: Compute chart-scoped release tag
