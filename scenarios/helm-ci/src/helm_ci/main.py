@@ -210,7 +210,11 @@ class HelmCi:
         normalized_git_tag_prefix = git_tag_prefix.strip("/")
         if not normalized_git_tag_prefix:
             raise ValueError("git_tag_prefix: must not be empty")
-        return f"{normalized_oci_base_url}/{normalized_git_tag_prefix}"
+
+        oci_namespace = normalized_git_tag_prefix.rpartition("/")[0]
+        if not oci_namespace:
+            return normalized_oci_base_url
+        return f"{normalized_oci_base_url}/{oci_namespace}"
 
     @function
     def get_oci_registry_host(

@@ -273,7 +273,7 @@ class Tests:
             git_tag_prefix="charts/appchart",
         )
 
-        TestCase().assertEqual("ghcr.io/riftonix/charts/appchart", oci_url)
+        TestCase().assertEqual("ghcr.io/riftonix/charts", oci_url)
 
     @function
     async def gets_library_oci_url(self) -> None:
@@ -283,7 +283,7 @@ class Tests:
             git_tag_prefix="libs/common",
         )
 
-        TestCase().assertEqual("ghcr.io/riftonix/libs/common", oci_url)
+        TestCase().assertEqual("ghcr.io/riftonix/libs", oci_url)
 
     @function
     async def gets_nested_library_oci_url(self) -> None:
@@ -293,7 +293,17 @@ class Tests:
             git_tag_prefix="/libs/test/common/",
         )
 
-        TestCase().assertEqual("ghcr.io/riftonix/libs/test/common", oci_url)
+        TestCase().assertEqual("ghcr.io/riftonix/libs/test", oci_url)
+
+    @function
+    async def gets_nested_library_oci_url_with_chart_name(self) -> None:
+        """Verify only the final chart name is removed from a nested prefix."""
+        oci_url = await dag.helm_ci(source=self._fixture_chart()).get_chart_oci_url(
+            oci_base_url="ghcr.io/riftonix",
+            git_tag_prefix="libs/test/common-lib",
+        )
+
+        TestCase().assertEqual("ghcr.io/riftonix/libs/test", oci_url)
 
     @function
     async def gets_oci_registry_host(self) -> None:
