@@ -58,6 +58,32 @@ Custom patterns replace the defaults. An explicit empty list skips Helm
 unittest. Other YAML files, such as `tests/e2e/kind.yaml`, do not enable the
 unittest step.
 
+Publish one chart and push its chart-scoped release tag in the same call:
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+
+dagger -m ./scenarios/helm-ci call \
+  --source=. \
+  publish-chart \
+  --chart-source=libs/argocd \
+  --git-tag-prefix=libs/argocd \
+  --oci-base-url=ghcr.io/riftonix \
+  --with-dependency-update=false \
+  --registry-login=rift0nix \
+  --registry-password=env://GITHUB_TOKEN \
+  --git-token=env://GITHUB_TOKEN
+```
+
+`registry-login` and `registry-password` authenticate the OCI registry and must
+be supplied together. `git-token` authenticates release tag fetch and push
+operations. One token can serve both purposes when it has package write and
+repository contents write permissions.
+
+The release tag is `<git-tag-prefix>/v<chart-version>`. An existing tag returns
+a successful no-op before registry login or chart publication. A missing tag is
+created and pushed only after the chart is published successfully.
+
 ## Runtime Image Inputs
 
 Helm operations use these constructor inputs:
@@ -81,8 +107,9 @@ Helm unittest operations use these constructor inputs:
 - `helm_unittest_image_tag`: `4.2.0-1.1.0`
 - `helm_unittest_container_user_id`: `65532`
 
-`verify-chart` and `publish-chart` do not invoke Git. Each call operates on the
-chart directory supplied through the scenario-level `source` input.
+`verify-chart` uses the resolved chart directory only. `publish-chart` uses the
+resolved chart directory for Helm operations and scenario-level `source` as the
+Git repository for release tag operations.
 
 Because these inputs are part of the public scenario API, release changes to
 them under a new scenario tag.

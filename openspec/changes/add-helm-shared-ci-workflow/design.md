@@ -66,7 +66,9 @@ The archived static-site design established that component documentation is inte
 
 6. Create release tags through the Git module, not provider APIs.
 
-   `publish_chart` is the single release entrypoint. It checks the chart-scoped release tag before registry login or chart publication. An existing tag means the release is already complete, so the function returns a successful no-op without publishing or tagging again. When the tag is missing, one invocation publishes one caller-selected chart and only then creates and pushes its release Git tag through the Git module. This keeps tagging provider-neutral, avoids separate Dagger calls, and avoids GitHub-specific release APIs. If the repository token lacks permission to create or push the tag after publication, the workflow should fail.
+   `publish_chart` is the single release entrypoint. It checks the chart-scoped release tag before registry login or chart publication. An existing tag means the release is already complete, so the function returns a successful no-op without publishing or tagging again. When the tag is missing, one invocation publishes one caller-selected chart and only then calls the Git module's `ensure_pushed_tag` function. This keeps tagging provider-neutral, avoids separate Dagger calls, and avoids GitHub-specific release APIs. If the repository token lacks permission to create or push the tag after publication, the workflow should fail.
+
+   Registry credentials use explicit `registry_login` and `registry_password` inputs. `git_token` remains separate because it authenticates release tag operations rather than OCI publication.
 
 7. Use chart-scoped release tags.
 

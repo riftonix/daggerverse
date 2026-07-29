@@ -63,22 +63,34 @@ dagger -m ./scenarios/helm-ci call \
 
 The CI provider owns matrix fan-out, retries, and per-chart logs.
 
-`verify-chart` and `publish-chart` use Helm runtime image inputs only. Configure Git
-runtime image inputs on the separate Git module discovery call.
+`verify-chart` uses Helm and Helm unittest runtime image inputs. `publish-chart`
+also uses the Git runtime image inputs because it checks and pushes the release
+tag in the same call.
 
 ## Publish A Chart
 
 ```bash
-REGISTRY_PASSWORD=secret \
+GITHUB_TOKEN="$(gh auth token)" \
 dagger -m ./scenarios/helm-ci call \
   --helm-image-tag=3.18.6 \
-  --source=./modules/helm/tests/charts/ns-configurator \
+  --source=. \
   publish-chart \
-  --oci-base-url=registry.example.com/mycharts \
-  --version=0.1.0 \
-  --app-version=1.0.0 \
-  --username=myuser \
-  --password=env://REGISTRY_PASSWORD
+  --chart-source=libs/argocd \
+  --git-tag-prefix=libs/argocd \
+  --oci-base-url=ghcr.io/riftonix \
+  --with-dependency-update=false \
+  --registry-login=rift0nix \
+  --registry-password=env://GITHUB_TOKEN \
+  --git-token=env://GITHUB_TOKEN
 ```
+
+`registry-login` and `registry-password` are used only for OCI publication.
+`git-token` is used to fetch and push the chart-scoped release tag. Supply both
+registry fields together. The same GitHub token can be used for both secrets if
+it has package write and repository contents write permissions.
+
+The scenario publishes the chart first, then calls the Git module to ensure the
+release tag exists on the configured remote. It does not use GitHub APIs and
+does not require a second Dagger invocation.
 
 Use real Dagger secrets in CI instead of printing credentials in logs.
