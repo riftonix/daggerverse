@@ -43,6 +43,26 @@ esac
                 expand=True,
             )
             .with_exec(["git", "config", "--global", f"credential.https://{normalized_host}.username", auth_username])
+            .with_exec(
+                [
+                    "git",
+                    "config",
+                    "--global",
+                    "--add",
+                    f"url.https://{normalized_host}/.insteadOf",
+                    f"git@{normalized_host}:",
+                ]
+            )
+            .with_exec(
+                [
+                    "git",
+                    "config",
+                    "--global",
+                    "--add",
+                    f"url.https://{normalized_host}/.insteadOf",
+                    f"ssh://git@{normalized_host}/",
+                ]
+            )
         )
         return self.git
 
@@ -86,6 +106,25 @@ esac
                 owner=self.git.user_id,
                 permissions=0o600,
                 expand=True,
+            )
+            container = container.with_exec(
+                [
+                    "git",
+                    "config",
+                    "--global",
+                    "--add",
+                    f"url.ssh://git@{normalized_host}/.insteadOf",
+                    f"https://{normalized_host}/",
+                ]
+            ).with_exec(
+                [
+                    "git",
+                    "config",
+                    "--global",
+                    "--add",
+                    f"url.ssh://git@{normalized_host}/.insteadOf",
+                    f"http://{normalized_host}/",
+                ]
             )
 
         self.git.container_ = container

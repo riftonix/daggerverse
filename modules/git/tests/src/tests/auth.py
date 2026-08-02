@@ -33,6 +33,11 @@ class AuthTests(SyntheticGitRepos):
             .with_exec(["git", "config", "--global", "--get", "credential.https://git.example.local.username"])
             .stdout()
         )
+        https_rewrites = (
+            await git.container()
+            .with_exec(["git", "config", "--global", "--get-all", "url.https://git.example.local/.insteadOf"])
+            .stdout()
+        )
         config = await git.container().with_exec(["git", "config", "--global", "--list"]).stdout()
 
         test_case = TestCase()
@@ -40,6 +45,10 @@ class AuthTests(SyntheticGitRepos):
         test_case.assertEqual("ci-user", askpass_username.strip())
         test_case.assertEqual("700", askpass_permissions.strip())
         test_case.assertEqual("ci-user", configured_username.strip())
+        test_case.assertEqual(
+            ["git@git.example.local:", "ssh://git@git.example.local/"],
+            https_rewrites.splitlines(),
+        )
         test_case.assertNotIn(token_text, config)
 
     async def with_ssh_key_auth_configures_git_without_exposing_key_material(self) -> None:
@@ -59,6 +68,11 @@ class AuthTests(SyntheticGitRepos):
         config_permissions = await git.container().with_exec(["stat", "-c", "%a", "/home/git/.ssh/config"]).stdout()
         ssh_command = await git.container().with_exec(["sh", "-c", "printf '%s' \"$GIT_SSH_COMMAND\""]).stdout()
         config = await git.container().with_exec(["cat", "/home/git/.ssh/config"]).stdout()
+        ssh_rewrites = (
+            await git.container()
+            .with_exec(["git", "config", "--global", "--get-all", "url.ssh://git@git.example.local/.insteadOf"])
+            .stdout()
+        )
 
         combined_output = "\n".join([ssh_command, config])
 
@@ -68,5 +82,9 @@ class AuthTests(SyntheticGitRepos):
         test_case.assertEqual("600", config_permissions.strip())
         test_case.assertIn("UserKnownHostsFile=/home/git/.ssh/known_hosts", ssh_command)
         test_case.assertIn("Host git.example.local", config)
+        test_case.assertEqual(
+            ["https://git.example.local/", "http://git.example.local/"],
+            ssh_rewrites.splitlines(),
+        )
         test_case.assertNotIn(private_key_text, combined_output)
         test_case.assertNotIn(known_hosts_text, combined_output)
