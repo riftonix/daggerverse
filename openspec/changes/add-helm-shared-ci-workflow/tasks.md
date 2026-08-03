@@ -43,6 +43,7 @@
 - [x] 6.8 Fail when Git credentials cannot create or push the release tag, without falling back to provider-specific APIs.
 - [x] 6.9 Add tests for chart source fallback and override behavior, release version publication, release tag calculation and push, existing-tag no-op before publication, and tag permission failure where practical.
 - [x] 6.10 Rename registry publication inputs to `registry_login` and `registry_password`, and delegate post-publication tag creation and push to the Git module's `ensure_pushed_tag` function within the same call.
+- [x] 6.11 Accept an explicit `oci_url` publication destination and an optional `registry_address` override that defaults to the host and port extracted from the OCI URL.
 
 ## 7. Documentation Content Validation
 
