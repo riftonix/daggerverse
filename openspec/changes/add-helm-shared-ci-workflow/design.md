@@ -70,11 +70,11 @@ The archived static-site design established that component documentation is inte
 
    Registry credentials use explicit `registry_login` and `registry_password` inputs. `git_token` remains separate because it authenticates release tag operations rather than OCI publication.
 
-7. Use chart-scoped release tags.
+7. Use chart-scoped release tags and an explicit OCI destination.
 
    A repository can publish multiple charts independently, so release tags should include chart scope rather than using only `v<version>`. `publish_chart` accepts a caller-provided `git_tag_prefix` and computes `<git-tag-prefix>/v<chart-version>`, allowing `charts/appchart/v1.2.3` and `libs/common/v1.2.3` to coexist.
 
-   The same prefix is preserved as the OCI chart repository path. With `oci_base_url=ghcr.io/riftonix`, `charts/appchart` publishes under `ghcr.io/riftonix/charts/appchart`, `libs/common` publishes under `ghcr.io/riftonix/libs/common`, and `libs/test/common` publishes under `ghcr.io/riftonix/libs/test/common`. This keeps repository-specific shell parsing out of provider workflows.
+   Git tag scope and OCI repository layout are independent. `publish_chart` accepts an explicit `oci_url` containing the complete Helm push destination without the chart name. For example, `oci_url=ghcr.io/riftonix/libs` publishes the `argocd` chart under `ghcr.io/riftonix/libs/argocd`. An optional `registry_address` controls the Helm registry login endpoint and defaults to the host and optional port extracted from `oci_url`.
 
 8. Separate repository and chart directory inputs without path reconstruction.
 

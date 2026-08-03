@@ -77,7 +77,8 @@ dagger -m ./scenarios/helm-ci call \
   publish-chart \
   --chart-source=libs/argocd \
   --git-tag-prefix=libs/argocd \
-  --oci-base-url=ghcr.io/riftonix \
+  --oci-url=ghcr.io/riftonix/libs \
+  --registry-address=ghcr.io \
   --with-dependency-update=false \
   --registry-login=rift0nix \
   --registry-password=env://GITHUB_TOKEN \
@@ -88,6 +89,10 @@ dagger -m ./scenarios/helm-ci call \
 `git-token` is used to fetch and push the chart-scoped release tag. Supply both
 registry fields together. The same GitHub token can be used for both secrets if
 it has package write and repository contents write permissions.
+
+`oci-url` specifies the complete destination without `oci://` or the chart name.
+`registry-address` is optional; when omitted, Helm CI uses the host and optional
+port from `oci-url` for registry login.
 
 The scenario publishes the chart first, then calls the Git module to ensure the
 release tag exists on the configured remote. It does not use GitHub APIs and

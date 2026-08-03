@@ -197,40 +197,20 @@ class HelmCi:
         return f"{normalized_git_tag_prefix}/v{version or chart_version}"
 
     @function
-    def get_chart_oci_url(
-        self,
-        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
-        git_tag_prefix: Annotated[str, Doc("Git release tag prefix for the chart")],
-    ) -> str:
-        """Return the chart OCI namespace URL derived from its Git tag prefix."""
-        normalized_oci_base_url = oci_base_url.removeprefix("oci://").rstrip("/")
-        if not normalized_oci_base_url:
-            raise ValueError("oci_base_url: must not be empty")
-
-        normalized_git_tag_prefix = git_tag_prefix.strip("/")
-        if not normalized_git_tag_prefix:
-            raise ValueError("git_tag_prefix: must not be empty")
-
-        oci_namespace = normalized_git_tag_prefix.rpartition("/")[0]
-        if not oci_namespace:
-            return normalized_oci_base_url
-        return f"{normalized_oci_base_url}/{oci_namespace}"
-
-    @function
     def get_oci_registry_host(
         self,
-        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
+        oci_url: Annotated[str, Doc("OCI destination URL without the chart name")],
     ) -> str:
-        """Return the registry host from a base OCI URL."""
-        normalized_oci_base_url = oci_base_url.removeprefix("oci://").rstrip("/")
-        if not normalized_oci_base_url:
-            raise ValueError("oci_base_url: must not be empty")
-        return normalized_oci_base_url.split("/", 1)[0]
+        """Return the registry host from an OCI destination URL."""
+        normalized_oci_url = oci_url.removeprefix("oci://").strip("/")
+        if not normalized_oci_url:
+            raise ValueError("oci_url: must not be empty")
+        return normalized_oci_url.split("/", 1)[0]
 
     @function
     async def publish_chart(
         self,
-        oci_base_url: Annotated[str, Doc("Base OCI registry URL without chart namespace")],
+        oci_url: Annotated[str, Doc("OCI destination URL without the chart name")],
         git_tag_prefix: Annotated[str, Doc("Git release tag prefix for the chart")],
         git_token: Annotated[dagger.Secret | None, Doc("Optional HTTPS token used to push the release Git tag")] = None,
         chart_source: Annotated[
@@ -245,6 +225,10 @@ class HelmCi:
         ] = True,
         registry_login: Annotated[str | None, Doc("Registry login used to publish the chart")] = None,
         registry_password: Annotated[dagger.Secret | None, Doc("Registry password used to publish the chart")] = None,
+        registry_address: Annotated[
+            str | None,
+            Doc("Optional registry login address; defaults to the host from the OCI URL"),
+        ] = None,
         insecure: Annotated[bool | None, Doc("Allow plain http pushes")] = False,
         git_host: Annotated[str, Doc("HTTPS Git host used for release tag authentication")] = "github.com",
         git_username: Annotated[str, Doc("HTTPS Git username used for release tag authentication")] = "x-access-token",
@@ -252,10 +236,9 @@ class HelmCi:
     ) -> str:
         """Publish one Helm chart and push its Git release tag."""
         chart_source = chart_source or self.source
-        oci_url = self.get_chart_oci_url(
-            oci_base_url=oci_base_url,
-            git_tag_prefix=git_tag_prefix,
-        )
+        normalized_oci_url = oci_url.removeprefix("oci://").strip("/")
+        if not normalized_oci_url:
+            raise ValueError("oci_url: must not be empty")
         release_tag = await self.get_chart_release_tag(
             git_tag_prefix=git_tag_prefix,
             chart_source=chart_source,
@@ -281,10 +264,10 @@ class HelmCi:
             chart = chart.with_registry_login(
                 username=registry_login,
                 password=registry_password,
-                address=self.get_oci_registry_host(oci_base_url=oci_base_url),
+                address=registry_address or self.get_oci_registry_host(oci_url=normalized_oci_url),
             )
         package_name = await chart.push(
-            oci_url=oci_url,
+            oci_url=normalized_oci_url,
             version=version or "",
             app_version=app_version or "",
             insecure=insecure,

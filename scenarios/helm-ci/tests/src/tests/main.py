@@ -44,9 +44,8 @@ class Tests:
         await self.normalizes_chart_release_tag_prefix()
         await self.publish_chart_requires_registry_credentials_together()
         await self.publish_chart_skips_existing_release_tag()
-        await self.gets_chart_oci_url()
-        await self.gets_library_oci_url()
-        await self.gets_nested_library_oci_url()
+        await self.gets_oci_registry_host()
+        await self.gets_oci_registry_host_with_port()
 
     @function
     async def verify_chart(self) -> None:
@@ -171,7 +170,7 @@ class Tests:
         """Verify the unified release entrypoint validates its tag prefix before publishing."""
         with TestCase().assertRaisesRegex(Exception, "git_tag_prefix: must not be empty"):
             await dag.helm_ci(source=self._fixture_chart()).publish_chart(
-                oci_base_url="registry.invalid",
+                oci_url="registry.invalid/charts",
                 git_tag_prefix="/",
                 git_token=dag.set_secret("helm-ci-test-git-token", "unused"),
             )
@@ -182,7 +181,7 @@ class Tests:
         helm_ci = dag.helm_ci(source=self._fixture_chart())
         with TestCase().assertRaises(Exception) as raised:
             await helm_ci.publish_chart(
-                oci_base_url="registry.invalid",
+                oci_url="registry.invalid/charts",
                 git_tag_prefix="charts/missing",
                 git_token=dag.set_secret("helm-ci-test-override-git-token", "unused"),
                 chart_source=self._non_chart_directory(),
@@ -246,7 +245,7 @@ class Tests:
             "registry_login and registry_password must be supplied together",
         ):
             await helm_ci.publish_chart(
-                oci_base_url="registry.invalid",
+                oci_url="registry.invalid/charts",
                 git_tag_prefix="charts/ns-configurator",
                 git_token=dag.set_secret("helm-ci-paired-auth-git-token", "unused"),
                 registry_login="registry-user",
@@ -258,7 +257,7 @@ class Tests:
         """Verify an existing remote release tag skips publication before registry access."""
         repository = self._repository_with_release_tag()
         output = await dag.helm_ci(source=repository).publish_chart(
-            oci_base_url="registry.invalid",
+            oci_url="registry.invalid/charts",
             git_tag_prefix="charts/ns-configurator",
             chart_source=self._fixture_chart(),
             with_dependency_update=False,
@@ -269,53 +268,22 @@ class Tests:
         test_case.assertIn("release tag: charts/ns-configurator/v1.0.0", output)
 
     @function
-    async def gets_chart_oci_url(self) -> None:
-        """Verify chart prefixes are preserved as OCI repository paths."""
-        oci_url = await dag.helm_ci(source=self._fixture_chart()).get_chart_oci_url(
-            oci_base_url="ghcr.io/riftonix/",
-            git_tag_prefix="charts/appchart",
-        )
-
-        TestCase().assertEqual("ghcr.io/riftonix/charts", oci_url)
-
-    @function
-    async def gets_library_oci_url(self) -> None:
-        """Verify library prefixes are preserved as OCI repository paths."""
-        oci_url = await dag.helm_ci(source=self._fixture_chart()).get_chart_oci_url(
-            oci_base_url="oci://ghcr.io/riftonix",
-            git_tag_prefix="libs/common",
-        )
-
-        TestCase().assertEqual("ghcr.io/riftonix/libs", oci_url)
-
-    @function
-    async def gets_nested_library_oci_url(self) -> None:
-        """Verify nested library prefixes retain every path segment."""
-        oci_url = await dag.helm_ci(source=self._fixture_chart()).get_chart_oci_url(
-            oci_base_url="ghcr.io/riftonix",
-            git_tag_prefix="/libs/test/common/",
-        )
-
-        TestCase().assertEqual("ghcr.io/riftonix/libs/test", oci_url)
-
-    @function
-    async def gets_nested_library_oci_url_with_chart_name(self) -> None:
-        """Verify only the final chart name is removed from a nested prefix."""
-        oci_url = await dag.helm_ci(source=self._fixture_chart()).get_chart_oci_url(
-            oci_base_url="ghcr.io/riftonix",
-            git_tag_prefix="libs/test/common-lib",
-        )
-
-        TestCase().assertEqual("ghcr.io/riftonix/libs/test", oci_url)
-
-    @function
     async def gets_oci_registry_host(self) -> None:
         """Verify registry authentication uses the host from the OCI URL."""
         registry_host = await dag.helm_ci(source=self._fixture_chart()).get_oci_registry_host(
-            oci_base_url="oci://ghcr.io/riftonix/"
+            oci_url="oci://ghcr.io/riftonix/libs/"
         )
 
         TestCase().assertEqual("ghcr.io", registry_host)
+
+    @function
+    async def gets_oci_registry_host_with_port(self) -> None:
+        """Verify registry host extraction preserves an explicit port."""
+        registry_host = await dag.helm_ci(source=self._fixture_chart()).get_oci_registry_host(
+            oci_url="registry.example.com:5000/team/charts"
+        )
+
+        TestCase().assertEqual("registry.example.com:5000", registry_host)
 
     def _non_chart_directory(self) -> Directory:
         """Return a directory without Chart.yaml."""

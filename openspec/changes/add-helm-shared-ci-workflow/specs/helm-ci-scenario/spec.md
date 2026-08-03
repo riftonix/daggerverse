@@ -82,11 +82,11 @@ The `scenarios/helm-ci` scenario SHALL expose `publish_chart` as the single rele
 - **THEN** the function SHALL read the chart version from the resolved chart source's `Chart.yaml`
 - **AND** it SHALL use that version unless the caller supplies an explicit `version` override
 - **AND** it SHALL run Helm dependency update by default unless the caller sets `with_dependency_update` to false
-- **AND** it SHALL append the normalized `git_tag_prefix` to `oci_base_url` as the chart repository path
+- **AND** it SHALL publish to the explicit `oci_url` destination without deriving the OCI repository path from `git_tag_prefix`
 - **AND** it SHALL package and push the effective version without appending build metadata
 - **AND** it SHALL compute the chart-scoped release tag
 - **AND** it SHALL create and push that Git tag through the Git module before the function returns
-- **AND** it SHALL authenticate to the registry host derived from the resulting OCI URL unless the caller supplies an explicit registry address
+- **AND** it SHALL authenticate to the registry host and optional port derived from `oci_url` unless the caller supplies an explicit `registry_address`
 - **AND** it SHALL expose registry credentials as `registry_login` and `registry_password`
 - **AND** it SHALL require `registry_login` and `registry_password` to be supplied together
 - **AND** all publication and tagging operations SHALL occur within the same `publish_chart` Dagger call

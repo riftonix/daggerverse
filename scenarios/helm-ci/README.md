@@ -68,7 +68,8 @@ dagger -m ./scenarios/helm-ci call \
   publish-chart \
   --chart-source=libs/argocd \
   --git-tag-prefix=libs/argocd \
-  --oci-base-url=ghcr.io/riftonix \
+  --oci-url=ghcr.io/riftonix/libs \
+  --registry-address=ghcr.io \
   --with-dependency-update=false \
   --registry-login=rift0nix \
   --registry-password=env://GITHUB_TOKEN \
@@ -79,6 +80,10 @@ dagger -m ./scenarios/helm-ci call \
 be supplied together. `git-token` authenticates release tag fetch and push
 operations. One token can serve both purposes when it has package write and
 repository contents write permissions.
+
+`oci-url` is the complete Helm push destination without `oci://` or the chart
+name. `registry-address` is optional and defaults to the host and port extracted
+from `oci-url`; set it explicitly when the registry login endpoint differs.
 
 The release tag is `<git-tag-prefix>/v<chart-version>`. An existing tag returns
 a successful no-op before registry login or chart publication. A missing tag is
