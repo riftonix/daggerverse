@@ -49,9 +49,8 @@ Example:
 ```bash
 dagger -m ./modules/hugo call \
   --source=./site \
-  --image-tag=0.154.5-10.5.0 \
+  --image-tag=0.165.0-10.5.5 \
   build \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
   --site-base-url=https://example.com/
 ```
 
@@ -94,8 +93,7 @@ Example static-site pin:
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
-  --hugo-image-tag=0.154.5-10.5.0 \
+  --hugo-image-tag=0.165.0-10.5.5 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo

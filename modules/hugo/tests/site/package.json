@@ -1,0 +1,7 @@
+{
+  "name": "hugo-docsy-fixture",
+  "private": true,
+  "devDependencies": {
+    "@docsy/theme": "0.17.0"
+  }
+}

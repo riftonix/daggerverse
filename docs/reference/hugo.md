@@ -1,156 +1,71 @@
 # Hugo Module Reference
 
-`modules/hugo` wraps Hugo in a pinned container image and exposes reusable
-engine-level operations for static-site pipelines.
+`modules/hugo` builds and validates npm-based Hugo sites in a pinned container. It does not use Go or Hugo Modules.
 
 ## Defaults
 
-- Image registry: `ghcr.io`
-- Image repository: `riftonix/container-images/hugo-autoprefixer`
-- Image tag: `0.154.5-10.5.0`
+- Image: `ghcr.io/riftonix/container-images/hugo-autoprefixer:0.165.0-10.5.5`
 - Container user: `65532`
 - Workdir: `/tmp/hugo/site`
+- npm registry: npm default
 
-The default image is `ghcr.io/riftonix/container-images/hugo-autoprefixer:0.154.5-10.5.0`.
-The normal build and validation paths rely on tools already present in that
-image. They do not install npm packages at runtime.
+The image supplies Hugo, Autoprefixer, Sass, and the other global build tools. A site does not need to declare `sass-embedded` when it intentionally relies on this pinned image.
 
-The runtime image can be pinned or mirrored with constructor inputs
-`image_registry`, `image_repository`, `image_tag`, and `user_id`. Keep Hugo site
-configuration such as `module.hugoVersion.min` synchronized with the runtime
-builder image when the site uses that field to describe the builder's available
-Hugo version. See [Runtime image input conventions](runtime-images.md).
+The site must contain `package.json` and `package-lock.json`. Build and validation run `npm ci --ignore-scripts` before Hugo. Downloads use the shared `hugo-npm-cache` Dagger cache. Set `npm_registry` to an npm-compatible proxy when required.
+
+## Site Configuration
+
+Declare Docsy in `package.json`:
+
+```json
+{
+  "private": true,
+  "devDependencies": {
+    "@docsy/theme": "0.17.0"
+  }
+}
+```
+
+Commit the generated `package-lock.json` and configure Hugo to load the package from `node_modules`:
+
+```yaml
+theme: "@docsy/theme"
+themesDir: node_modules
+```
+
+Do not add `go.mod`, `go.sum`, or `module.imports` for the theme.
 
 ## Functions
 
-`build(source, hugo_theme_url, site_base_url)` renders a Hugo site and returns
-the generated `public` directory as a Dagger `Directory`.
+`build(source, site_base_url)` installs npm dependencies, renders the site, and returns `public` as a Dagger `Directory`.
 
-`validate(source, hugo_theme_url, site_base_url)` runs Hugo configuration and
-strict render checks. The validation path uses Hugo build/config behavior with
-strict flags such as warning and path checks; markdown, link, HTML,
-accessibility, and policy linting remain separate concerns.
+`validate(source, site_base_url)` installs npm dependencies and runs Hugo configuration and rendering checks with strict warning, path, and localization flags.
 
-`init_module(source, module_path)` initializes Hugo module metadata without
-rendering a static site.
+`with_npm_dependencies(source)` returns the prepared runtime for inspection or extension.
 
-`prepare_module(source, hugo_module_url)` resolves Hugo module dependencies
-without producing a `public` directory.
-
-## Site Build Example
+## Examples
 
 ```bash
 dagger -m ./modules/hugo call \
-  --source ./site \
-  --image-tag 0.154.5-10.5.0 \
-  build \
-  --hugo-theme-url github.com/google/docsy@v0.13.0 \
-  --site-base-url https://example.com/
-```
-
-## Strict Validation Example
-
-```bash
-dagger -m ./modules/hugo call \
-  --source ./site \
-  --image-tag 0.154.5-10.5.0 \
-  validate \
-  --hugo-theme-url github.com/google/docsy@v0.13.0 \
-  --site-base-url https://example.com/
-```
-
-## Hugo Module Preparation
-
-Use Hugo module preparation when a repository is a reusable Hugo module rather
-than the final rendered site:
-
-```bash
-dagger -m ./modules/hugo call \
-  --source ./docs \
-  prepare-module
-```
-
-Preparation is intentionally an engine-specific Hugo operation. The
-`scenarios/static-site` API only exposes common static-site render and verify
-operations.
-
-Scenario-level Hugo verification passes the site as constructor `source` and
-the Hugo theme as constructor `hugo_theme_url`:
-
-```bash
-dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
-  --hugo-image-tag=0.154.5-10.5.0 \
-  verify-site \
+  --image-tag=0.165.0-10.5.5 \
+  build \
   --site-base-url=https://example.com/ \
-  --engine=hugo
+  --output=./public
 ```
 
-Renovate should update duplicated Hugo runtime image tags and downstream
-`module.hugoVersion.min` values from the same Docker tag source when the minimum
-version is coupled to this builder. For the current image stream, use Docker
-tags from `hugomods/hugo` with `extractVersion=^exts-(?<version>.+)$` rather
-than `gohugoio/hugo` GitHub releases.
-
-## Recommended `docs` Module Layout
-
-A component documentation module should stay path-neutral. It should expose
-normal Hugo component directories and let the importing site choose the final
-URL path with mounts.
-
-```text
-docs/
-├── README.md
-├── go.mod
-└── content/
-    └── how-to/
-        └── example.md
+```bash
+dagger -m ./modules/hugo call \
+  --source=./site \
+  --image-tag=0.165.0-10.5.5 \
+  validate \
+  --site-base-url=https://example.com/
 ```
 
-Example `go.mod`:
+## External Content
 
-```go
-module github.com/riftonix/example/docs
-```
+The Hugo module receives one complete site tree. Use `scenarios/static-site` when documentation from several repositories must be mounted into that tree. External content directories remain path-neutral and require no Go metadata.
 
-Content under `docs/content` should not encode a final site path such as
-`docs/components/example`. The main site owns that placement.
+## Provider Boundary
 
-## Recommended `openspec` Module Layout
-
-An OpenSpec module should keep OpenSpec-owned files unchanged. Hugo can mount
-the existing trees directly:
-
-```text
-openspec/
-├── go.mod
-├── specs/
-│   └── capability-name/
-│       └── spec.md
-└── changes/
-    └── archive/
-        └── completed-change/
-            ├── proposal.md
-            ├── design.md
-            └── tasks.md
-```
-
-Example `go.mod`:
-
-```go
-module github.com/riftonix/example/openspec
-```
-
-Optional Hugo sidecar `_index.md` files may be added next to OpenSpec
-directories when Docsy navigation needs section pages. Do not rewrite
-OpenSpec-owned `spec.md`, `proposal.md`, `design.md`, or `tasks.md` solely for
-Hugo.
-
-## Provider-Neutral Usage
-
-Provider workflows should compute values such as preview URLs and then pass the
-explicit `site_base_url` to Hugo or to the static-site scenario. The Hugo module
-does not publish Pages artifacts, manage deployment environments, delete
-previews, comment on pull requests, or derive provider metadata from CI
-environment variables.
+The module does not publish Pages artifacts, manage environments, calculate preview URLs, or inspect provider event metadata. Workflows pass the final `site_base_url` and publish the returned directory.

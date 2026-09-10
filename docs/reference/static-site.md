@@ -1,183 +1,74 @@
 # Static Site Scenario Reference
 
-`scenarios/static-site` provides provider-neutral static-site verification and
-rendering. Hugo is the first supported engine, and future engines can be added
-behind the same scenario-level command shape.
+`scenarios/static-site` provides provider-neutral verification, rendering, and external content composition. Hugo is currently the only supported engine.
 
-## Scope
+## Hugo Sites
 
-The public scenario API is limited to common static-site operations:
-
-- verify a `source` site directory with an explicit `site_base_url`
-- render a `source` site directory and return the generated static output
-- validate Hugo virtual mount collisions from a Hugo YAML module import layout
-
-Engine-specific operations remain in engine modules. For example, Hugo module
-initialization and dependency resolution stay in `modules/hugo`.
-
-## Engine Selection
-
-Use the `engine` argument to choose the static-site engine. The only supported
-engine today is `hugo`.
-
-Hugo-backed operations require constructor input `hugo_theme_url`. Use a Hugo
-module reference such as `github.com/google/docsy@v0.13.0`.
-
-Hugo-backed operations also expose Hugo runtime image inputs on the scenario
-constructor: `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`,
-and `hugo_container_user_id`. Pin `hugo_image_tag` in CI when reproducible Hugo
-rendering matters or when site configuration such as `module.hugoVersion.min`
-must stay synchronized with the builder image.
-
-Unsupported engines fail with a clear error. Adding a future engine such as
-Jekyll should route the existing render and verify operations to that engine
-without moving provider-specific publication behavior into this scenario.
-
-## Verify Example
+The constructor accepts the site through `source` plus optional Hugo image and npm registry inputs. The site owns its npm theme declaration and lockfile. There is no `hugo_theme_url` input and no Go module resolution.
 
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
-  --hugo-image-tag=0.154.5-10.5.0 \
+  --npm-registry=https://npm.example.test/ \
+  --hugo-image-tag=0.165.0-10.5.5 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
 ```
 
-## Render Example
-
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
-  --hugo-image-tag=0.154.5-10.5.0 \
+  --hugo-image-tag=0.165.0-10.5.5 \
   render-site \
   --site-base-url=https://example.com/ \
   --engine=hugo \
   --output=./public
 ```
 
-## Migration From `--site`
+See [Hugo module reference](hugo.md) for the required `package.json`, `package-lock.json`, and Hugo theme configuration.
 
-Older static-site scenario calls passed the site tree to each function with
-`--site=<dir>`. New calls pass the primary site tree once through constructor
-input `--source=<dir>` before the function name. Hugo calls must also pass
-constructor input `--hugo-theme-url=<module-ref>`.
+## Content Mounts
 
-This is a breaking CLI change. Do not expect backward-compatible `--site`
-aliases in the updated scenario API. Release the changed static-site scenario
-under a new tag after this migration; consumers still using
-`scenarios/static-site/v0.1.0` should keep that tag until they replace
-function-level `--site=<dir>` calls with constructor `--source=<dir>` calls.
+A content mount uses values at the same index in four constructor arrays:
 
-Adding Hugo runtime image inputs also changes the released scenario API. Publish
-that update under a new scenario tag so workflows can opt into explicit image
-pinning without changing callers still pinned to older tags.
+- `content_sources`: caller-provided Dagger directories
+- `content_source_paths`: paths selected inside those directories
+- `content_target_paths`: paths inside the final site tree
+- `content_contributors`: stable names used in collision diagnostics
 
-## Main Site Import Layout
+All four arrays must have the same length.
 
-The recommended main Hugo site imports component `docs` modules into
-component-specific documentation paths and imports `openspec` modules into
-shared specs and archived changes paths.
+The scenario enumerates mapped files before applying overlays. If multiple mounts produce the same target file, verification and rendering fail before Hugo starts.
 
-```yaml
-module:
-  imports:
-    - path: github.com/riftonix/daggerverse/docs
-      mounts:
-        - source: content
-          target: content/docs/components/daggerverse
-
-    - path: github.com/riftonix/container-images/docs
-      mounts:
-        - source: content
-          target: content/docs/components/container-images
-
-    - path: github.com/riftonix/daggerverse/openspec
-      mounts:
-        - source: specs
-          target: content/docs/specs
-        - source: changes/archive
-          target: content/docs/changes/archive
-
-    - path: github.com/riftonix/container-images/openspec
-      mounts:
-        - source: specs
-          target: content/docs/specs
-        - source: changes/archive
-          target: content/docs/changes/archive
-```
-
-Example rendered URL mapping:
+Recommended mappings for component repositories:
 
 ```text
-daggerverse/docs/content/how-to/foo.md
--> /docs/components/daggerverse/how-to/foo/
+daggerverse docs/content
+-> content/docs/components/daggerverse
 
-container-images/docs/content/how-to/foo.md
--> /docs/components/container-images/how-to/foo/
+container-images docs/content
+-> content/docs/components/container-images
 
-daggerverse/openspec/specs/git-module/spec.md
--> /docs/specs/git-module/spec/
+daggerverse openspec/specs
+-> content/docs/specs
 
-container-images/openspec/specs/container-images-scenario/spec.md
--> /docs/specs/container-images-scenario/spec/
-
-daggerverse/openspec/changes/archive/add-git-module/proposal.md
--> /docs/changes/archive/add-git-module/proposal/
+daggerverse openspec/changes/archive
+-> content/docs/changes/archive
 ```
 
-## Mount Collision Validation
+Sources remain unchanged and do not need `go.mod`. The caller obtains or checks out repositories and passes their directories explicitly. The scenario does not fetch repositories.
 
-Hugo module mounts can overwrite content when multiple imports contribute the
-same virtual path. Validate the mount layout before rendering when shared
-targets are used.
+`validate-content-mounts` validates the constructor mounts and returns `validated content mount paths`. `get-content-mount-collisions` returns collision descriptions without failing the call.
 
-`validate-hugo-mounts` reads a Hugo YAML config file and receives imported
-module directories in the same order as `module.imports`:
+## Runtime Inputs
 
-```bash
-dagger -m ./scenarios/static-site call validate-hugo-mounts \
-  --config ./hugo.yml \
-  --modules ./daggerverse-docs \
-  --modules ./container-images-docs \
-  --modules ./daggerverse-openspec \
-  --modules ./container-images-openspec
-```
+- `hugo_image_registry`: `ghcr.io`
+- `hugo_image_repository`: `riftonix/container-images/hugo-autoprefixer`
+- `hugo_image_tag`: `0.165.0-10.5.5`
+- `hugo_container_user_id`: `65532`
+- `npm_registry`: optional npm registry or proxy URL
 
-The validator walks each configured `mount.source`, maps files to
-`mount.target`, and fails when more than one import contributes the same virtual
-path. This is generic Hugo mount validation; it is not limited to `docs` or
-`openspec` directories.
+## Provider Boundary
 
-Use `get-hugo-mount-collisions` when you need a report without failing the
-call:
-
-```bash
-dagger -m ./scenarios/static-site call get-hugo-mount-collisions \
-  --config ./hugo.yml \
-  --modules ./daggerverse-docs \
-  --modules ./container-images-docs \
-  --modules ./daggerverse-openspec \
-  --modules ./container-images-openspec
-```
-
-Collision messages include the virtual path and the contributing import paths
-and mounts.
-
-## CI Provider Boundary
-
-GitHub Actions and GitLab CI workflows remain responsible for:
-
-- event rules and changed-path selection
-- checkout depth, refs, and repository preparation
-- preview URL calculation
-- GitHub Pages or GitLab Pages publication
-- preview cleanup
-- pull request or merge request comments
-- tokens, permissions, and environments
-
-Workflows should pass already computed values such as `site_base_url` into the
-scenario. The scenario does not derive GitHub or GitLab metadata from provider
-environment variables and does not publish Pages artifacts itself.
+Provider workflows remain responsible for checkout, event rules, preview URL calculation, publication, cleanup, permissions, and change-request comments. The scenario accepts computed inputs and returns rendered content.

@@ -1,15 +1,14 @@
 from typing import Annotated
 
 import dagger
-import yaml
 from dagger import DefaultPath, Doc, dag, function, object_type
 
 DEFAULT_ENGINE = "hugo"
 SUPPORTED_ENGINES = (DEFAULT_ENGINE,)
 DEFAULT_HUGO_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_HUGO_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
-# renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer
-DEFAULT_HUGO_IMAGE_TAG = "0.154.5-10.5.0"
+# renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer versioning=loose
+DEFAULT_HUGO_IMAGE_TAG = "0.165.0-10.5.5"
 DEFAULT_HUGO_CONTAINER_USER_ID = "65532"
 
 
@@ -18,33 +17,42 @@ class StaticSite:
     """Static-site scenario entrypoint."""
 
     source: dagger.Directory
-    hugo_theme_url: str | None
+    content_sources: list[dagger.Directory]
+    content_source_paths: list[str]
+    content_target_paths: list[str]
+    content_contributors: list[str]
     hugo_image_registry: str
     hugo_image_repository: str
     hugo_image_tag: str
     hugo_container_user_id: str
+    npm_registry: str | None
 
     @classmethod
     async def create(
         cls,
         source: Annotated[dagger.Directory, DefaultPath("."), Doc("Static site source directory")],
-        hugo_theme_url: Annotated[
-            str | None,
-            Doc("Hugo theme module URL, required when engine is hugo"),
-        ] = None,
+        content_sources: Annotated[list[dagger.Directory] | None, Doc("External content source directories")] = None,
+        content_source_paths: Annotated[list[str] | None, Doc("Paths selected within content sources")] = None,
+        content_target_paths: Annotated[list[str] | None, Doc("Content target paths within the site")] = None,
+        content_contributors: Annotated[list[str] | None, Doc("Contributor names for collision diagnostics")] = None,
         hugo_image_registry: Annotated[str | None, Doc("Hugo image registry")] = DEFAULT_HUGO_IMAGE_REGISTRY,
         hugo_image_repository: Annotated[str | None, Doc("Hugo image repository")] = DEFAULT_HUGO_IMAGE_REPOSITORY,
         hugo_image_tag: Annotated[str | None, Doc("Hugo image tag")] = DEFAULT_HUGO_IMAGE_TAG,
         hugo_container_user_id: Annotated[str | None, Doc("Hugo container user")] = DEFAULT_HUGO_CONTAINER_USER_ID,
+        npm_registry: Annotated[str | None, Doc("Optional npm registry or proxy URL")] = None,
     ):
         """Constructor."""
         return cls(
             source=source,
-            hugo_theme_url=hugo_theme_url,
+            content_sources=content_sources or [],
+            content_source_paths=content_source_paths or [],
+            content_target_paths=content_target_paths or [],
+            content_contributors=content_contributors or [],
             hugo_image_registry=hugo_image_registry or DEFAULT_HUGO_IMAGE_REGISTRY,
             hugo_image_repository=hugo_image_repository or DEFAULT_HUGO_IMAGE_REPOSITORY,
             hugo_image_tag=hugo_image_tag or DEFAULT_HUGO_IMAGE_TAG,
             hugo_container_user_id=hugo_container_user_id or DEFAULT_HUGO_CONTAINER_USER_ID,
+            npm_registry=npm_registry,
         )
 
     @function
@@ -62,8 +70,7 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await self._hugo().validate(
-                hugo_theme_url=self._required_hugo_theme_url(),
+            return await self._hugo(await self._composed_source()).validate(
                 site_base_url=site_base_url,
             )
 
@@ -80,78 +87,44 @@ class StaticSite:
         selected_engine = self._select_engine(engine)
 
         if selected_engine == "hugo":
-            return await self._hugo().build(
-                hugo_theme_url=self._required_hugo_theme_url(),
+            return await self._hugo(await self._composed_source()).build(
                 site_base_url=site_base_url,
             )
 
         msg = f"Static-site engine dispatch is incomplete for {selected_engine!r}"
         raise RuntimeError(msg)
 
-    def _hugo(self):
+    def _hugo(self, source: dagger.Directory):
         """Return a Hugo module configured with the scenario Hugo runtime image inputs."""
         return dag.hugo(
-            source=self.source,
+            source=source,
             image_registry=self.hugo_image_registry,
             image_repository=self.hugo_image_repository,
             image_tag=self.hugo_image_tag,
             user_id=self.hugo_container_user_id,
+            npm_registry=self.npm_registry,
         )
 
     @function
-    async def validate_hugo_mounts(
-        self,
-        config: Annotated[
-            dagger.File,
-            Doc("Hugo YAML config file containing module imports and mounts"),
-        ],
-        modules: Annotated[
-            list[dagger.Directory],
-            Doc("Imported module roots in the same order as module.imports in the config"),
-        ],
-    ) -> str:
-        """Validate that Hugo imports do not overwrite shared virtual paths."""
-        collisions = await self.get_hugo_mount_collisions(
-            config=config,
-            modules=modules,
-        )
+    async def validate_content_mounts(self) -> str:
+        """Validate that content mounts do not overwrite target paths."""
+        collisions = await self.get_content_mount_collisions()
         if collisions:
-            msg = "Hugo virtual path collision: " + "; ".join(collisions)
+            msg = "Static-site content path collision: " + "; ".join(collisions)
             raise ValueError(msg)
 
-        return "validated Hugo mount paths"
+        return "validated content mount paths"
 
     @function
-    async def get_hugo_mount_collisions(
-        self,
-        config: Annotated[
-            dagger.File,
-            Doc("Hugo YAML config file containing module imports and mounts"),
-        ],
-        modules: Annotated[
-            list[dagger.Directory],
-            Doc("Imported module roots in the same order as module.imports in the config"),
-        ],
-    ) -> list[str]:
-        """Return Hugo virtual mount path collisions without failing."""
-        imports = await self._hugo_imports(config)
-        if len(imports) != len(modules):
-            msg = "modules length must match module.imports length in the Hugo config"
-            raise ValueError(msg)
-
+    async def get_content_mount_collisions(self) -> list[str]:
+        """Return content mount path collisions without failing."""
         contributors_by_virtual_path: dict[str, list[str]] = {}
 
-        for module_index, module in enumerate(modules):
-            module_path = str(imports[module_index].get("path") or f"module {module_index + 1}")
-            for mount in imports[module_index].get("mounts") or []:
-                source_path = self._clean_path(str(mount.get("source") or ""))
-                target_path = self._clean_path(str(mount.get("target") or ""))
-                if not source_path or not target_path:
-                    continue
-                for relative_path in await self._directory_files(module.directory(source_path)):
-                    virtual_path = f"{target_path}/{relative_path}"
-                    contributor = f"{module_path}:{source_path}->{target_path}"
-                    contributors_by_virtual_path.setdefault(virtual_path, []).append(contributor)
+        for source, source_path, target_path, contributor in self._mounts():
+            for relative_path in await self._directory_files(source.directory(source_path)):
+                virtual_path = f"{target_path}/{relative_path}"
+                mapping = f"{contributor}:{source_path}->{target_path}"
+                contributors_by_virtual_path.setdefault(virtual_path, []).append(mapping)
 
         collisions: list[str] = []
         for virtual_path, contributors in sorted(contributors_by_virtual_path.items()):
@@ -170,27 +143,42 @@ class StaticSite:
         msg = f"Unsupported static-site engine {engine!r}. Supported engines: {supported_engines}"
         raise ValueError(msg)
 
-    def _required_hugo_theme_url(self) -> str:
-        if self.hugo_theme_url and self.hugo_theme_url.strip():
-            return self.hugo_theme_url
+    async def _composed_source(self) -> dagger.Directory:
+        await self.validate_content_mounts()
+        source = self.source
+        for content_source, source_path, target_path, _ in self._mounts():
+            source = source.with_directory(target_path, content_source.directory(source_path))
+        return source
 
-        msg = "hugo_theme_url is required when engine is hugo"
-        raise ValueError(msg)
+    def _mounts(self) -> list[tuple[dagger.Directory, str, str, str]]:
+        lengths = {
+            len(self.content_sources),
+            len(self.content_source_paths),
+            len(self.content_target_paths),
+            len(self.content_contributors),
+        }
+        if len(lengths) != 1:
+            raise ValueError("content source, source path, target path, and contributor counts must match")
 
-    async def _hugo_imports(self, config: dagger.File) -> list[dict]:
-        config_data = yaml.safe_load(await config.contents()) or {}
-        if not isinstance(config_data, dict):
-            msg = "Hugo config must be a YAML mapping"
-            raise ValueError(msg)
-        module_config = config_data.get("module") or {}
-        if not isinstance(module_config, dict):
-            msg = "Hugo config module section must be a mapping"
-            raise ValueError(msg)
-        imports = module_config.get("imports") or []
-        if not isinstance(imports, list):
-            msg = "Hugo config module.imports section must be a list"
-            raise ValueError(msg)
-        return [import_config for import_config in imports if isinstance(import_config, dict)]
+        mounts: list[tuple[dagger.Directory, str, str, str]] = []
+        for source, raw_source_path, raw_target_path, raw_contributor in zip(
+            self.content_sources,
+            self.content_source_paths,
+            self.content_target_paths,
+            self.content_contributors,
+            strict=True,
+        ):
+            source_path = self._clean_path(raw_source_path)
+            target_path = self._clean_path(raw_target_path)
+            contributor = raw_contributor.strip()
+            if not source_path:
+                raise ValueError("content source path is required")
+            if not target_path:
+                raise ValueError("content target path is required")
+            if not contributor:
+                raise ValueError("content contributor is required")
+            mounts.append((source, source_path, target_path, contributor))
+        return mounts
 
     def _clean_path(self, path: str) -> str:
         return path.strip().strip("/")

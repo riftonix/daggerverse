@@ -52,12 +52,14 @@ site rendering must be reproducible:
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
-  --hugo-image-tag=0.154.5-10.5.0 \
+  --hugo-image-tag=0.165.0-10.5.5 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
 ```
+
+The Hugo site must commit `package.json` and `package-lock.json`. Configure
+Docsy as `@docsy/theme` with `themesDir: node_modules`; no `go.mod` is needed.
 
 Image-backed modules use `image_registry`, `image_repository`, `image_tag`, and
 `container_user_id` for their execution container. Scenarios that compose image-backed

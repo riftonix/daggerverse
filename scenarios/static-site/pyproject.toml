@@ -2,7 +2,7 @@
 name = "static-site"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["dagger-io", "pyyaml==6.0.3"]
+dependencies = ["dagger-io"]
 
 [build-system]
 requires = ["hatchling==1.29.0"]

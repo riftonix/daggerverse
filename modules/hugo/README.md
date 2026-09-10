@@ -1,7 +1,6 @@
 # Hugo Module
 
-Containerized Hugo build, validation, and Hugo module preparation primitives for
-Dagger pipelines.
+Containerized npm-based Hugo build and validation primitives for Dagger pipelines.
 
 The detailed contract, defaults, module layout recommendations, and examples
 live in [Hugo module reference](../../docs/reference/hugo.md).
@@ -10,8 +9,9 @@ live in [Hugo module reference](../../docs/reference/hugo.md).
 
 - `image_registry`: `ghcr.io`
 - `image_repository`: `riftonix/container-images/hugo-autoprefixer`
-- `image_tag`: `0.154.5-10.5.0`
+- `image_tag`: `0.165.0-10.5.5`
 - `user_id`: `65532`
+- `npm_registry`: unset, uses the npm default or caller configuration
 
 Pin `image_tag` in CI when Hugo rendering must be reproducible or when a site
 uses `module.hugoVersion.min` to describe the runtime builder version.
@@ -19,11 +19,15 @@ uses `module.hugoVersion.min` to describe the runtime builder version.
 ```bash
 dagger -m ./modules/hugo call \
   --source=./site \
-  --image-tag=0.154.5-10.5.0 \
+  --npm-registry=https://npm.example.test/ \
+  --image-tag=0.165.0-10.5.5 \
   build \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
   --site-base-url=https://example.com/
 ```
+
+Build and validation require `package.json` and `package-lock.json`, then run
+`npm ci --ignore-scripts`. Configure Docsy as `@docsy/theme` from `node_modules`;
+the pinned image supplies Sass and other global build tools.
 
 ## Local Paths
 
