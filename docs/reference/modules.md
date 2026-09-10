@@ -76,13 +76,13 @@ Runs Helm chart unit tests in the public `helmunittest/helm-unittest` runtime.
 
 ## hugo
 
-Builds, validates, and prepares Hugo sites or Hugo modules in a containerized environment.
+Builds and validates npm-based Hugo sites without Go or Hugo Modules.
 
 - Path: `modules/hugo`
 - Main source: `modules/hugo/src/hugo/main.py`
 - Detailed reference: [Hugo module reference](hugo.md)
-- Typical command: `dagger -m ./modules/hugo call --source=./site build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
-- Reproducible command: `dagger -m ./modules/hugo call --source=./site --image-tag=0.154.5-10.5.0 build --hugo-theme-url=github.com/google/docsy@v0.13.0 --site-base-url=https://example.com/`
+- Typical command: `dagger -m ./modules/hugo call --source=./site build --site-base-url=https://example.com/`
+- Reproducible command: `dagger -m ./modules/hugo call --source=./site --image-tag=0.165.0-10.5.5 build --site-base-url=https://example.com/`
 
 ## opentofu
 
@@ -145,7 +145,7 @@ rendering workflows.
 - Path: `scenarios/static-site`
 - Main source: `scenarios/static-site/src/static_site/main.py`
 - Detailed reference: [Static site scenario reference](static-site.md)
-- Typical verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 verify-site --site-base-url=https://example.com/ --engine=hugo`
-- Typical render command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 render-site --site-base-url=https://example.com/ --engine=hugo --output=./public`
-- Reproducible verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-theme-url=github.com/google/docsy@v0.13.0 --hugo-image-tag=0.154.5-10.5.0 verify-site --site-base-url=https://example.com/ --engine=hugo`
-- CI use cases: verify and render caller-selected static sites, validate Hugo mount collisions, and keep provider-specific Pages lifecycle in workflow YAML.
+- Typical verify command: `dagger -m ./scenarios/static-site call --source=./site verify-site --site-base-url=https://example.com/ --engine=hugo`
+- Typical render command: `dagger -m ./scenarios/static-site call --source=./site render-site --site-base-url=https://example.com/ --engine=hugo --output=./public`
+- Reproducible verify command: `dagger -m ./scenarios/static-site call --source=./site --hugo-image-tag=0.165.0-10.5.5 verify-site --site-base-url=https://example.com/ --engine=hugo`
+- CI use cases: verify and render caller-selected static sites, compose explicit external content mounts, validate collisions, and keep provider-specific Pages lifecycle in workflow YAML.

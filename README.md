@@ -51,7 +51,6 @@ Example scenario call:
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./scenarios/static-site/tests/site \
-  --hugo-theme-url=github.com/google/docsy@v0.13.0 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo

@@ -6,7 +6,6 @@ from dagger import Directory, dag, function, object_type
 
 FIXTURE_SITE_PATH = "site"
 SITE_BASE_URL = "https://example.com/"
-HUGO_THEME_URL = "github.com/google/docsy@v0.13.0"
 
 
 @object_type
@@ -22,90 +21,80 @@ class Tests:
     async def all(self) -> None:
         """Run all static-site scenario tests."""
         await self.verify_docsy_fixture()
-        await self.hugo_theme_url_is_required()
         await self.unsupported_engine_fails_clearly()
         await self.rendered_output_exists()
-        await self.unique_hugo_mount_paths_pass()
-        await self.duplicate_hugo_mount_paths_are_reported()
+        await self.unique_content_mount_paths_pass()
+        await self.duplicate_content_mount_paths_are_reported()
+        await self.composed_content_is_rendered()
+        await self.fixture_has_no_go_metadata()
 
     @function
     async def verify_docsy_fixture(self) -> None:
-        """Verify the Docsy fixture through the provider-neutral scenario API."""
-        validation_output = await dag.static_site(
-            source=self._fixture_site(),
-            hugo_theme_url=HUGO_THEME_URL,
-        ).verify_site(
+        """Verify the npm-based Docsy fixture through the scenario API."""
+        output = await dag.static_site(source=self._fixture_site()).verify_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
         )
-
-        TestCase().assertIn("Pages", validation_output)
-
-    @function
-    async def hugo_theme_url_is_required(self) -> None:
-        """Reject Hugo operations without an explicit Hugo theme URL."""
-        test_case = TestCase()
-        try:
-            await dag.static_site(
-                source=self._fixture_site(),
-            ).verify_site(
-                site_base_url=SITE_BASE_URL,
-                engine="hugo",
-            )
-        except BaseException as exc:
-            message = str(exc)
-            test_case.assertIn("hugo_theme_url is required", message)
-            test_case.assertIn("engine is hugo", message)
-        else:
-            test_case.fail("expected missing hugo_theme_url to fail")
+        TestCase().assertIn("Pages", output)
 
     @function
     async def rendered_output_exists(self) -> None:
-        """Render the Docsy fixture through the provider-neutral scenario API."""
-        public_dir = await dag.static_site(
-            source=self._fixture_site(),
-            hugo_theme_url=HUGO_THEME_URL,
-        ).render_site(
+        """Render the npm-based Docsy fixture through the scenario API."""
+        public_dir = await dag.static_site(source=self._fixture_site()).render_site(
             site_base_url=SITE_BASE_URL,
             engine="hugo",
         )
-
-        index_html = await public_dir.file("index.html").contents()
-        TestCase().assertGreater(len(index_html), 0)
+        TestCase().assertGreater(len(await public_dir.file("index.html").contents()), 0)
 
     @function
-    async def unique_hugo_mount_paths_pass(self) -> None:
-        """Accept Hugo imports whose mounts produce unique virtual paths."""
-        source = self._main_site_with_component_modules()
-        result = await dag.static_site().validate_hugo_mounts(
-            config=source.file("hugo.yml"),
-            modules=[
-                source.directory("daggerverse-docs"),
-                source.directory("container-images-docs"),
-                source.directory("daggerverse-openspec"),
-                source.directory("container-images-openspec"),
-            ],
-        )
-
-        TestCase().assertEqual("validated Hugo mount paths", result)
+    async def unique_content_mount_paths_pass(self) -> None:
+        """Accept mounts whose target files are unique."""
+        source = self._component_sources()
+        result = await dag.static_site(
+            content_sources=[source.directory("first"), source.directory("second")],
+            content_source_paths=["content", "content"],
+            content_target_paths=["content/docs/first", "content/docs/second"],
+            content_contributors=["first", "second"],
+        ).validate_content_mounts()
+        TestCase().assertEqual("validated content mount paths", result)
 
     @function
-    async def duplicate_hugo_mount_paths_are_reported(self) -> None:
-        """Report duplicate virtual paths for arbitrary Hugo module mounts."""
-        source = self._site_with_duplicate_hugo_mounts()
-        collisions = await dag.static_site().get_hugo_mount_collisions(
-            config=source.file("hugo.yml"),
-            modules=[
-                source.directory("first-module"),
-                source.directory("second-module"),
-            ],
-        )
-
+    async def duplicate_content_mount_paths_are_reported(self) -> None:
+        """Report duplicate target files and their contributors."""
+        source = self._component_sources()
+        collisions = await dag.static_site(
+            content_sources=[source.directory("first"), source.directory("second")],
+            content_source_paths=["content", "content"],
+            content_target_paths=["content/docs/shared", "content/docs/shared"],
+            content_contributors=["first", "second"],
+        ).get_content_mount_collisions()
         message = "\n".join(collisions)
         test_case = TestCase()
         test_case.assertIn("content/docs/shared/page.md", message)
-        test_case.assertIn("example.com/first-module:content->content/docs/shared", message)
-        test_case.assertIn("example.com/second-module:docs->content/docs/shared", message)
+        test_case.assertIn("first:content->content/docs/shared", message)
+        test_case.assertIn("second:content->content/docs/shared", message)
+
+    @function
+    async def composed_content_is_rendered(self) -> None:
+        """Render external content under the caller-selected target path."""
+        source = self._component_sources()
+        public_dir = await dag.static_site(
+            source=self._fixture_site(),
+            content_sources=[source.directory("first")],
+            content_source_paths=["content"],
+            content_target_paths=["content/docs/components/first"],
+            content_contributors=["first"],
+        ).render_site(site_base_url=SITE_BASE_URL, engine="hugo")
+        page = await public_dir.file("docs/components/first/page/index.html").contents()
+        TestCase().assertIn("First component page", page)
+
+    @function
+    async def fixture_has_no_go_metadata(self) -> None:
+        """Keep the site fixture independent of Go modules."""
+        entries = await self._fixture_site().entries()
+        test_case = TestCase()
+        test_case.assertNotIn("go.mod", entries)
+        test_case.assertNotIn("go.sum", entries)
 
     @function
     async def unsupported_engine_fails_clearly(self) -> None:
@@ -113,132 +102,28 @@ class Tests:
         test_case = TestCase()
         try:
             await dag.static_site(source=dag.directory()).verify_site(
-                site_base_url="https://example.com/",
+                site_base_url=SITE_BASE_URL,
                 engine="zola",
             )
         except BaseException as exc:
             message = str(exc)
             test_case.assertIn("Unsupported static-site engine", message)
             test_case.assertIn("zola", message)
-            test_case.assertIn("hugo", message)
         else:
             test_case.fail("expected unsupported engine to fail")
 
     def _fixture_site(self) -> Directory:
-        """Return the fixture Hugo site directory."""
         return dag.current_module().source().directory(FIXTURE_SITE_PATH)
 
-    def _main_site_with_component_modules(self) -> Directory:
-        """Return a main Hugo site importing component docs and OpenSpec modules."""
+    def _component_sources(self) -> Directory:
         return (
             dag.directory()
             .with_new_file(
-                "go.mod",
-                "module example.com/main-site\n\n"
-                "require (\n"
-                "\tgithub.com/riftonix/daggerverse/docs v0.0.0\n"
-                "\tgithub.com/riftonix/container-images/docs v0.0.0\n"
-                "\tgithub.com/riftonix/daggerverse/openspec v0.0.0\n"
-                "\tgithub.com/riftonix/container-images/openspec v0.0.0\n"
-                ")\n\n"
-                "replace github.com/riftonix/daggerverse/docs => ./daggerverse-docs\n"
-                "replace github.com/riftonix/container-images/docs => ./container-images-docs\n"
-                "replace github.com/riftonix/daggerverse/openspec => ./daggerverse-openspec\n"
-                "replace github.com/riftonix/container-images/openspec => ./container-images-openspec\n",
+                "first/content/page.md",
+                "---\ntitle: First\n---\n\nFirst component page.\n",
             )
             .with_new_file(
-                "hugo.yml",
-                "baseURL: ''\n"
-                "title: Component Documentation\n"
-                "module:\n"
-                "  imports:\n"
-                "    - path: github.com/riftonix/daggerverse/docs\n"
-                "      mounts:\n"
-                "        - source: content\n"
-                "          target: content/docs/components/daggerverse\n"
-                "    - path: github.com/riftonix/container-images/docs\n"
-                "      mounts:\n"
-                "        - source: content\n"
-                "          target: content/docs/components/container-images\n"
-                "    - path: github.com/riftonix/daggerverse/openspec\n"
-                "      mounts:\n"
-                "        - source: specs\n"
-                "          target: content/docs/specs\n"
-                "        - source: changes/archive\n"
-                "          target: content/docs/changes/archive\n"
-                "    - path: github.com/riftonix/container-images/openspec\n"
-                "      mounts:\n"
-                "        - source: specs\n"
-                "          target: content/docs/specs\n"
-                "        - source: changes/archive\n"
-                "          target: content/docs/changes/archive\n",
-            )
-            .with_new_file(
-                "layouts/_default/single.html",
-                "<!doctype html><html><head><title>{{ .Title }}</title></head><body>{{ .Content }}</body></html>",
-            )
-            .with_new_file("daggerverse-docs/go.mod", "module github.com/riftonix/daggerverse/docs\n")
-            .with_new_file(
-                "daggerverse-docs/content/how-to/foo.md",
-                "---\ntitle: Daggerverse Foo\n---\n\nDaggerverse component guide.\n",
-            )
-            .with_new_file(
-                "container-images-docs/go.mod",
-                "module github.com/riftonix/container-images/docs\n",
-            )
-            .with_new_file(
-                "container-images-docs/content/how-to/foo.md",
-                "---\ntitle: Container Images Foo\n---\n\nContainer images component guide.\n",
-            )
-            .with_new_file(
-                "daggerverse-openspec/go.mod",
-                "module github.com/riftonix/daggerverse/openspec\n",
-            )
-            .with_new_file(
-                "daggerverse-openspec/specs/git-module/spec.md",
-                "---\ntitle: Git Module Spec\n---\n\nDaggerverse Git module spec.\n",
-            )
-            .with_new_file(
-                "daggerverse-openspec/changes/archive/git-module-change/proposal.md",
-                "---\ntitle: Git Module Change\n---\n\nDaggerverse archived change.\n",
-            )
-            .with_new_file(
-                "container-images-openspec/go.mod",
-                "module github.com/riftonix/container-images/openspec\n",
-            )
-            .with_new_file(
-                "container-images-openspec/specs/container-images-scenario/spec.md",
-                "---\ntitle: Container Images Scenario Spec\n---\n\nContainer images scenario spec.\n",
-            )
-            .with_new_file(
-                "container-images-openspec/changes/archive/container-images-scenario-change/proposal.md",
-                "---\ntitle: Container Images Scenario Change\n---\n\nContainer images archived change.\n",
-            )
-        )
-
-    def _site_with_duplicate_hugo_mounts(self) -> Directory:
-        """Return a Hugo config and modules with duplicate virtual mount paths."""
-        return (
-            dag.directory()
-            .with_new_file(
-                "hugo.yml",
-                "module:\n"
-                "  imports:\n"
-                "    - path: example.com/first-module\n"
-                "      mounts:\n"
-                "        - source: content\n"
-                "          target: content/docs/shared\n"
-                "    - path: example.com/second-module\n"
-                "      mounts:\n"
-                "        - source: docs\n"
-                "          target: content/docs/shared\n",
-            )
-            .with_new_file(
-                "first-module/content/page.md",
-                "---\ntitle: First\n---\n\nFirst module page.\n",
-            )
-            .with_new_file(
-                "second-module/docs/page.md",
-                "---\ntitle: Second\n---\n\nSecond module page.\n",
+                "second/content/page.md",
+                "---\ntitle: Second\n---\n\nSecond component page.\n",
             )
         )
