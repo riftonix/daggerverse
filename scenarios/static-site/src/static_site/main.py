@@ -8,7 +8,7 @@ SUPPORTED_ENGINES = (DEFAULT_ENGINE,)
 DEFAULT_HUGO_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_HUGO_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
 # renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer versioning=loose
-DEFAULT_HUGO_IMAGE_TAG = "0.165.0-10.5.6"
+DEFAULT_HUGO_IMAGE_TAG = "0.165.0-10.6.0"
 DEFAULT_HUGO_CONTAINER_USER_ID = "65532"
 
 

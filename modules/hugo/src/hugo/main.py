@@ -6,7 +6,7 @@ from dagger import DefaultPath, Doc, dag, function, object_type
 DEFAULT_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_IMAGE_REPOSITORY = "riftonix/container-images/hugo-autoprefixer"
 # renovate: datasource=docker depName=ghcr.io/riftonix/container-images/hugo-autoprefixer versioning=loose
-DEFAULT_IMAGE_TAG = "0.165.0-10.5.6"
+DEFAULT_IMAGE_TAG = "0.165.0-10.6.0"
 DEFAULT_CONTAINER_USER_ID = "65532"
 
 
