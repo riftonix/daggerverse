@@ -101,6 +101,17 @@ Runs SSH client operations in a container.
 - Main source: `modules/ssh/src/ssh/main.py`
 - Typical command: `dagger -m ./modules/ssh call exec --destination=example.com`
 
+## updatecli
+
+Runs caller-provided Updatecli manifests to preview and apply updates, render
+templates, and export modified local working trees.
+
+- Path: `modules/updatecli`
+- Main source: `modules/updatecli/src/updatecli/main.py`
+- Detailed reference: [Updatecli module reference](updatecli.md)
+- Typical command: `dagger -m ./modules/updatecli call --source=. diff --config=./updatecli.yaml`
+- CI use cases: dependency or content updates with caller-defined SCM and pull request actions, and local file synchronization without SCM credentials.
+
 ## Kubernetes Cluster Lifecycle
 
 The previous Kind wrapper module has been removed. Future Kubernetes cluster

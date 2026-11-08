@@ -1,0 +1,14 @@
+name: Update a local fixture
+pipelineid: local-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: printf '2.0.0'
+targets:
+  version:
+    kind: file
+    sourceid: version
+    spec:
+      file: version.txt
+      forcecreate: true

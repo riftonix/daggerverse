@@ -24,6 +24,8 @@ The main documentation source is [docs/README.md](docs/README.md). It includes t
   - https://github.com/riftonix/daggerverse/modules/opentofu
 - **ssh** - SSH client in a container with key setup helpers.
   - https://github.com/riftonix/daggerverse/modules/ssh
+- **updatecli** - preview and apply Updatecli manifests, render templates, and return updated working trees.
+  - https://github.com/riftonix/daggerverse/modules/updatecli
 
 ## Scenarios
 

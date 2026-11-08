@@ -1,0 +1,13 @@
+name: Deliberately failing target
+pipelineid: failing-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: printf '2.0.0'
+targets:
+  version:
+    kind: shell
+    disablesourceinput: true
+    spec:
+      command: "echo fixture-target-failure >&2; exit 17"

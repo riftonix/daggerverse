@@ -1,0 +1,16 @@
+name: Runtime helpers and environment
+pipelineid: helper-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: sh /opt/updatecli-test/report.sh
+      environments:
+        - name: UPDATECLI_TEST_PLAIN
+        - name: UPDATECLI_TEST_SECRET
+targets:
+  report:
+    kind: shell
+    disablesourceinput: true
+    spec:
+      command: echo helper-target-changed

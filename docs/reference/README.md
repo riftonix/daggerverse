@@ -9,6 +9,7 @@ Available reference pages:
 - [Docker module reference](docker.md)
 - [Helm unittest module reference](helm-unittest.md)
 - [Hugo module reference](hugo.md)
+- [Updatecli module reference](updatecli.md)
 - [Container images scenario reference](container-images.md)
 - [Static site scenario reference](static-site.md)
 - [Runtime image input conventions](runtime-images.md)

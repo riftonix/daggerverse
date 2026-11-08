@@ -50,12 +50,14 @@ import asyncio
 import dagger
 from dagger import dag
 
+
 async def main():
     async with dagger.Connection(dag) as client:
         project = client.host().directory("./path/to/iac")
         tofu = await dag.opentofu(image_tag="latest")  # pin image_tag and set executor="terraform" when needed
         out = await tofu.lint(source=project)
         print(out)
+
 
 asyncio.run(main())
 ```

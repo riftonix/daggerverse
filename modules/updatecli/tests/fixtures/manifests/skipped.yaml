@@ -1,0 +1,14 @@
+name: Deliberately failing source
+pipelineid: skipped-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: "echo fixture-source-failure >&2; exit 17"
+targets:
+  version:
+    kind: file
+    sourceid: version
+    spec:
+      file: version.txt
+      forcecreate: true
