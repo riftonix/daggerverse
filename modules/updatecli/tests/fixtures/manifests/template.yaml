@@ -1,0 +1,14 @@
+name: 'Templated version {{ .version }}'
+pipelineid: template-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: printf '{{ .version }}'
+targets:
+  version:
+    kind: file
+    sourceid: version
+    spec:
+      file: version.txt
+      forcecreate: true

@@ -1,0 +1,13 @@
+name: Observe the pipeline mode
+pipelineid: mode-fixture
+sources:
+  version:
+    kind: shell
+    spec:
+      command: printf '2.0.0'
+targets:
+  mode:
+    kind: shell
+    disablesourceinput: true
+    spec:
+      command: sh /opt/updatecli-test/mode.sh

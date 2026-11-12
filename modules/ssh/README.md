@@ -45,6 +45,7 @@ import dagger
 from dagger import dag
 from ssh import Ssh
 
+
 async def main():
     async with dagger.Connection(dag) as client:
         ssh_mod = await Ssh.create()
@@ -56,13 +57,10 @@ async def main():
 
         # Execute a remote command (password auth example)
         res = await ssh_mod.exec(
-            destination="example.com",
-            ssh_port=22,
-            ssh_user="root",
-            insecure_ssh_password="hunter2",
-            ssh_cmd="uname -a"
+            destination="example.com", ssh_port=22, ssh_user="root", insecure_ssh_password="hunter2", ssh_cmd="uname -a"
         )
         print(res)
+
 
 asyncio.run(main())
 ```
