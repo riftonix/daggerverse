@@ -87,8 +87,12 @@ Commands that run Dagger functions, containers, image builds, or network calls (
   Verified: the README documents `sync-charts-diff`, `sync-charts`, `sync-charts-manifest`, `sync-charts-update`, `updatecli-container`, and `with-updatecli-container`, matching the scenario functions; its relative links are unchanged and resolve.
 ## 3. Integration Verification
 
-- [ ] 3.1 With explicit approval, run `dagger -m ./scenarios/helm-ci call --source=<helm-shared checkout> sync-charts-diff --components=common` and verify that it either reports the expected upstream version or prints no change, with the pinned digest accepted.
-- [ ] 3.2 With explicit approval, run `sync-charts` for one component with a known newer upstream version against a temporary copy of a `helm-shared` checkout, and verify that only the component directory and its pin change.
+- [x] 3.1 With explicit approval, run `dagger -m ./scenarios/helm-ci call --source=<helm-shared checkout> sync-charts-diff --components=common` and verify that it either reports the expected upstream version or prints no change, with the pinned digest accepted.
+
+  Verified on `helm-shared` `master` at `37c5706` with the scenario at `7be2309`: `common` is pinned to `1.0.5`, the highest matching upstream tag, so the run reports `NOTHING CHANGED` (`Changed: 0`, `Failed: 0`). An up-to-date component is not pulled, so the pinned digest check is covered by 3.2.
+- [x] 3.2 With explicit approval, run `sync-charts` for one component with a known newer upstream version against a temporary copy of a `helm-shared` checkout, and verify that only the component directory and its pin change.
+
+  Verified with `sync-charts --components=traefik` exported into a clone of `helm-shared` at `37c5706`: the pinned `1.0.5` package passed the digest check, and the run synchronized `traefik` to `1.0.6`. `git status` shows only `libs/traefik/Chart.yaml` (`version` `1.0.5` to `1.0.6`) and `updatecli/pins/traefik.json` (`1.0.6`, `sha256:c7a24c5b13fa453be3403eb639558c277470b46dd6bde32a0b005627316d728a`).
 - [ ] 3.3 Run `make openspec-validate` and verify that the change validates.
 
 ## Workflow follow-up
