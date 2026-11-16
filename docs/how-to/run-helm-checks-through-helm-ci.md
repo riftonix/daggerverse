@@ -7,6 +7,9 @@ checks. The scenario composes `modules/helm` for Helm operations and
 CI provider workflows own event triggers, branch selection, path selection, and
 publish timing. Pass those decisions into the scenario as explicit inputs.
 
+To pull upstream releases into forked charts, see
+[Sync forked charts through Helm CI](sync-forked-charts-through-helm-ci.md).
+
 ## Verify One Chart
 
 ```bash

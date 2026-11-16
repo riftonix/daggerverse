@@ -40,7 +40,7 @@ Ready-to-run CI jobs live under `scenarios/<name>`. Scenarios compose reusable m
 
 Scenarios should pin and test the versions of the building blocks they compose. A scenario may use module-specific objects internally, but its public API should expose stable Dagger primitives or scenario-owned spec/result objects rather than object types from implementation modules. This lets users compose released scenarios and modules independently without type collisions between different versions of the same module.
 
-`scenarios/helm-ci` composes the Helm and Git modules into portable Helm chart verification and publication workflows.
+`scenarios/helm-ci` composes the Helm, Git, and Updatecli modules into portable Helm chart verification, publication, and upstream chart sync workflows.
 
 ## `.github/workflows/`
 

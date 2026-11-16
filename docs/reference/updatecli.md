@@ -39,6 +39,7 @@ version is set by the image tag, so the module skips the release lookup.
 | Function | Result | Behavior |
 | --- | --- | --- |
 | `container()` | `Container` | Return the configured runtime without running Updatecli |
+| `with_container(container)` | Module instance | Replace the runtime with a caller-provided container |
 | `with_secret_variable(name, secret)` | Module instance | Add a secret environment variable |
 | `with_env_variable(name, value)` | Module instance | Add a non-secret environment variable |
 | `with_directory(path, directory)` | Module instance | Add runtime helper files owned by the configured user |
@@ -60,6 +61,10 @@ Updatecli reports a pipeline whose source or condition failed as skipped and
 exits with code `0`. The module does not treat a skipped pipeline as an error:
 the call succeeds and returns the report, including the source error output. A
 manifest that must fail on such an error has to perform the check in a target.
+
+`with_container` is meant for a runtime derived from `container()`, for example
+with bound services or extra environment. Later setup methods and Updatecli
+commands run in the replacement, so it must keep the runtime paths above.
 
 The setup methods affect subsequent calls. Executions do not mutate the input
 `Directory` or replace the configured runtime with the command result. Use
@@ -156,7 +161,8 @@ make tests module updatecli
 The neighboring Dagger test module uses the parent module public API. Its
 aggregate `all()` checks runtime setup, preview, apply, returned working trees,
 rendering without pipeline execution, ordered YAML/JSON values, failure
-propagation, skipped pipelines, helper mounts, plain variables, and secret scrubbing. Fixtures use
+propagation, skipped pipelines, helper mounts, plain variables, a replaced
+runtime container, and secret scrubbing. Fixtures use
 local shell and file resources without external services or real credentials;
 initial Dagger/SDK provisioning and image pulls still need their normal setup.
 
