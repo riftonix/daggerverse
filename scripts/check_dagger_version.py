@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-DAGGER_JSON_GLOB = "modules/**/dagger.json"
+DAGGER_JSON_GLOBS = ("modules/**/dagger.json", "scenarios/**/dagger.json")
 WORKFLOW_GLOB = ".github/workflows/*.y*ml"
 DAGGER_VERSION_PATTERN = re.compile(r"^\s*DAGGER_VERSION:\s*([vV]?[0-9]+(?:\.[0-9]+){2})\s*$")
 
@@ -21,7 +21,9 @@ def normalize_version(version: str) -> str:
 
 def dagger_json_files() -> list[Path]:
     """Return checked Dagger module metadata files."""
-    return sorted(path for path in REPOSITORY_ROOT.glob(DAGGER_JSON_GLOB) if "sdk" not in path.parts)
+    return sorted(
+        path for pattern in DAGGER_JSON_GLOBS for path in REPOSITORY_ROOT.glob(pattern) if "sdk" not in path.parts
+    )
 
 
 def workflow_files() -> list[Path]:
@@ -69,7 +71,7 @@ def main() -> int:
     }
 
     if not engine_versions:
-        print("No modules/**/dagger.json files found.", file=sys.stderr)
+        print(f"No {' or '.join(DAGGER_JSON_GLOBS)} files found.", file=sys.stderr)
         return 2
 
     if not workflow_versions:
