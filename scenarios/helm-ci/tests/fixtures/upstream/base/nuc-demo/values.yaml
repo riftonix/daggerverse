@@ -1,0 +1,7 @@
+first: upstream-old
+a: 1
+b: 2
+c: 3
+d: 4
+last: keep
+marker: upstream-marker

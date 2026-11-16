@@ -20,6 +20,8 @@ Node.js. Use a custom runtime image when shell resources need those tools.
 ## Functions
 
 - `container()` returns the configured runtime container.
+- `with_container(container)` replaces the runtime container, for example with
+  `container()` plus bound services. Later calls use the replacement.
 - `with_secret_variable(name, secret)`, `with_env_variable(name, value)`, and
   `with_directory(path, directory)` configure the runtime and return the module
   for chaining.

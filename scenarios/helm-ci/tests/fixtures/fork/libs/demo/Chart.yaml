@@ -1,0 +1,4 @@
+apiVersion: v2
+description: Demo STEP2 chart
+name: demo
+version: 1.0.4
