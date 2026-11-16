@@ -1,0 +1,8 @@
+version: 0.1
+log:
+  level: warn
+storage:
+  filesystem:
+    rootdirectory: /tmp/registry-data
+http:
+  addr: 127.0.0.1:5000

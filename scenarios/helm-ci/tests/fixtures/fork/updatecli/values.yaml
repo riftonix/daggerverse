@@ -1,0 +1,29 @@
+upstream:
+  registry: oci://registry:5000/nuc
+  plainhttp: true
+  versionfilter: ">=1.0.0 <2.0.0"
+  exclude:
+    - LICENSE
+home: https://github.com/example/helm-fork
+rewrite:
+  - from: oci://registry:5000/nuc
+    to: oci://ghcr.io/example/libs
+  - from: SHARED
+    to: STEP1
+  - file: Chart.yaml
+    regex: '(?m)^home:.*\n?'
+    to: ""
+  - file: values.yaml
+    from: upstream-marker
+    to: fork-marker
+components:
+  demo:
+    exclude:
+      - docs/internal.md
+    rewrite:
+      - from: STEP1
+        to: STEP2
+  other:
+# Keys the scenario does not know, such as the helm-shared github section, are ignored.
+github:
+  enabled: true

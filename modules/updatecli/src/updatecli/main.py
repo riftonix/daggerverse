@@ -70,6 +70,15 @@ class Updatecli:
         return self.container_
 
     @function
+    def with_container(
+        self,
+        container: Annotated[dagger.Container, Doc("Custom Updatecli runtime container")],
+    ) -> Self:
+        """Use a caller-provided runtime, for example container() with bound services."""
+        self.container_ = container
+        return self
+
+    @function
     def with_secret_variable(
         self,
         name: Annotated[str, Doc("Secret environment variable name")],

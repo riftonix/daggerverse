@@ -16,6 +16,10 @@
     {
       "name": "helm-unittest",
       "source": "../../modules/helm-unittest"
+    },
+    {
+      "name": "updatecli",
+      "source": "../../modules/updatecli"
     }
   ]
 }

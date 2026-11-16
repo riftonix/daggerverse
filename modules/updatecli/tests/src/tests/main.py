@@ -61,6 +61,7 @@ class Tests:
         await self.failing_pipeline()
         await self.skipped_pipeline()
         await self.runtime_additions_and_secret()
+        await self.custom_container()
 
     @function
     async def runtime(self) -> None:
@@ -211,6 +212,21 @@ class Tests:
         test.assertIn("helper-target-changed", output)
         test.assertNotIn(secret_value, output)
         test.assertIn("***", output)
+
+    @function
+    async def custom_container(self) -> None:
+        """Run Updatecli in a caller-provided container derived from container()."""
+        container = (
+            self._module()
+            .container()
+            .with_directory("/opt/updatecli-test", self._fixtures().directory("helpers"))
+            .with_env_variable("UPDATECLI_TEST_PLAIN", "custom-container-marker")
+            .with_env_variable("UPDATECLI_TEST_SECRET", "custom-container-secret")
+        )
+        output = await self._module().with_container(container=container).apply(config=self._manifest("helpers.yaml"))
+        test = TestCase()
+        test.assertIn("custom-container-marker", output)
+        test.assertIn("helper-target-changed", output)
 
     async def _assert_fails_with(self, call: Awaitable[object], expected: str) -> None:
         test = TestCase()

@@ -175,6 +175,19 @@ The system SHALL expose a manifest function that returns the rendered Updatecli 
 - **THEN** it SHALL return one pipeline per selected component with pipeline ID `upstream-<component id>`
 - **AND** the rendered manifest SHALL NOT contain token values
 
+### Requirement: Helm CI scenario chart sync runtime container
+The system SHALL expose a function that returns the Updatecli runtime container used by the chart sync functions, and a function that replaces it with a caller-provided container. The chart sync functions SHALL run Updatecli in the replaced container, with the helper, the manifest, and secrets added to it.
+
+#### Scenario: Default runtime container
+- **GIVEN** a caller has not replaced the runtime container
+- **WHEN** the caller requests the runtime container
+- **THEN** the scenario SHALL return a container from the configured Updatecli runtime image with `source` as the working tree
+
+#### Scenario: Caller binds a service to the runtime container
+- **GIVEN** a caller takes the runtime container, binds a registry service to it under an alias, and passes the result back to the scenario
+- **WHEN** the caller runs any chart sync function
+- **THEN** the helper SHALL reach the bound service under that alias
+
 ### Requirement: Helm CI scenario chart sync pull request proposal
 The system SHALL expose an update function that takes `github_token` as a secret, `repository` as `owner/name`, and `branch`, and creates or updates one pull request per changed component against `branch` from the working branch `updatecli_<branch>_upstream-<component id>`.
 

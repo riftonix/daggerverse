@@ -1,0 +1,5 @@
+apiVersion: v2
+description: Demo SHARED chart
+home: https://example.invalid/nuc-demo
+name: nuc-demo
+version: 1.0.5

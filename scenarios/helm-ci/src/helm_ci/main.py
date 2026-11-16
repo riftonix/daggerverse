@@ -1,8 +1,11 @@
 import json
-from typing import Annotated
+import re
+from typing import Annotated, Self
 
 import dagger
 from dagger import DefaultPath, Doc, dag, function, object_type
+
+from .chart_sync_manifest import HELPER_DIRECTORY, HELPER_PATH, render_manifest
 
 DEFAULT_HELM_IMAGE_REGISTRY = "docker.io"
 DEFAULT_HELM_IMAGE_REPOSITORY = "alpine/helm"
@@ -22,6 +25,17 @@ DEFAULT_HELM_UNITTEST_IMAGE_REPOSITORY = "helmunittest/helm-unittest"
 DEFAULT_HELM_UNITTEST_IMAGE_TAG = "4.2.0-1.1.0"
 DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID = "65532"
 
+DEFAULT_UPDATECLI_IMAGE_REGISTRY = "ghcr.io"
+DEFAULT_UPDATECLI_IMAGE_REPOSITORY = "riftonix/container-images/updatecli-python-nodejs"
+# renovate: datasource=docker depName=ghcr.io/riftonix/container-images/updatecli-python-nodejs versioning=regex:^py(?<compatibility>\d+\.\d+-node\d+)-updatecli(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-pyyaml\d+\.\d+\.\d+-helm(?<build>\d+)\.(?<revision>\d+)\.\d+$
+DEFAULT_UPDATECLI_IMAGE_TAG = "py3.14-node26-updatecli0.123.0-pyyaml6.0.3-helm4.3.2"
+DEFAULT_UPDATECLI_CONTAINER_USER_ID = "65532"
+
+DEFAULT_CHART_SYNC_CONFIG_PATH = "updatecli/values.yaml"
+CHART_SYNC_CONFIG_PATH = re.compile(r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*")
+GITHUB_REPOSITORY = re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+")
+UPDATECLI_GITHUB_TOKEN = "UPDATECLI_GITHUB_TOKEN"
+
 
 @object_type
 class HelmCi:
@@ -40,6 +54,12 @@ class HelmCi:
     helm_unittest_image_repository: str
     helm_unittest_image_tag: str
     helm_unittest_container_user_id: str
+
+    updatecli_image_registry: str
+    updatecli_image_repository: str
+    updatecli_image_tag: str
+    updatecli_container_user_id: str
+    updatecli_container_: dagger.Container | None
 
     @classmethod
     async def create(
@@ -71,8 +91,20 @@ class HelmCi:
         helm_unittest_container_user_id: Annotated[
             str | None, Doc("Helm unittest container user")
         ] = DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID,
+        updatecli_image_registry: Annotated[
+            str | None, Doc("Updatecli image registry for chart sync")
+        ] = DEFAULT_UPDATECLI_IMAGE_REGISTRY,
+        updatecli_image_repository: Annotated[
+            str | None, Doc("Updatecli image repository for chart sync; needs Python, PyYAML, Git, and Helm")
+        ] = DEFAULT_UPDATECLI_IMAGE_REPOSITORY,
+        updatecli_image_tag: Annotated[
+            str | None, Doc("Updatecli image tag for chart sync")
+        ] = DEFAULT_UPDATECLI_IMAGE_TAG,
+        updatecli_container_user_id: Annotated[
+            str | None, Doc("Updatecli container user for chart sync")
+        ] = DEFAULT_UPDATECLI_CONTAINER_USER_ID,
     ):
-        """Constructor exposing Helm and Git runtime image inputs with prefixed names."""
+        """Constructor exposing Helm, Git, Helm unittest, and Updatecli runtime image inputs with prefixed names."""
         return cls(
             source=source,
             helm_image_registry=helm_image_registry or DEFAULT_HELM_IMAGE_REGISTRY,
@@ -87,6 +119,11 @@ class HelmCi:
             helm_unittest_image_repository=helm_unittest_image_repository or DEFAULT_HELM_UNITTEST_IMAGE_REPOSITORY,
             helm_unittest_image_tag=helm_unittest_image_tag or DEFAULT_HELM_UNITTEST_IMAGE_TAG,
             helm_unittest_container_user_id=helm_unittest_container_user_id or DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID,
+            updatecli_image_registry=updatecli_image_registry or DEFAULT_UPDATECLI_IMAGE_REGISTRY,
+            updatecli_image_repository=updatecli_image_repository or DEFAULT_UPDATECLI_IMAGE_REPOSITORY,
+            updatecli_image_tag=updatecli_image_tag or DEFAULT_UPDATECLI_IMAGE_TAG,
+            updatecli_container_user_id=updatecli_container_user_id or DEFAULT_UPDATECLI_CONTAINER_USER_ID,
+            updatecli_container_=None,
         )
 
     def _helm(self, source: dagger.Directory):
@@ -275,3 +312,141 @@ class HelmCi:
 
         await git.ensure_pushed_tag(tag=release_tag, remote=git_remote)
         return f"published: {package_name}\nrelease tag: {release_tag}"
+
+    def _updatecli(self):
+        """Return the configured Updatecli module instance with source as the working tree."""
+        return dag.updatecli(
+            source=self.source,
+            image_registry=self.updatecli_image_registry,
+            image_repository=self.updatecli_image_repository,
+            image_tag=self.updatecli_image_tag,
+            container_user_id=self.updatecli_container_user_id,
+        )
+
+    @function
+    def updatecli_container(self) -> dagger.Container:
+        """Return the Updatecli runtime container used by the chart sync functions."""
+        if self.updatecli_container_ is not None:
+            return self.updatecli_container_
+        return self._updatecli().container()
+
+    @function
+    def with_updatecli_container(
+        self,
+        container: Annotated[dagger.Container, Doc("Custom Updatecli runtime, for example with bound services")],
+    ) -> Self:
+        """Run the chart sync functions in a caller-provided runtime derived from updatecli_container()."""
+        self.updatecli_container_ = container
+        return self
+
+    def _sync_charts_helper(self) -> dagger.Directory:
+        return dag.directory().with_file(
+            "chart_sync.py",
+            dag.current_module().source().file("src/helm_ci/chart_sync.py"),
+        )
+
+    def _sync_charts_updatecli(self):
+        """Return the Updatecli module running in the chart sync runtime with the helper mounted."""
+        return (
+            self._updatecli()
+            .with_container(container=self.updatecli_container())
+            .with_directory(path=HELPER_DIRECTORY, directory=self._sync_charts_helper())
+        )
+
+    async def _sync_charts_components(self, config_path: str, components: list[str] | None) -> list[dict]:
+        """Validate the whole configuration and every pin, then return the selected components."""
+        if not CHART_SYNC_CONFIG_PATH.fullmatch(config_path) or any(
+            part in (".", "..") for part in config_path.split("/")
+        ):
+            raise ValueError(f"config_path: {config_path!r} must be a relative path inside source")
+        command = ["python3", "-I", HELPER_PATH, "validate", f"--config={config_path}"]
+        command += [f"--component={component}" for component in components or []]
+        result = (
+            self.updatecli_container()
+            .with_directory(HELPER_DIRECTORY, self._sync_charts_helper())
+            .with_exec(command, expect=dagger.ReturnType.ANY)
+        )
+        if await result.exit_code() != 0:
+            raise ValueError((await result.stderr()).strip())
+        return json.loads(await result.stdout())["components"]
+
+    async def _sync_charts_manifest_file(
+        self,
+        config_path: str,
+        components: list[str] | None,
+        repository: str | None = None,
+        branch: str | None = None,
+    ) -> dagger.File:
+        text = await self.sync_charts_manifest(
+            config_path=config_path,
+            components=components,
+            repository=repository,
+            branch=branch,
+        )
+        return dag.directory().with_new_file("manifest.yaml", text).file("manifest.yaml")
+
+    @function
+    async def sync_charts_manifest(
+        self,
+        config_path: Annotated[
+            str, Doc("Chart sync configuration in source; pins are read from pins/ next to it")
+        ] = DEFAULT_CHART_SYNC_CONFIG_PATH,
+        components: Annotated[list[str] | None, Doc("Component IDs; all components when empty")] = None,
+        repository: Annotated[str | None, Doc("GitHub repository owner/name for pull request mode")] = None,
+        branch: Annotated[str | None, Doc("GitHub base branch for pull request mode")] = None,
+    ) -> str:
+        """Render the Updatecli manifest: local pipelines, or GitHub pipelines with repository and branch."""
+        if bool(repository) != bool(branch):
+            raise ValueError("repository and branch must be supplied together")
+        if repository and not GITHUB_REPOSITORY.fullmatch(repository):
+            raise ValueError(f"repository: {repository!r} must be owner/name")
+        selected = await self._sync_charts_components(config_path, components)
+        return render_manifest(selected, config_path, repository or None, branch or None)
+
+    @function
+    async def sync_charts_diff(
+        self,
+        config_path: Annotated[
+            str, Doc("Chart sync configuration in source; pins are read from pins/ next to it")
+        ] = DEFAULT_CHART_SYNC_CONFIG_PATH,
+        components: Annotated[list[str] | None, Doc("Component IDs; all components when empty")] = None,
+    ) -> str:
+        """Preview upstream chart updates on source without writing files."""
+        manifest = await self._sync_charts_manifest_file(config_path, components)
+        return await self._sync_charts_updatecli().diff(config=manifest)
+
+    @function
+    async def sync_charts(
+        self,
+        config_path: Annotated[
+            str, Doc("Chart sync configuration in source; pins are read from pins/ next to it")
+        ] = DEFAULT_CHART_SYNC_CONFIG_PATH,
+        components: Annotated[list[str] | None, Doc("Component IDs; all components when empty")] = None,
+    ) -> dagger.Directory:
+        """Synchronize components from upstream and return the updated source."""
+        manifest = await self._sync_charts_manifest_file(config_path, components)
+        updated = self._sync_charts_updatecli().applied_source(config=manifest)
+        # Evaluate here, so Updatecli failures keep their output instead of an invalid result error.
+        await updated.sync()
+        return updated
+
+    @function
+    async def sync_charts_update(
+        self,
+        github_token: Annotated[dagger.Secret, Doc("GitHub token that pushes branches and opens pull requests")],
+        repository: Annotated[str, Doc("GitHub repository owner/name")],
+        branch: Annotated[str, Doc("GitHub base branch")],
+        config_path: Annotated[
+            str, Doc("Chart sync configuration in source; pins are read from pins/ next to it")
+        ] = DEFAULT_CHART_SYNC_CONFIG_PATH,
+        components: Annotated[list[str] | None, Doc("Component IDs; all components when empty")] = None,
+    ) -> str:
+        """Propose each upstream chart update as a GitHub pull request on its own working branch."""
+        if not repository or not branch:
+            raise ValueError("repository and branch must be supplied together")
+        manifest = await self._sync_charts_manifest_file(config_path, components, repository, branch)
+        return (
+            await self._sync_charts_updatecli()
+            .with_secret_variable(name=UPDATECLI_GITHUB_TOKEN, secret=github_token)
+            .apply(config=manifest)
+        )

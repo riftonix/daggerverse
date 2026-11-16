@@ -4,6 +4,8 @@ from unittest import TestCase
 
 from dagger import Directory, QueryError, dag, function, object_type
 
+from .sync_charts import SyncChartsTests
+
 FIXTURE_GIT_IMAGE_REGISTRY = "docker.io"
 FIXTURE_GIT_IMAGE_REPOSITORY = "alpine/git"
 # renovate: datasource=docker depName=alpine/git
@@ -46,6 +48,12 @@ class Tests:
         await self.publish_chart_skips_existing_release_tag()
         await self.gets_oci_registry_host()
         await self.gets_oci_registry_host_with_port()
+        await self.sync_charts().all()
+
+    @function
+    def sync_charts(self) -> SyncChartsTests:
+        """Return the chart sync tests."""
+        return SyncChartsTests()
 
     @function
     async def verify_chart(self) -> None:

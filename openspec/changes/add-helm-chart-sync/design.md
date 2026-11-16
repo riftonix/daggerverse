@@ -41,7 +41,7 @@ See `proposal.md`, section Why. The draft has these technical properties:
   - Renovate-annotated `*_IMAGE_TAG` constants;
   - Dagger test modules with `all()`;
   - the repository-aligned engine version.
-- All modules use engine `v0.21.10`, while `scenarios/helm-ci` and its tests use `v0.20.8`. Dagger refuses to load a module whose `engineVersion` is newer than the running engine (`module requires dagger <version>, but you have <version>`).
+- All modules use engine `v0.21.10`. The scenarios and their tests used `v0.20.8` (`static-site` tests `v0.21.9`), because the Renovate `engineVersion` manager and `scripts/check_dagger_version.py` covered only `modules/**/dagger.json`. Dagger refuses to load a module whose `engineVersion` is newer than the running engine (`module requires dagger <version>, but you have <version>`).
 - `scenarios/helm-ci` already depends on `pyyaml==6.0.3`.
 - The published `updatecli-python-nodejs` tag `py3.14-node26-updatecli0.123.0-pyyaml6.0.3` has Updatecli, git 2.47.3 (with `merge-tree --write-tree`, available since git 2.38), and Python 3.14 with PyYAML, but no Helm. Its runtime user is `pn` (uid 1000).
 - The `helm-shared` `master` branch has these protections and settings:
@@ -69,7 +69,7 @@ See `proposal.md`, section Why. The draft has these technical properties:
 ### Architecture Overview
 
 ```text
-helm-shared workflow ──> scenarios/helm-ci chart_sync_* ──> modules/updatecli ──> Updatecli in runtime image
+helm-shared workflow ──> scenarios/helm-ci sync_charts* ──> modules/updatecli ──> Updatecli in runtime image
                               │ validates config and pins,       │
                               │ renders one pipeline per         ├─ shell target: chart_sync.py sync
                               │ component, mounts chart_sync.py  │  (selects version, pulls, merges, writes)
@@ -89,7 +89,7 @@ helm-shared workflow ──> gh workflow run ci.yaml --ref <updatecli branch>
   - pulls packages with Helm and checks digests;
   - normalizes the packages, merges them with git, and writes the component directory and pin;
   - prints the change report.
-- **`modules/updatecli`** (from `add-skills-sync`): runs `updatecli pipeline diff`, `updatecli pipeline apply`, or `updatecli manifest show` with the mounted manifest, working tree, helper directory, and secrets.
+- **`modules/updatecli`** (from `add-skills-sync`): runs `updatecli pipeline diff`, `updatecli pipeline apply`, or `updatecli manifest show` with the mounted manifest, working tree, helper directory, and secrets, in its own or a caller-provided runtime container.
 - **Runtime image `updatecli-python-nodejs`** (in `container-images`): provides Updatecli, Helm, git, and Python 3.14 with PyYAML.
 - **`helm-shared` workflow**: grants token permissions, runs the update function, and dispatches CI on update branches.
 
@@ -103,7 +103,7 @@ helm-shared workflow ──> gh workflow run ci.yaml --ref <updatecli branch>
 ### Dependencies and Data Flows
 
 1. The scenario reads `config_path` and the pins from `source`, validates them, and applies the `components` selection.
-2. The scenario renders one Updatecli pipeline per selected component. It then calls the Updatecli module with the manifest, the helper directory, and either `source` (local mode) or the `UPDATECLI_GITHUB_TOKEN` secret (update mode).
+2. The scenario renders one Updatecli pipeline per selected component. It then calls the Updatecli module with the runtime container (the module default with `source` at `/work`, or the caller replacement), the manifest, the helper directory, and, in update mode, the `UPDATECLI_GITHUB_TOKEN` secret.
 3. Updatecli runs the shell target in the working tree: the local `source`, or the Updatecli clone of `branch`. The pipeline has no sources.
 4. The helper selects the version, prepares the merged result, and checks the patch. Then it prints the report and writes the result, or prints nothing when the component is up to date.
 5. In update mode, Updatecli commits the changed files through the GitHub API on the component working branch and creates or updates the pull request.
@@ -113,14 +113,27 @@ helm-shared workflow ──> gh workflow run ci.yaml --ref <updatecli branch>
 ### Helm CI Scenario
 
 - **Dependency:** a new local dependency `updatecli` on `../../modules/updatecli`.
-- **Engine:** `engineVersion` changes from `v0.20.8` to `v0.21.10` in `scenarios/helm-ci/dagger.json` and `scenarios/helm-ci/tests/dagger.json`, and the generated SDK is refreshed.
+- **Engine:** `v0.21.10`, from the engine alignment below. The generated SDK of the scenario and its tests is refreshed together with the new dependency.
 - **Constructor:** new inputs `updatecli_image_registry`, `updatecli_image_repository`, `updatecli_image_tag`, and `updatecli_container_user_id`. The defaults come from new `DEFAULT_UPDATECLI_IMAGE_*` constants:
   - registry `ghcr.io`;
   - repository `riftonix/container-images/updatecli-python-nodejs`;
   - the new Helm-enabled tag, with a Renovate annotation;
   - container user `65532`, as in `add-skills-sync`.
 - **New files:** `src/helm_ci/chart_sync.py` (the helper) and the manifest renderer. The scenario mounts the helper at `/opt/chart-sync`.
+- **Runtime container:** a new optional field `updatecli_container_`. `updatecli_container()` returns it, or `dag.updatecli(source=source, <updatecli_* inputs>).container()` when it is unset. `with_updatecli_container(container)` sets it. Every chart sync function passes the result to the Updatecli module through `with_container`, then adds the helper, the token, and the manifest. This is the `container()` and `with_container()` pattern of `modules/helm`.
 - **Existing functions:** unchanged.
+
+### Updatecli Module
+
+- **New function:** `with_container(container: Container) -> Self` replaces the cached runtime container, as in `modules/helm`. Later `with_*` additions and commands use it.
+- **Tests:** a check that runs a manifest in a container with an added environment variable and asserts that the variable value appears in the output.
+- **README:** documents the function.
+
+### Engine Version Alignment
+
+- `engineVersion` is `v0.21.10` in `dagger.json` of `scenarios/container-images`, `scenarios/helm-ci`, `scenarios/static-site`, and their `tests` modules.
+- The Renovate `engineVersion` regex manager matches `/^(modules|scenarios)/.*/dagger\.json$/`.
+- `scripts/check_dagger_version.py` checks `modules/**/dagger.json` and `scenarios/**/dagger.json` against the workflow `DAGGER_VERSION`.
 
 ### Chart Sync Helper
 
@@ -148,7 +161,7 @@ The rest is kept from the draft:
 
 - `container-images`: `docker/updatecli-python-nodejs` gets the following changes:
   - a new bake variable `HELM_VERSION`, default `4.3.2` (the `alpine/helm` tag that Daggerverse already pins in `modules/helm` and `scenarios/helm-ci`), with the description `renovate: datasource=docker depName=alpine/helm`;
-  - a Dockerfile stage `FROM docker.io/alpine/helm:${HELM_VERSION}`, from which the image copies the `helm` binary (expected at `/usr/bin/helm`, to be verified) into `/usr/local/bin/helm`;
+  - a Dockerfile stage `FROM docker.io/alpine/helm:${HELM_VERSION}`, from which the image copies the `helm` binary (at `/usr/bin/helm`) into `/usr/local/bin/helm`;
   - a `helm version` build check;
   - the tag `py<python>-node<node>-updatecli<updatecli>-pyyaml<pyyaml>-helm<helm>`, for example `py3.14-node26-updatecli0.123.0-pyyaml6.0.3-helm4.3.2`, with updated labels and `docs/reference/updatecli-python-nodejs.md`.
 
@@ -268,12 +281,12 @@ actions:
 
 ```sh
 # Preview, local sync, manifest, pull requests
-dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. chart-sync-diff --components=traefik
-dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. chart-sync export --path=.
+dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. sync-charts-diff --components=traefik
+dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. sync-charts export --path=.
 dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. \
-  chart-sync-manifest --repository=riftonix/helm-shared --branch=master
+  sync-charts-manifest --repository=riftonix/helm-shared --branch=master
 dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=. \
-  chart-sync-update --github-token=env:GITHUB_TOKEN --repository=riftonix/helm-shared --branch=master
+  sync-charts-update --github-token=env:GITHUB_TOKEN --repository=riftonix/helm-shared --branch=master
 ```
 
 ### Internal Interfaces
@@ -281,10 +294,27 @@ dagger -m github.com/riftonix/daggerverse/scenarios/helm-ci@<tag> call --source=
 **Helm CI scenario additions:**
 - **Constructor:** the existing inputs, plus `updatecli_image_registry`, `updatecli_image_repository`, `updatecli_image_tag`, and `updatecli_container_user_id`.
 - **Functions:** all of them accept `config_path: str = "updatecli/values.yaml"` and `components: list[str] | None = None`:
-  - `chart_sync_manifest(config_path, components, repository: str | None, branch: str | None) -> str`;
-  - `chart_sync_diff(config_path, components) -> str`;
-  - `chart_sync(config_path, components) -> Directory`;
-  - `chart_sync_update(github_token: Secret, repository: str, branch: str, config_path, components) -> str`.
+  - `sync_charts_manifest(config_path, components, repository: str | None, branch: str | None) -> str`;
+  - `sync_charts_diff(config_path, components) -> str`;
+  - `sync_charts(config_path, components) -> Directory`;
+  - `sync_charts_update(github_token: Secret, repository: str, branch: str, config_path, components) -> str`.
+- **Runtime container functions:** `updatecli_container() -> Container` and `with_updatecli_container(container: Container) -> HelmCi`.
+
+**Updatecli module addition:** `with_container(container: Container) -> Updatecli`.
+
+**Test fixture flow:**
+
+```python
+ci = dag.helm_ci(source=fixture_repository)
+ci = ci.with_updatecli_container(
+    ci.updatecli_container()
+    .with_service_binding("registry", registry_service)
+    .with_env_variable("NO_PROXY", "registry,registry:5000")
+)
+report = await ci.sync_charts_diff()
+```
+
+The fixture configuration uses `upstream.registry: oci://registry:5000/<project>` and `upstream.plainhttp: true`.
 
 **`helm-shared` workflow sketch** (external task):
 
@@ -301,7 +331,7 @@ steps:
   - run: |
       args=()
       [[ -n "$COMPONENT" ]] && args+=(--components="$COMPONENT")
-      dagger -m "$HELM_CI_SCENARIO" call --source=. chart-sync-update \
+      dagger -m "$HELM_CI_SCENARIO" call --source=. sync-charts-update \
         --github-token=env:GITHUB_TOKEN --repository="$GITHUB_REPOSITORY" --branch=master "${args[@]}"
     env: {GITHUB_TOKEN: "${{ github.token }}", COMPONENT: "${{ inputs.component }}"}
   - run: |
@@ -335,7 +365,7 @@ steps:
 
 - The helper report and stderr diagnostics appear in the Updatecli output returned by the scenario functions and in the caller job logs.
 - The pull request description is the static per-component text above, plus the standard Updatecli report. The selected version is visible in the pin diff.
-- `chart_sync_manifest` returns the rendered manifest for inspection. Dagger scrubs secret values from outputs.
+- `sync_charts_manifest` returns the rendered manifest for inspection. Dagger scrubs secret values from outputs.
 
 ## Decisions
 
@@ -368,6 +398,15 @@ For dispatched runs, `ci.yaml` gains `workflow_dispatch`. It uses the merge base
 
 Alternative considered: a PAT or GitHub App token, as in the draft. Rejected because it requires secret provisioning.
 
+### Decision: Replaceable runtime container for test services
+
+The chart sync tests need a local OCI registry reachable from the Updatecli shell target. The scenario creates the Updatecli container, so the test module cannot bind a service to it directly. The scenario therefore exposes `updatecli_container()` and `with_updatecli_container()`, and `modules/updatecli` gains `with_container()`, following `modules/helm`, whose tests bind the registry the same way. A service binding is part of the container definition, so the alias resolves when the scenario and the Updatecli module run the container.
+
+Alternatives considered:
+- an optional `upstream_registry_service` input on the four chart sync functions, rejected because it adds a test-only parameter to every public function;
+- addressing the service by its own hostname without a binding, rejected because Dagger resolves service hostnames through the search domains of the calling module only;
+- testing the helper outside the scenario, rejected because it would not cover the scenario and Updatecli end to end.
+
 ### Decision: Helm in the shared runtime image
 
 The shell target runs inside the Updatecli container, so Helm has to be in that image. Adding it to `updatecli-python-nodejs` and releasing a new tag keeps one runtime image for both Daggerverse Updatecli scenarios. Copying the static binary from `alpine/helm` reuses the tag that Renovate already tracks in Daggerverse.
@@ -382,9 +421,11 @@ Alternatives considered:
 - [Harbor changes its anonymous token flow or tag listing] → The component fails visibly with the HTTP status in the diagnostics, and the next run retries.
 - [The caller checkout differs from the remote `branch`] → Validation reads the caller `source`, while update mode reads the Updatecli clone of `branch`. The workflow checks out the same branch that it passes as `branch`.
 - [Competing delta for `helm-ci-scenario` in the open `add-helm-shared-ci-workflow` change] → Requirement names do not overlap. Whichever change is archived second may need its delta rebased on the main spec.
-- [Engine `v0.21.10` breaks callers on older Dagger] → `helm-shared` must run Dagger `v0.21.10` or later before it consumes the new release. Its `DAGGER_VERSION` is `0.21.9` on `master`.
+- [Engine `v0.21.10` breaks callers on older Dagger] → Callers of the next scenario releases need Dagger `v0.21.10` or later. `helm-shared` must run Dagger `v0.21.10` or later before it consumes the new release. Its `DAGGER_VERSION` is `0.21.9` on `master`.
 - [Renovate versioning of the composite image tag] → The Renovate annotation needs a versioning that understands the composite tag. This is shared with `add-skills-sync` and verified when the annotation is added.
 - [Static pull request titles] → Accepted: the version is in the pin diff and the job log.
+- [The `updatecli-module` capability is introduced by the open `add-skills-sync` change] → This change adds a requirement with a distinct name, so either change can be archived first.
+- [A replaced runtime container bypasses the `updatecli_*` image inputs] → Accepted, as in `modules/helm`: the caller owns the container it passes.
 
 ## Migration Plan
 
@@ -399,7 +440,7 @@ Alternatives considered:
    - remove `updatecli/manifest.yaml`, `updatecli/sync_chart.py`, `updatecli/requirements.txt`, and `updatecli/tests/`;
    - remove the `github` block from `values.yaml`;
    - update `updatecli/README.md` and the root README.
-4. Run `chart-sync-diff` locally, then dispatch the workflow for one component. Review the first pull requests.
+4. Run `sync-charts-diff` locally, then dispatch the workflow for one component. Review the first pull requests.
 
 ### Backward Compatibility
 
