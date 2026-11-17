@@ -11,10 +11,11 @@ This documentation separates learning material, task-oriented guides, reference 
 5. Read [Git module reference](reference/git.md) when building Git-based CI decisions.
 6. Read [Helm unittest module reference](reference/helm-unittest.md) when adding chart unit tests.
 7. Read [Run Helm checks through Helm CI](how-to/run-helm-checks-through-helm-ci.md) if you want CI-oriented Helm orchestration.
-8. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
-9. Read [Runtime image input conventions](reference/runtime-images.md) when pinning or mirroring tool runtime images.
-10. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
-11. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
+8. Read [Sync forked charts through Helm CI](how-to/sync-forked-charts-through-helm-ci.md) when you keep forks of upstream Helm charts.
+9. Read [Static site scenario reference](reference/static-site.md) when composing provider-neutral Hugo documentation workflows.
+10. Read [Runtime image input conventions](reference/runtime-images.md) when pinning or mirroring tool runtime images.
+11. Use [Module reference](reference/modules.md) when you need available modules, scenarios, responsibilities, and entry points.
+12. Read [Architecture](explanation/architecture.md) when you need the reasoning behind modules, scenarios, composition rules, and dependency boundaries.
 
 ## Documentation Structure
 

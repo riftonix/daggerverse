@@ -159,7 +159,7 @@ The system SHALL merge the upstream changes between the pinned and the selected 
 - **WHEN** the scenario synchronizes the component
 - **THEN** the component SHALL fail with a message that requires manual resolution of the version collision
 
-#### Scenario: Vendored paths are not merged
+#### Scenario: Vendored dependencies are not merged
 - **GIVEN** a component with vendored paths, which are `charts` and `Chart.lock` unless `vendored` is declared
 - **WHEN** the scenario synchronizes the component
 - **THEN** it SHALL neither read nor write those chart-relative paths in the component directory

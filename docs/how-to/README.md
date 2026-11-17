@@ -8,3 +8,4 @@ Available guides:
 - [Run module and scenario checks](run-module-checks.md)
 - [Write Dagger CI modules and tests](write-dagger-ci-modules-and-tests.md)
 - [Run Helm checks through Helm CI](run-helm-checks-through-helm-ci.md)
+- [Sync forked charts through Helm CI](sync-forked-charts-through-helm-ci.md)

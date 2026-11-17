@@ -93,7 +93,9 @@ Commands that run Dagger functions, containers, image builds, or network calls (
 - [x] 3.2 With explicit approval, run `sync-charts` for one component with a known newer upstream version against a temporary copy of a `helm-shared` checkout, and verify that only the component directory and its pin change.
 
   Verified with `sync-charts --components=traefik` exported into a clone of `helm-shared` at `37c5706`: the pinned `1.0.5` package passed the digest check, and the run synchronized `traefik` to `1.0.6`. `git status` shows only `libs/traefik/Chart.yaml` (`version` `1.0.5` to `1.0.6`) and `updatecli/pins/traefik.json` (`1.0.6`, `sha256:c7a24c5b13fa453be3403eb639558c277470b46dd6bde32a0b005627316d728a`).
-- [ ] 3.3 Run `make openspec-validate` and verify that the change validates.
+- [x] 3.3 Run `make openspec-validate` and verify that the change validates.
+
+  Verified: `openspec validate add-helm-chart-sync --strict` reports the change as valid, and `make openspec-validate` passes.
 
 ## Workflow follow-up
 

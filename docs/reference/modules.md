@@ -124,16 +124,18 @@ Ready-to-run CI jobs are scenarios, not reusable modules.
 
 ## helm-ci scenario
 
-Composes the reusable Helm and Git modules into portable Helm chart verification
-and publication workflows.
+Composes the reusable Helm, Git, and Updatecli modules into portable Helm chart
+verification, publication, and upstream chart sync workflows.
 
 - Path: `scenarios/helm-ci`
 - Main source: `scenarios/helm-ci/src/helm_ci/main.py`
 - How-to guide: [Run Helm checks through Helm CI](../how-to/run-helm-checks-through-helm-ci.md)
+- Chart sync guide: [Sync forked charts through Helm CI](../how-to/sync-forked-charts-through-helm-ci.md)
+- Typical chart sync preview: `dagger -m ./scenarios/helm-ci call --source=. sync-charts-diff`
 - Typical verify command: `dagger -m ./scenarios/helm-ci call --source=./charts/mychart verify-chart`
 - Reproducible chart command: `dagger -m ./scenarios/helm-ci call --source=./charts/mychart --helm-image-tag=3.18.6 verify-chart`
 - Optional unittest selection: repeat `--unittest-suite-files` to replace the Helm unittest module defaults `tests/**/*_test.yaml` and `tests/**/*_test.yml`.
-- CI use cases: verify one chart directory per matrix job and publish caller-selected chart versions to OCI registries.
+- CI use cases: verify one chart directory per matrix job, publish caller-selected chart versions to OCI registries, and open one pull request per forked chart with upstream changes.
 
 ## container-images scenario
 

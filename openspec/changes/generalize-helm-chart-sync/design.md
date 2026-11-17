@@ -13,7 +13,7 @@
 
 ### References
 
-- `openspec/changes/add-helm-chart-sync/`: the chart sync design and requirements that this change generalizes.
+- `openspec/changes/archive/2026-11-16-add-helm-chart-sync/`: the chart sync design and requirements that this change generalizes.
 - `scenarios/helm-ci/src/helm_ci/chart_sync.py`: `load_config`, `rules`, `VENDORED`, `list_tags`, `pull`, and `synchronize`.
 - `riftonix/helm-shared` `master` at `37c5706`: `updatecli/values.yaml` with 25 components.
 - Specs: `specs/helm-ci-scenario/spec.md`.
