@@ -10,7 +10,7 @@ from dagger import Doc, ExecError, QueryError, dag, function, object_type
 DEFAULT_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_IMAGE_REPOSITORY = "updatecli/updatecli"
 # renovate: datasource=docker depName=ghcr.io/updatecli/updatecli
-DEFAULT_IMAGE_TAG = "v0.123.0"
+DEFAULT_IMAGE_TAG = "v0.124.0"
 DEFAULT_CONTAINER_USER_ID = "65532"
 
 
