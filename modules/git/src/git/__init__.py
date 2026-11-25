@@ -1,16 +1,12 @@
-"""A generated module for Git functions
+"""Git helpers for CI and release workflows, independent of the CI provider.
 
-This module has been generated via dagger init and serves as a reference to
-basic module structure as you get started with Dagger.
+Compare explicit Git refs or commits to find changed files and directories.
+Map changes to monorepo components to build a CI or release matrix. Configure
+shared paths so changes to common files select all components.
 
-Two functions have been pre-created. You can modify, delete, or add to them,
-as needed. They demonstrate usage of arguments and return types using simple
-echo and grep commands. The functions can be called from the dagger CLI or
-from one of the SDKs.
-
-The first line in this comment block is a short description line and the
-rest is a long description with more detail on the module's purpose or usage,
-if appropriate. All modules should have a short description.
+Use an existing checkout with its `.git` directory to fetch refs and tags,
+deepen shallow history, or create and push release tags.
+Remote operations support both HTTPS token and SSH key authentication.
 """
 
 from .main import Git as Git
