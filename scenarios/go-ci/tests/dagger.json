@@ -1,0 +1,13 @@
+{
+  "name": "tests",
+  "engineVersion": "v0.21.11",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "go-ci",
+      "source": ".."
+    }
+  ]
+}
