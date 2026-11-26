@@ -9,7 +9,7 @@ APP_PACKAGE = "./cmd/app"
 # renovate: datasource=docker depName=library/golang versioning=regex:^(?<compatibility>1\.26)\.(?<patch>\d+)$
 COMPATIBLE_GO_IMAGE_TAG = "1.26.11"
 # renovate: datasource=docker depName=library/golang versioning=regex:^(?<compatibility>1\.25)\.(?<patch>\d+)$
-OLDER_GO_IMAGE_TAG = "1.25.11"
+OLDER_GO_IMAGE_TAG = "1.25.14"
 
 
 @object_type
