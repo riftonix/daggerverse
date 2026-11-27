@@ -2,6 +2,11 @@
 
 Collection of reusable Dagger CI modules and ready-to-run scenarios.
 
+Build CI pipelines from scratch faster by reusing ready-to-run scenarios. The
+same workflows run out of the box on any CI platform that can run Dagger,
+including GitLab CI, Jenkins, and GitHub Actions. They can also run offline
+inside a corporate network when all dependencies are available internally.
+
 Modules live under `modules/` and are self-contained building blocks. Scenarios
 live under `scenarios/` and compose modules or other scenarios into concrete CI
 workflows.
