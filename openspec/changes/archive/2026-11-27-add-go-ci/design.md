@@ -4,8 +4,8 @@
 
 ### References
 
-- [`helm-ci` scenario](../../../scenarios/helm-ci/README.md): reference for a provider-neutral Dagger verification entrypoint.
-- [Daggerverse authoring guide](../../../docs/how-to/write-dagger-ci-modules-and-tests.md): reference for source inputs, public Dagger types, and local contract tests.
+- [`helm-ci` scenario](../../../../scenarios/helm-ci/README.md): reference for a provider-neutral Dagger verification entrypoint.
+- [Daggerverse authoring guide](../../../../docs/how-to/write-dagger-ci-modules-and-tests.md): reference for source inputs, public Dagger types, and local contract tests.
 - [`kelm/go.mod`](https://github.com/riftonix/kelm/blob/master/go.mod) and [`kafgres/go.mod`](https://github.com/riftonix/kafgres/blob/master/go.mod): toolchain requirements for the initial consumers.
 - [`helm-shared` CI workflow](https://github.com/riftonix/helm-shared/blob/master/.github/workflows/ci.yaml) and [Renovate configuration](https://github.com/riftonix/helm-shared/blob/master/renovate.json): reference for pinned Dagger dependencies and the `CI Passed` job.
 - [Upstream Dagger Go module](https://daggerverse.dev/mod/github.com/dagger/dagger/modules/go): alternative considered for test and build operations.
@@ -68,7 +68,7 @@ Run `gofmt -l` over project Go files while excluding `.git` and `vendor` from th
 
 Replace the placeholder in each consumer's `.github/workflows/ci.yaml` with a `verify` job. Keep `ci-passed` and its display name `CI Passed`; use `needs: verify` and `if: ${{ always() }}` so the gate fails explicitly unless `needs.verify.result` is `success`. Unlike the Helm matrix, there is no valid skipped verification for a run of this workflow.
 
-Set `GO_CI_SCENARIO` to `github.com/riftonix/daggerverse/scenarios/go-ci@scenarios/go-ci/vX.Y.Z`, replacing `vX.Y.Z` with the actual released tag. Use the annotation `# renovate: datasource=github-tags depName=riftonix/daggerverse versioning=semver extractVersion=^scenarios/go-ci/v(?<version>.*)$`. Pin `DAGGER_VERSION` to the scenario-compatible CLI version, with the existing numeric pin regex and the Dagger datasource annotation used by `helm-shared`.
+The preview pull requests pin `GO_CI_SCENARIO` to `github.com/riftonix/daggerverse/scenarios/go-ci@8f33d37296aa3f94c07ea344f301ab92fe070542`. The SHA pin has no `github-tags` annotation. `DAGGER_VERSION` uses the scenario-compatible CLI version and the Dagger datasource annotation used by `helm-shared`.
 
 In both consumers' `renovate.json`, align the GitHub reference pattern in the existing CI regex manager with `helm-shared`: change `(?<currentValue>v?[0-9][^/\s]*)` to `v?(?<currentValue>[0-9][^/\s]*)` in the regular expression (preserve JSON escaping). The tag extractor returns numbers without `v`; keeping `v` outside `currentValue` preserves it when Renovate writes the next version. Leave the numeric pin pattern, other Renovate settings, and `helm-shared` unchanged.
 
@@ -81,7 +81,7 @@ In both consumers' `renovate.json`, align the GitHub reference pattern in the ex
 
 ### Rollout
 
-Validate against both consumers before adoption. Make a `scenarios/go-ci/vX.Y.Z` release tag available before merging the consumer workflow changes. Adopt that tag and the matching Renovate rules in both repositories, then verify that their PR checks report the actual result of `verify-app`.
+The change ends with [kelm #36](https://github.com/riftonix/kelm/pull/36) and [kafgres #27](https://github.com/riftonix/kafgres/pull/27) open on the SHA pin. Kafgres passed the preview checks. Kelm passed formatting after a fix but its test run reported missing `go.sum` entries. The follow-up `extract-go-module` owns resolving the failed check, publishing a scenario tag, and completing adoption.
 
 ### Rollback
 
