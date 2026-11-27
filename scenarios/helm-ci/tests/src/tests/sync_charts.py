@@ -34,7 +34,6 @@ class SyncChartsTests:
         await self.reports_missing_configuration()
         await self.rejects_unknown_component()
         await self.rejects_invalid_inputs()
-        await self.selects_components()
         await self.renders_local_and_pull_request_manifests()
         await self.default_runtime_container()
         await self.runtime_user_input()
@@ -122,21 +121,12 @@ class SyncChartsTests:
         )
 
     @function
-    async def selects_components(self) -> None:
-        """Render one pipeline per selected component, or for every component without a selection."""
-        test = TestCase()
-        helm_ci = scenario(fork())
-        selected = list(yaml.safe_load_all(await helm_ci.sync_charts_manifest(components=["other"])))
-        every = list(yaml.safe_load_all(await helm_ci.sync_charts_manifest()))
-        test.assertEqual(["upstream-other"], [document["pipelineid"] for document in selected])
-        test.assertEqual(["upstream-demo", "upstream-other"], [document["pipelineid"] for document in every])
-
-    @function
     async def renders_local_and_pull_request_manifests(self) -> None:
-        """Render local pipelines, or GitHub pipelines with a pull request action and no token."""
+        """Render all local pipelines or a selected GitHub pipeline with a PR action and no token."""
         test = TestCase()
         helm_ci = scenario(fork())
         local = list(yaml.safe_load_all(await helm_ci.sync_charts_manifest()))
+        test.assertEqual(["upstream-demo", "upstream-other"], [document["pipelineid"] for document in local])
         for document in local:
             test.assertNotIn("scms", document)
             test.assertNotIn("actions", document)
@@ -146,9 +136,9 @@ class SyncChartsTests:
             local[0]["targets"]["component"]["spec"]["command"],
         )
 
-        text = await helm_ci.sync_charts_manifest(repository="example/helm-fork", branch="master")
+        text = await helm_ci.sync_charts_manifest(components=["demo"], repository="example/helm-fork", branch="master")
         github = list(yaml.safe_load_all(text))
-        test.assertEqual(["upstream-demo", "upstream-other"], [document["pipelineid"] for document in github])
+        test.assertEqual(["upstream-demo"], [document["pipelineid"] for document in github])
         test.assertNotIn("token", text)
         demo = github[0]
         test.assertEqual(

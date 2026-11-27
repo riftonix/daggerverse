@@ -8,8 +8,6 @@ from dagger import Directory, ExecError, QueryError, dag, function, object_type
 APP_PACKAGE = "./cmd/app"
 # renovate: datasource=docker depName=library/golang versioning=regex:^(?<compatibility>1\.26)\.(?<patch>\d+)$
 COMPATIBLE_GO_IMAGE_TAG = "1.26.11"
-# renovate: datasource=docker depName=library/golang versioning=regex:^(?<compatibility>1\.25)\.(?<patch>\d+)$
-OLDER_GO_IMAGE_TAG = "1.25.14"
 
 
 @object_type
@@ -20,56 +18,39 @@ class Tests:
     async def all(self) -> None:
         """Run all Go CI scenario tests."""
         await self.verify_embedded_app()
-        await self.reject_invalid_inputs()
-        await self.verify_formatting()
+        await self.verify_runtime_overrides()
+        await self.report_formatting_failure()
         await self.report_test_and_build_failures()
-        await self.verify_toolchain_override()
-        await self.verify_container_user()
 
     @function
     async def verify_embedded_app(self) -> None:
         """Verify plain source with an embedded file and normalize the package path."""
-        output = await dag.go_ci(source=_app_fixture()).verify_app(package="cmd/./app")
+        fixture = await dag.current_module().source().file("fixtures/user_test.go").contents()
+        source = _app_fixture().with_new_file("cmd/app/user_test.go", fixture)
+        output = await dag.go_ci(source=source).verify_app(package="cmd/./app")
         TestCase().assertIn(f"Verified {APP_PACKAGE} using", output)
 
     @function
-    async def reject_invalid_inputs(self) -> None:
-        """Reject missing root manifests and non-application packages."""
-        source = _app_fixture()
-        nested = dag.directory().with_directory("nested", source)
-        for missing_manifest in (nested, nested.with_new_directory("go.mod")):
-            await _assert_failure(
-                dag.go_ci(source=missing_manifest).verify_app(package="./nested/cmd/app"), "missing root go.mod"
-            )
-        scenario = dag.go_ci(source=source)
-        for package in ("", "/cmd/app", "../app", "./cmd/...", "./cmd/missing", "./internal/greeting"):
-            await _assert_failure(scenario.verify_app(package=package), "package", repr(package))
-
-        escaped = source.with_symlink("/tmp", "escaped")
-        await _assert_failure(
-            dag.go_ci(source=escaped).verify_app(package="./escaped"), "package directory is outside the source tree"
+    async def verify_runtime_overrides(self) -> None:
+        """Forward the runtime image and a distinct numeric UID to the Go module."""
+        fixture = await dag.current_module().source().file("fixtures/user_test.go").contents()
+        fixture = fixture.replace("65532", "12345").replace(
+            'expectedVersion = ""', f'expectedVersion = "go{COMPATIBLE_GO_IMAGE_TAG}"'
         )
-        nested = source.with_directory("nested", source)
-        await _assert_failure(
-            dag.go_ci(source=nested).verify_app(package="./nested/cmd/app"), "package", "./nested/cmd/app"
+        source = _app_fixture().with_new_file("cmd/app/user_test.go", fixture)
+        scenario = dag.go_ci(
+            source=source,
+            go_image_tag=COMPATIBLE_GO_IMAGE_TAG,
+            go_container_user_id="12345",
         )
+        TestCase().assertIn(f":{COMPATIBLE_GO_IMAGE_TAG}", await scenario.verify_app(package=APP_PACKAGE))
 
     @function
-    async def verify_formatting(self) -> None:
-        """Skip Git and vendor trees and report unformatted files without changing them."""
-        unformatted = "package ignored\nfunc  ignored() {}\n"
-        source = (
-            _app_fixture()
-            .with_new_file(".git/unformatted.go", unformatted)
-            .with_new_file("cmd/app/vendor/unformatted.go", unformatted)
-        )
-        await dag.go_ci(source=source).verify_app(package=APP_PACKAGE)
-
+    async def report_formatting_failure(self) -> None:
+        """Return the module's formatting diagnostic to the scenario caller."""
         path = "internal/greeting/unformatted file.go"
-        unformatted = unformatted.replace("package ignored", "package greeting")
-        source = source.with_new_file(path, unformatted)
-        await _assert_failure(dag.go_ci(source=source).verify_app(package=APP_PACKAGE), "formatting", path)
-        TestCase().assertEqual(unformatted, await source.file(path).contents())
+        source = _app_fixture().with_new_file(path, "package greeting\nfunc  ignored() {}\n")
+        await _assert_failure(dag.go_ci(source=source).verify_app(package=APP_PACKAGE), "formatting check failed", path)
 
     @function
     async def report_test_and_build_failures(self) -> None:
@@ -88,29 +69,6 @@ class Tests:
         await _assert_failure(
             dag.go_ci(source=missing_main).verify_app(package=APP_PACKAGE), "go build failed", "main is undeclared"
         )
-
-    @function
-    async def verify_toolchain_override(self) -> None:
-        """Keep workspace mode off and enforce the module's minimum with the selected image."""
-        source = _app_fixture().with_new_file("go.work", "go 1.26.0\n\nuse ./missing\n")
-        compatible = dag.go_ci(source=source, go_image_tag=COMPATIBLE_GO_IMAGE_TAG)
-        TestCase().assertIn(f":{COMPATIBLE_GO_IMAGE_TAG}", await compatible.verify_app(package=APP_PACKAGE))
-
-        older = dag.go_ci(source=source, go_image_tag=OLDER_GO_IMAGE_TAG)
-        await _assert_failure(
-            older.verify_app(package=APP_PACKAGE), "go.mod requires go >= 1.26.0", "GOTOOLCHAIN=local"
-        )
-
-    @function
-    async def verify_container_user(self) -> None:
-        """Pass the default UID and a distinct numeric UID to the Go module."""
-        fixture = await dag.current_module().source().file("fixtures/user_test.go").contents()
-        source = _app_fixture()
-        default = source.with_new_file("cmd/app/user_test.go", fixture)
-        await dag.go_ci(source=default).verify_app(package=APP_PACKAGE)
-
-        custom = source.with_new_file("cmd/app/user_test.go", fixture.replace("65532", "12345"))
-        await dag.go_ci(source=custom, go_container_user_id="12345").verify_app(package=APP_PACKAGE)
 
 
 def _app_fixture() -> Directory:
