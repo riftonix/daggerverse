@@ -2,7 +2,7 @@
 
 ## Context
 
-The [Go CI baseline](../../specs/go-ci-scenario/spec.md) defines the checks already provided by `verify-app`. The [preview rollout](../archive/2026-11-27-add-go-ci/design.md#rollout) stopped at two open consumer pull requests using the same commit SHA. Kafgres passed; Kelm reached `go test ./...` and reported missing `go.sum` entries.
+The [Go CI specification](../../../specs/go-ci-scenario/spec.md) defines the checks provided by `verify-app`. The [preview rollout](../2026-11-27-add-go-ci/design.md#rollout) used commit SHA pins. Kafgres passed preview CI and became the first release-tagged consumer. Kelm adoption is deferred.
 
 ## Goals / Non-Goals
 
@@ -27,28 +27,25 @@ Use the Python SDK and matching engine metadata, with neighboring test modules t
 
 ### Decision: Pass the UID through and make the runtime writable for that user
 
-Keep the current pinned public image and prefixed image overrides. Follow the repository's [runtime image conventions](../../../docs/reference/runtime-images.md): the module exposes `container_user_id`, the scenario exposes `go_container_user_id`, and duplicate image defaults use the same Renovate metadata. Use `65532` as the proposed default, matching neighboring modules. Apply the UID to all check commands and set a writable home and temporary build location; set `GOMODCACHE` and `GOCACHE` explicitly and give the selected UID access to each cache. If cache ownership is UID-specific, scope cache keys by UID so switching users does not reuse an incompatible mount. Verify the default and a distinct numeric UID, including one without an image-local account.
+Keep the current pinned public image and prefixed image overrides. Follow the repository's [runtime image conventions](../../../../docs/reference/runtime-images.md): the module exposes `container_user_id`, the scenario exposes `go_container_user_id`, and duplicate image defaults use the same Renovate metadata. Use `65532` as the default, matching neighboring modules. Apply the UID to all check commands and set a writable home and temporary build location; set `GOMODCACHE` and `GOCACHE` explicitly and give the selected UID access to each cache. Scope cache keys by UID so switching users does not reuse an incompatible mount. Verify the default and a distinct numeric UID, including one without an image-local account.
 
 Keep `GOTOOLCHAIN=local` and `GOWORK=off`. Keep `-buildvcs=false` on test and build. A missing or inconsistent dependency checksum remains a Go error rather than causing the verifier to rewrite `go.mod` or `go.sum`.
 
-### Decision: Roll forward through the existing consumer pull requests
+### Decision: Roll forward through the existing Kafgres pull request
 
-Review Kelm's Go module requirements and checksums at the PR head to identify why Go reports missing `go.sum` entries. Commit the necessary dependency metadata correction in Kelm and verify the resulting diff. Do not change the verifier to bypass module integrity checks.
-
-After the module and scenario are verified on `master`, publish the selected `scenarios/go-ci/vX.Y.Z` tag through the repository's `make release` workflow. The local module is included in the tagged repository snapshot; consumer workflows only reference the scenario tag. Update each open consumer PR from its temporary SHA to the released tag and add:
+Publish `scenarios/go-ci/v0.1.0` from the verified `master` commit. The local module is included in the tagged repository snapshot, so the consumer workflow references only the scenario tag. Replace the temporary SHA in [kafgres #27](https://github.com/riftonix/kafgres/pull/27) with the released tag and add:
 
 ```text
 # renovate: datasource=github-tags depName=riftonix/daggerverse versioning=semver extractVersion=^scenarios/go-ci/v(?<version>.*)$
 ```
 
-Retain the preview PRs' GitHub-reference regex fix, the numeric Dagger pin, and `permissions: contents: read`. Keep `needs: verify`, `if: ${{ always() }}`, and the explicit `success` check on the `CI Passed` job. Use one scenario call per app and verify both PRs before merging the consumer workflows.
+Retain the GitHub-reference regex fix, the numeric Dagger pin, and `permissions: contents: read`. Keep `needs: verify`, `if: ${{ always() }}`, and the explicit `success` check on the `CI Passed` job. Verify the single scenario call and the gate on the released tag before merging the Kafgres workflow.
 
 ## Risks / Trade-offs
 
 - The default Go image and image overrides can have root-owned home or cache paths. The explicit UID, home and cache configuration must be exercised in the contract suite so image selection remains usable.
-- The Kelm error is currently observed on the preview branch. Verify the cause and the fix on that branch before treating consumer rollout as complete.
 
 ## Migration Plan
 
-- Existing `verify-app` callers keep their arguments; the user override is optional. SHA-pinned consumers move to the released tag and its Renovate annotation together.
+- Existing `verify-app` callers keep their arguments; the user override is optional. Kafgres's preview pin moves to the released tag together with its Renovate annotation.
 - If adoption must be rolled back after merge, revert the affected downstream workflow change. Published tags stay immutable.

@@ -42,21 +42,21 @@ The system SHALL provide a pinned public Go runtime image by default and accept 
 
 ## ADDED Requirements
 
-### Requirement: Adopt Go CI in both consumer workflows
+### Requirement: Adopt Go CI in the Kafgres workflow
 
-The system SHALL run `verify-app` once for pull requests targeting `master` in `riftonix/kelm` and `riftonix/kafgres`. Each workflow SHALL pass its repository root and application package to a released `go-ci` scenario. The existing `CI Passed` status SHALL report success only if verification succeeds.
+The system SHALL run `verify-app` once for pull requests targeting `master` in `riftonix/kafgres`. The workflow SHALL pass its repository root and application package to a released `go-ci` scenario. The existing `CI Passed` status SHALL report success only if verification succeeds.
 
-#### Scenario: Verify one consumer application
+#### Scenario: Verify the Kafgres application
 
-- **GIVEN** a pull request targets `master` in `kelm` or `kafgres`
+- **GIVEN** a pull request targets `master` in `kafgres`
 - **WHEN** its GitHub Actions CI workflow runs
-- **THEN** it calls the released scenario once with `source=.` and `package=./cmd/kelm` or `package=./cmd/kafgres`, respectively
+- **THEN** it calls the released scenario once with `source=.` and `package=./cmd/kafgres`
 - **AND** `CI Passed` fails if verification fails, is cancelled, or is skipped
 - **AND** the workflow requires only read access to repository contents and no publication credentials
 
 #### Scenario: Update only the Go CI scenario release pin
 
-- **GIVEN** either consumer pins `@scenarios/go-ci/vX.Y.Z` in its workflow
+- **GIVEN** the Kafgres workflow pins `@scenarios/go-ci/vX.Y.Z`
 - **WHEN** Renovate finds a newer compatible version from Git tags in `riftonix/daggerverse`
 - **THEN** it considers only tags under `scenarios/go-ci/v`
 - **AND** it replaces the version while preserving the `@scenarios/go-ci/v` prefix
