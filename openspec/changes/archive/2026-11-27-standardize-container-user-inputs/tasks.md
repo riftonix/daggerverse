@@ -99,7 +99,7 @@ and Git as `container_user_id`. Helm CI uses Git for release tagging in
 
 ## 10. Archive
 
-- [ ] 10.1 After implementation, archive the change and update baseline specs under `openspec/specs/`.
+- [x] 10.1 After implementation, archive the change and update baseline specs under `openspec/specs/`.
 
 ## 11. OpenTofu Module And Tests
 

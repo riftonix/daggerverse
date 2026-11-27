@@ -9,7 +9,7 @@ initialization, and validation.
 The OpenTofu module SHALL expose the standard runtime image inputs for the container used to execute the IaC tool.
 
 #### Scenario: Caller overrides OpenTofu image tag
-- **WHEN** a caller creates the OpenTofu module with `image_registry`, `image_repository`, `image_tag`, or `user_id`
+- **WHEN** a caller creates the OpenTofu module with `image_registry`, `image_repository`, or `image_tag`
 - **THEN** the module SHALL use those values when constructing the OpenTofu execution container
 
 #### Scenario: Caller uses default OpenTofu image
@@ -33,3 +33,15 @@ The OpenTofu module SHALL keep the IaC command selection separate from runtime i
 - **WHEN** the OpenTofu module test invokes `lint` with the default runtime image and a non-existent `executor` command
 - **THEN** the failure SHALL reference the non-existent executor command
 - **AND** the default runtime image SHALL remain the configured image, proving executor selection is separate from image identity
+
+### Requirement: OpenTofu Container User Input
+The OpenTofu module SHALL expose `container_user_id` as an optional execution UID, separate from runtime image identity and `executor`.
+
+#### Scenario: Caller configures OpenTofu container user
+- **WHEN** a caller creates the OpenTofu module with `container_user_id`
+- **THEN** the module SHALL run the configured IaC executor as that UID
+- **AND** the public constructor SHALL NOT accept the legacy `user_id` input
+
+#### Scenario: Caller uses the default OpenTofu container user
+- **WHEN** a caller omits `container_user_id`
+- **THEN** the module SHALL run as UID `65532`
