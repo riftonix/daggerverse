@@ -3,5 +3,11 @@
   "engineVersion": "v0.21.11",
   "sdk": {
     "source": "python"
-  }
+  },
+  "dependencies": [
+    {
+      "name": "go",
+      "source": "../../modules/go"
+    }
+  ]
 }
