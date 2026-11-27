@@ -1,7 +1,6 @@
 from unittest import TestCase
 
 import dagger
-from dagger import dag
 
 from .fixtures import SyntheticGitRepos
 
@@ -19,7 +18,7 @@ class RefTests(SyntheticGitRepos):
 
     async def with_fetched_refs_missing_branch(self) -> None:
         """Fetch a missing remote branch from a local bare remote."""
-        git = dag.git(source=self.repo_with_missing_remote_branch())
+        git = self.git(self.repo_with_missing_remote_branch())
         test_case = TestCase()
 
         try:
@@ -41,19 +40,17 @@ class RefTests(SyntheticGitRepos):
     async def ensure_ref_resolves_existing_ref(self) -> None:
         """Return the resolved object SHA for an existing ref."""
         repo = self.repo_with_local_tag()
-        git = dag.git(source=repo)
+        git = self.git(repo)
 
         resolved_ref = await git.ensure_ref(ref="HEAD")
-        expected_ref = (
-            await dag.git(source=repo).container().with_exec(["git", "rev-parse", "--verify", "HEAD"]).stdout()
-        )
+        expected_ref = await git.container().with_exec(["git", "rev-parse", "--verify", "HEAD"]).stdout()
 
         test_case = TestCase()
         test_case.assertEqual(expected_ref.strip(), resolved_ref)
 
     async def ensure_ref_fails_for_missing_ref(self) -> None:
         """Fail with a clear error when a ref is missing."""
-        git = dag.git(source=self.repo_with_local_tag())
+        git = self.git(self.repo_with_local_tag())
         test_case = TestCase()
 
         try:
@@ -65,7 +62,7 @@ class RefTests(SyntheticGitRepos):
 
     async def with_unshallow_fetches_full_history(self) -> None:
         """Turn a shallow repository into a full-history repository."""
-        git = dag.git(source=self.shallow_repo_with_remote_history())
+        git = self.git(self.shallow_repo_with_remote_history())
         test_case = TestCase()
 
         is_shallow = await git.container().with_exec(["git", "rev-parse", "--is-shallow-repository"]).stdout()
@@ -81,7 +78,7 @@ class RefTests(SyntheticGitRepos):
 
     async def with_unshallow_keeps_full_repository_usable(self) -> None:
         """Leave an already full-history repository usable after with_unshallow."""
-        git = dag.git(source=self.repo_with_remote_tag())
+        git = self.git(self.repo_with_remote_tag())
 
         full_git = git.with_unshallow()
         resolved_ref = await full_git.ensure_ref(ref="HEAD")
@@ -92,7 +89,7 @@ class RefTests(SyntheticGitRepos):
     async def merge_base_for_diverged_branches(self) -> None:
         """Return the shared commit for diverged base and head branches."""
         repo = self.repo_with_diverged_branches()
-        git = dag.git(source=repo.directory("/work/repo"))
+        git = self.git(repo.directory("/work/repo"))
 
         merge_base = await git.get_merge_base(base_ref="main", head_ref="feature")
         expected_merge_base = await repo.with_exec(["git", "merge-base", "main", "feature"]).stdout()

@@ -1,8 +1,9 @@
 """Dagger-native tests for the Hugo module."""
 
+from typing import Annotated, Self
 from unittest import TestCase
 
-from dagger import Directory, ExecError, dag, function, object_type
+from dagger import Directory, Doc, ExecError, dag, function, object_type
 
 FIXTURE_SITE_PATH = "site"
 SITE_BASE_URL = "https://example.com/"
@@ -11,6 +12,30 @@ SITE_BASE_URL = "https://example.com/"
 @object_type
 class Tests:
     """Test module entrypoint for Hugo checks."""
+
+    image_registry: str | None
+    image_repository: str | None
+    image_tag: str | None
+    container_user_id: str | None
+    npm_registry: str | None
+
+    @classmethod
+    async def create(
+        cls,
+        image_registry: Annotated[str | None, Doc("Hugo image registry override")] = None,
+        image_repository: Annotated[str | None, Doc("Hugo image repository override")] = None,
+        image_tag: Annotated[str | None, Doc("Hugo image tag override")] = None,
+        container_user_id: Annotated[str | None, Doc("Hugo container user ID override")] = None,
+        npm_registry: Annotated[str | None, Doc("Optional npm registry or proxy URL")] = None,
+    ) -> Self:
+        """Accept mirrored Hugo runtime settings without duplicating its defaults."""
+        return cls(
+            image_registry=image_registry,
+            image_repository=image_repository,
+            image_tag=image_tag,
+            container_user_id=container_user_id,
+            npm_registry=npm_registry,
+        )
 
     @function
     def module(self) -> str:
@@ -52,9 +77,13 @@ class Tests:
     @function
     async def installs_lockfile_dependencies(self) -> None:
         """Install dependencies from package-lock.json with scripts disabled."""
-        container = self._hugo(self._site_with_local_npm_dependency()).with_npm_dependencies()
+        container_user_id = self.container_user_id or "12345"
+        hugo = self._hugo(self._site_with_local_npm_dependency(), container_user_id=container_user_id)
+        container = hugo.with_npm_dependencies()
         installed = await container.file("node_modules/local-fixture/package.json").contents()
-        TestCase().assertIn('"name":"local-fixture"', installed)
+        test_case = TestCase()
+        test_case.assertIn('"name":"local-fixture"', installed)
+        test_case.assertEqual(container_user_id, await container.user())
 
     @function
     async def missing_package_json_fails(self) -> None:
@@ -85,7 +114,7 @@ class Tests:
         """Configure an optional npm registry or proxy URL."""
         registry = "https://npm.example.test/"
         value = (
-            await dag.hugo(source=self._fixture_site(), npm_registry=registry)
+            await self._hugo(self._fixture_site(), npm_registry=registry)
             .container()
             .with_exec(["sh", "-c", 'printf %s "$NPM_CONFIG_REGISTRY"'])
             .stdout()
@@ -101,8 +130,15 @@ class Tests:
         else:
             test_case.fail(f"expected dependency preparation to fail with {expected!r}")
 
-    def _hugo(self, source: Directory):
-        return dag.hugo(source=source)
+    def _hugo(self, source: Directory, *, container_user_id: str | None = None, npm_registry: str | None = None):
+        return dag.hugo(
+            source=source,
+            image_registry=self.image_registry,
+            image_repository=self.image_repository,
+            image_tag=self.image_tag,
+            container_user_id=container_user_id or self.container_user_id,
+            npm_registry=npm_registry or self.npm_registry,
+        )
 
     def _fixture_site(self) -> Directory:
         return dag.current_module().source().directory(FIXTURE_SITE_PATH)

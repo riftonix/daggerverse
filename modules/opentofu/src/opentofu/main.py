@@ -7,7 +7,7 @@ DEFAULT_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_IMAGE_REPOSITORY = "opentofu/opentofu"
 # renovate: datasource=docker depName=ghcr.io/opentofu/opentofu
 DEFAULT_IMAGE_TAG = "latest"
-DEFAULT_USER_ID = "65532"
+DEFAULT_CONTAINER_USER_ID = "65532"
 
 
 @object_type
@@ -15,7 +15,7 @@ class Opentofu:
     image_registry: str
     image_repository: str
     image_tag: str
-    user_id: str
+    container_user_id: str
     executor: str
     container_: dagger.Container | None
 
@@ -25,7 +25,7 @@ class Opentofu:
         image_registry: Annotated[str | None, Doc("OpenTofu image registry")] = DEFAULT_IMAGE_REGISTRY,
         image_repository: Annotated[str | None, Doc("OpenTofu image repository")] = DEFAULT_IMAGE_REPOSITORY,
         image_tag: Annotated[str | None, Doc("OpenTofu image tag")] = DEFAULT_IMAGE_TAG,
-        user_id: Annotated[str | None, Doc("OpenTofu image user")] = DEFAULT_USER_ID,
+        container_user_id: Annotated[str | None, Doc("OpenTofu container user ID")] = DEFAULT_CONTAINER_USER_ID,
         executor: Annotated[str, Doc("Choice of IaC executor")] = "tofu",
     ):
         """Constructor"""
@@ -33,7 +33,7 @@ class Opentofu:
             image_registry=image_registry or DEFAULT_IMAGE_REGISTRY,
             image_repository=image_repository or DEFAULT_IMAGE_REPOSITORY,
             image_tag=image_tag or DEFAULT_IMAGE_TAG,
-            user_id=user_id or DEFAULT_USER_ID,
+            container_user_id=container_user_id or DEFAULT_CONTAINER_USER_ID,
             executor=executor,
             container_=None,
         )
@@ -47,7 +47,7 @@ class Opentofu:
         container: dagger.Container = dag.container()
         self.container_ = (
             container.from_(address=address)
-            .with_user(self.user_id)
+            .with_user(self.container_user_id)
             .with_env_variable("TF_CLI_CONFIG_FILE", "/src/.tf.rc")
         )
         return self.container_

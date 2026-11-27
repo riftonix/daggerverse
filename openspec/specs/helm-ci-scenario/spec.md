@@ -94,11 +94,11 @@ The Helm CI scenario SHALL expose runtime image inputs for the Helm, Git, and Up
 
 #### Scenario: Caller configures Helm runtime image
 - **WHEN** a caller invokes Helm chart verification or publication through the Helm CI scenario
-- **THEN** the scenario SHALL use `helm_image_registry`, `helm_image_repository`, `helm_image_tag`, and `helm_container_user_id` when creating the Helm module
+- **THEN** the scenario SHALL use `helm_image_registry`, `helm_image_repository`, and `helm_image_tag` when creating the Helm module
 
 #### Scenario: Caller configures Git runtime image
-- **WHEN** a caller invokes changed-chart verification through the Helm CI scenario
-- **THEN** the scenario SHALL use `git_image_registry`, `git_image_repository`, `git_image_tag`, and `git_container_user_id` when creating the Git module
+- **WHEN** a caller publishes a chart through the Helm CI scenario
+- **THEN** the scenario SHALL use `git_image_registry`, `git_image_repository`, and `git_image_tag` when creating the Git module for release tag operations
 
 #### Scenario: Caller configures Updatecli runtime image
 - **GIVEN** a caller provides `updatecli_image_registry`, `updatecli_image_repository`, `updatecli_image_tag`, or `updatecli_container_user_id`
@@ -107,9 +107,9 @@ The Helm CI scenario SHALL expose runtime image inputs for the Helm, Git, and Up
 - **AND** the default runtime image SHALL provide Updatecli, Helm, git, and Python with PyYAML
 
 #### Scenario: Single-chart workflow does not require Git image inputs
-- **WHEN** a caller invokes `verify-chart` or `publish-chart` for one chart directory
+- **WHEN** a caller invokes `verify-chart` for one chart directory
 - **THEN** Git runtime image inputs SHALL remain available on the scenario API
-- **AND** the scenario SHALL NOT invoke the Git module for those operations
+- **AND** the scenario SHALL NOT invoke the Git module for verification
 
 #### Scenario: Runtime inputs do not expose module object types
 - **WHEN** callers configure Helm CI runtime images
@@ -339,3 +339,19 @@ The system SHALL verify chart sync behavior in the `scenarios/helm-ci/tests` Dag
 - **WHEN** a user or CI runs `make tests scenario helm-ci`
 - **THEN** the aggregate test SHALL cover configuration validation, version selection, digest verification, merge, conflict, version collision, exclusions, rewrites, preview, local synchronization, and rendered pull request manifests
 - **AND** any failed check SHALL fail the test run
+
+### Requirement: Helm CI Container User Inputs
+The Helm CI scenario SHALL expose prefixed container execution user inputs for the Helm and Git modules it composes.
+
+#### Scenario: Caller configures Helm container user through Helm CI
+- **WHEN** a caller invokes Helm chart verification or publication through Helm CI with `helm_container_user_id`
+- **THEN** the scenario SHALL pass that value to the Helm module as `container_user_id`
+
+#### Scenario: Caller configures Git container user through Helm CI
+- **WHEN** a caller publishes a chart through Helm CI with `git_container_user_id`
+- **THEN** the scenario SHALL pass that value to the Git module as `container_user_id`
+
+#### Scenario: Helm CI does not expose generic user_id
+- **WHEN** a caller uses the updated Helm CI scenario API
+- **THEN** the scenario SHALL NOT expose a generic `user_id` input for Helm or Git execution
+- **AND** callers SHALL use prefixed inputs for the tool they need to configure

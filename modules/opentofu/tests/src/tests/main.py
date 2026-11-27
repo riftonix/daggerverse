@@ -24,10 +24,11 @@ class Tests:
         """The executor input selects the IaC command and does not change image identity."""
         bogus_executor = "not-a-real-iac-executor"
         test_case = TestCase()
+        container_user_id = "12345"
+        tofu = dag.opentofu(executor=bogus_executor, container_user_id=container_user_id)
+        test_case.assertEqual(container_user_id, await tofu.container().user())
         try:
-            await dag.opentofu(
-                executor=bogus_executor,
-            ).lint(source=dag.directory())
+            await tofu.lint(source=dag.directory())
         except BaseException as exc:
             message = getattr(exc, "stderr", None) or str(exc)
             test_case.assertIn(bogus_executor, message)

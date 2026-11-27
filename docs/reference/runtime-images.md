@@ -12,18 +12,26 @@ inputs:
 - `image_registry`
 - `image_repository`
 - `image_tag`
-- `container_user_id`
 
 The module builds the runtime image reference internally from registry,
 repository, and tag. Callers can override one field without parsing a combined
 image string.
+
+### Container Execution User
+
+`container_user_id` is an optional execution setting, separate from image
+selection. Expose it only when a caller can use it to select the UID of a tool
+process, set ownership of files, directories, or secrets, or configure the
+container user's home. A module or scenario without that behavior needs no UID
+input. Registry usernames, Git tagger identity, and remote SSH login keep their
+own parameter names.
 
 New image-backed modules define these defaults as module-level constants:
 
 - `DEFAULT_IMAGE_REGISTRY`
 - `DEFAULT_IMAGE_REPOSITORY`
 - `DEFAULT_IMAGE_TAG`
-- `DEFAULT_CONTAINER_USER_ID`
+- `DEFAULT_CONTAINER_USER_ID`, when the module exposes a container user override
 
 `DEFAULT_IMAGE_TAG` is Renovate-managed. Put the strict Renovate annotation on
 the line immediately before the tag constant:
@@ -60,20 +68,25 @@ the convention. Its `executor` input remains separate because it selects the
 command to run inside the image, such as `tofu` or `terraform`, not the image
 identity.
 
-## Multi-Tool Scenarios
+## Scenarios And Test Modules
 
 Scenarios that compose one image-backed module expose the composed tool's
 runtime image fields with a purpose prefix. Scenarios that compose more than one
 image-backed module expose one prefixed input set per tool.
 
-Examples:
+If a composed tool supports an execution UID override, the scenario exposes an
+optional input prefixed with that tool's name and passes it to the module as
+`container_user_id`. For example:
 
 - `hugo_image_registry`, `hugo_image_repository`, `hugo_image_tag`, `hugo_container_user_id`
 - `helm_image_registry`, `helm_image_repository`, `helm_image_tag`, `helm_container_user_id`
 - `git_image_registry`, `git_image_repository`, `git_image_tag`, `git_container_user_id`
 
-The container user field uses `container_user_id` because the user is a
-container execution setting, not part of the image reference.
+Dagger test modules use the same prefixes for scenario runtime overrides and
+prefix helper overrides by purpose, such as `registry_container_user_id` for a
+test registry that supports a custom UID. Tests for a single-tool module can use
+`container_user_id` for the module under test. Keep these overrides optional so
+the aggregate `all` command can run with the parent defaults.
 
 Scenario source uses the same constant convention with a tool prefix:
 
@@ -93,7 +106,8 @@ Example static-site pin:
 ```bash
 dagger -m ./scenarios/static-site call \
   --source=./site \
-  --hugo-image-tag=0.165.0-10.5.5 \
+  --hugo-image-tag=0.165.0-10.7.0 \
+  --hugo-container-user-id=65532 \
   verify-site \
   --site-base-url=https://example.com/ \
   --engine=hugo
@@ -160,11 +174,18 @@ runtime builder.
 
 ## Release Tags
 
-Changing public runtime image inputs in a released module or scenario requires a
-new release tag. Consumers should pin the old tag until they update their Dagger
-calls.
+Changing public runtime image or container user inputs in a released module or
+scenario requires a new component release tag. When a scenario ships a changed
+local module dependency, publish a new scenario tag even if its public flags
+stay the same. Keep existing tags immutable; consumers can keep their old pin
+until they update their Dagger calls.
 
 Breaking migrations include removing a combined input such as `container_image`
 and replacing it with `image_registry`, `image_repository`, and `image_tag`.
+For the UID migration, direct callers replace `user_id` (`--user-id`) with
+`container_user_id` (`--container-user-id`). Static Site and Helm CI callers
+keep their tool-prefixed flags. For SSH callers on the legacy `ssh/v0.1.0`
+release, see the [SSH migration notes](../../modules/ssh/README.md#container-user-migration).
+
 Source-compatible constructor additions should still be released under a new tag
 when they change the public scenario or module API.

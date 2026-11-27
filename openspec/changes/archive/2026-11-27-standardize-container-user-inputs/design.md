@@ -32,7 +32,7 @@ The existing `modules/kind` is minimal and not worth preserving as a public API.
 
 2. Make container user inputs conditional.
 
-   `container_user_id` should be exposed only when the component uses the value. Git, Helm, Hugo, and SSH need it because they set container users and file/secret ownership. OpenTofu should not gain it unless its implementation starts using it. Kind should not be updated because the module is removed.
+   `container_user_id` should be exposed only when the component uses the value. Git, Helm, Hugo, and SSH set container users and file or secret ownership. OpenTofu also uses its existing `user_id` in `.with_user()`, so it needs the same rename. Kind is removed.
 
 3. Prefix scenario container user inputs by tool.
 
@@ -48,7 +48,7 @@ The existing `modules/kind` is minimal and not worth preserving as a public API.
 
 6. Pair code changes with tests and docs.
 
-   Each module/scenario rename should update its tests and README/reference documentation in the same implementation step. Final format, lint, test, and OpenSpec validation commands are user-run handoff tasks for this change.
+   Each module/scenario rename should update its tests and README/reference documentation in the same implementation step. CI handles the final format and lint checks. Validate the OpenSpec change locally and document the Dagger test commands.
 
 ## Risks / Trade-offs
 
@@ -59,12 +59,12 @@ The existing `modules/kind` is minimal and not worth preserving as a public API.
 
 ## Migration Plan
 
-1. Rename `user_id` to `container_user_id` in Git, Helm, Hugo, and SSH modules, updating internal field names and ownership calls.
+1. Rename `user_id` to `container_user_id` in Git, Helm, Hugo, SSH, and OpenTofu, updating internal field names and execution or ownership calls.
 2. Update static-site and Helm CI scenarios to expose and pass through prefixed container user inputs for composed Hugo, Helm, and Git modules.
 3. Update affected Dagger test modules alongside each component change, including optional prefixed offline override inputs where relevant.
 4. Remove `modules/kind` files and references from docs/lists.
 5. Update documentation and examples.
-6. Hand off format, lint, test, and OpenSpec validation commands for the user to run.
+6. Validate the OpenSpec change, leave format and lint checks to CI, and document the Dagger test commands.
 7. Release changed modules/scenarios under new tags. Consumers migrate by replacing `user_id` with `container_user_id` or prefixed scenario inputs.
 
 Rollback is tag-based: consumers can stay on previous tags until their workflows migrate.

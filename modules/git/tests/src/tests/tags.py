@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from dagger import dag
-
 from .fixtures import SyntheticGitRepos
 
 
@@ -23,7 +21,7 @@ class TagTests(SyntheticGitRepos):
 
     async def with_fetched_tags(self) -> None:
         """Fetch tags from a local bare remote into a repository without local tags."""
-        git = dag.git(source=self.repo_with_remote_tag())
+        git = self.git(self.repo_with_remote_tag())
         test_case = TestCase()
 
         test_case.assertEqual([], await git.get_tags(pattern="v1.0.0"))
@@ -34,14 +32,14 @@ class TagTests(SyntheticGitRepos):
 
     async def get_tags(self) -> None:
         """Return local tags through the verb-based get_tags function."""
-        tags = await dag.git(source=self.repo_with_version_tags()).get_tags(pattern="v1.*")
+        tags = await self.git(self.repo_with_version_tags()).get_tags(pattern="v1.*")
 
         test_case = TestCase()
         test_case.assertEqual(["v1.0.0", "v1.2.0", "v1.10.0"], tags)
 
     async def get_tags_with_sort(self) -> None:
         """Return local tags with an explicit git tag sort order."""
-        git = dag.git(source=self.repo_with_version_tags())
+        git = self.git(self.repo_with_version_tags())
 
         refname_tags = await git.get_tags(pattern="v1.*", sort="refname")
         descending_version_tags = await git.get_tags(pattern="v1.*", sort="-version")
@@ -54,7 +52,7 @@ class TagTests(SyntheticGitRepos):
 
     async def has_tag(self) -> None:
         """Return whether an exact local tag exists."""
-        git = dag.git(source=self.repo_with_version_tags())
+        git = self.git(self.repo_with_version_tags())
 
         test_case = TestCase()
         test_case.assertTrue(await git.has_tag(tag="v1.2.0"))
@@ -64,7 +62,7 @@ class TagTests(SyntheticGitRepos):
 
     async def get_latest_tag(self) -> None:
         """Return the latest matching tag for semver and non-semver tag sets."""
-        git = dag.git(source=self.repo_with_version_tags())
+        git = self.git(self.repo_with_version_tags())
 
         latest_semver = await git.get_latest_tag(pattern="v*")
         latest_v1 = await git.get_latest_tag(pattern="v1.*")
@@ -89,7 +87,7 @@ class TagTests(SyntheticGitRepos):
 
     async def tags_pointing_at(self) -> None:
         """Return tags that point at HEAD and non-HEAD refs."""
-        git = dag.git(source=self.repo_with_tags_on_multiple_refs())
+        git = self.git(self.repo_with_tags_on_multiple_refs())
 
         head_tags = await git.get_tags_pointing_at()
         first_commit_tags = await git.get_tags_pointing_at(ref="HEAD~1")
@@ -100,7 +98,7 @@ class TagTests(SyntheticGitRepos):
 
     async def create_lightweight_tag(self) -> None:
         """Create a lightweight tag on HEAD."""
-        git = dag.git(source=self.repo_with_local_tag()).create_tag(tag="v1.1.0")
+        git = self.git(self.repo_with_local_tag()).create_tag(tag="v1.1.0")
 
         tag_type = await git.container().with_exec(["git", "cat-file", "-t", "v1.1.0"]).stdout()
         pointed_sha = await git.container().with_exec(["git", "rev-parse", "v1.1.0"]).stdout()
@@ -113,7 +111,7 @@ class TagTests(SyntheticGitRepos):
 
     async def create_annotated_tag(self) -> None:
         """Create an annotated tag on HEAD with tagger metadata."""
-        git = dag.git(source=self.repo_with_local_tag()).create_tag(
+        git = self.git(self.repo_with_local_tag()).create_tag(
             tag="v1.1.0",
             message="Release v1.1.0",
             user_name="Release Bot",
@@ -141,7 +139,7 @@ class TagTests(SyntheticGitRepos):
 
     async def push_tag_to_local_bare_remote(self) -> None:
         """Push a local tag to a local bare remote."""
-        git = dag.git(source=self.repo_with_remote_tag())
+        git = self.git(self.repo_with_remote_tag())
 
         before_push = (
             await git.container().with_exec(["git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"]).stdout()
@@ -162,7 +160,7 @@ class TagTests(SyntheticGitRepos):
 
     async def ensure_pushed_tag_creates_missing_remote_tag(self) -> None:
         """Create and push a missing remote tag."""
-        git = dag.git(source=self.repo_with_remote_tag())
+        git = self.git(self.repo_with_remote_tag())
 
         result = await git.ensure_pushed_tag(tag="v1.1.0")
 
@@ -170,7 +168,7 @@ class TagTests(SyntheticGitRepos):
 
     async def ensure_pushed_tag_accepts_existing_remote_tag(self) -> None:
         """Return an existing remote tag without pushing a duplicate."""
-        git = dag.git(source=self.repo_with_remote_tag())
+        git = self.git(self.repo_with_remote_tag())
 
         result = await git.ensure_pushed_tag(tag="v1.0.0")
 

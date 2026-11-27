@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from dagger import dag
-
 from .fixtures import SyntheticGitRepos
 
 
@@ -19,7 +17,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def head_sha(self) -> None:
         """Call the parent Git module public API and assert full SHA shape."""
-        head_sha = await dag.git(source=self.repo_on_main_branch()).get_head_sha()
+        head_sha = await self.git(self.repo_on_main_branch()).get_head_sha()
 
         test_case = TestCase()
         test_case.assertEqual(40, len(head_sha.strip()))
@@ -27,7 +25,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def short_commit_sha(self) -> None:
         """Call the parent Git module public API and assert short SHA shape."""
-        short_sha = await dag.git(source=self.repo_on_main_branch()).get_short_commit_sha(length=8)
+        short_sha = await self.git(self.repo_on_main_branch()).get_short_commit_sha(length=8)
 
         test_case = TestCase()
         test_case.assertEqual(8, len(short_sha.strip()))
@@ -35,7 +33,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def current_ref_for_branch(self) -> None:
         """Return branch metadata when HEAD is attached to a branch."""
-        git = dag.git(source=self.repo_on_main_branch())
+        git = self.git(self.repo_on_main_branch())
 
         current_branch = await git.get_current_branch()
         current_ref = await git.get_current_ref()
@@ -46,7 +44,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def current_ref_for_detached_head(self) -> None:
         """Return detached HEAD metadata without reporting a branch."""
-        git = dag.git(source=self.repo_with_detached_head())
+        git = self.git(self.repo_with_detached_head())
 
         current_branch = await git.get_current_branch()
         current_ref = await git.get_current_ref()
@@ -59,7 +57,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def remote_url_and_default_branch(self) -> None:
         """Return remote metadata from a local bare remote."""
-        git = dag.git(source=self.repo_with_default_branch_remote())
+        git = self.git(self.repo_with_default_branch_remote())
 
         remote_url = await git.get_remote_url()
         default_branch = await git.get_default_branch()
@@ -70,7 +68,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def status_porcelain_for_clean_worktree(self) -> None:
         """Return empty porcelain status and clean flag for a clean worktree."""
-        git = dag.git(source=self.repo_on_main_branch())
+        git = self.git(self.repo_on_main_branch())
 
         status = await git.get_status_porcelain()
         is_clean = await git.has_clean_worktree()
@@ -81,7 +79,7 @@ class MetadataTests(SyntheticGitRepos):
 
     async def status_porcelain_for_dirty_worktree(self) -> None:
         """Return porcelain status and dirty flag for pending changes."""
-        git = dag.git(source=self.repo_with_dirty_worktree())
+        git = self.git(self.repo_with_dirty_worktree())
 
         status = await git.get_status_porcelain()
         is_clean = await git.has_clean_worktree()

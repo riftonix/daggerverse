@@ -38,7 +38,7 @@ esac
             .with_new_file(
                 askpass_path,
                 contents=askpass_script,
-                owner=self.git.user_id,
+                owner=self.git.container_user_id,
                 permissions=0o700,
                 expand=True,
             )
@@ -85,8 +85,10 @@ esac
         container = (
             self.git.container()
             .with_exec(["mkdir", "-p", ssh_dir], expand=True)
-            .with_mounted_secret(key_path, private_key, owner=self.git.user_id, mode=0o600, expand=True)
-            .with_mounted_secret(known_hosts_path, known_hosts, owner=self.git.user_id, mode=0o644, expand=True)
+            .with_mounted_secret(key_path, private_key, owner=self.git.container_user_id, mode=0o600, expand=True)
+            .with_mounted_secret(
+                known_hosts_path, known_hosts, owner=self.git.container_user_id, mode=0o644, expand=True
+            )
             .with_env_variable("GIT_SSH_COMMAND", ssh_command, expand=True)
         )
 
@@ -103,7 +105,7 @@ esac
             container = container.with_new_file(
                 "$HOME/.ssh/config",
                 contents=config,
-                owner=self.git.user_id,
+                owner=self.git.container_user_id,
                 permissions=0o600,
                 expand=True,
             )

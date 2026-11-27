@@ -15,14 +15,14 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 ## Defaults
 - image_registry: `docker.io`
 - image_repository: `kroniak/ssh-client`
-- image_tag: `3.21`
-- container_user: `65532`
+- image_tag: `3.23`
+- container_user_id: `65532`
 - HOME: `/home/65532`
 - SSH config: `$HOME/.ssh/config` with `StrictHostKeyChecking no`
 
 ## API
 
-- create(image_registry, image_repository, image_tag, container_user)
+- create(image_registry, image_repository, image_tag, container_user_id)
   - Returns a configured Ssh module instance.
 
 - container() -> dagger.Container
@@ -36,6 +36,14 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
   - Builds and runs an ssh command. If `insecure_ssh_password` is provided, uses `sshpass -p`.
   - Adds `-o StrictHostKeyChecking=no` to suppress host key prompts.
   - Returns stdout from the remote command.
+
+## Container User Migration
+
+Callers upgrading from `ssh/v0.1.0` switch from the `ssh/` module path to
+`modules/ssh` and from `--container-user` to `--container-user-id`. Callers
+pinned to newer commits that accept `--user-id` also switch to
+`--container-user-id` (Python: `container_user_id`). This configures the local
+container's UID and home; `ssh_user` still selects the remote login.
 
 ## Usage (Python SDK)
 
@@ -87,6 +95,10 @@ dagger -m ./modules/ssh call with-private-key --source=./id_rsa
 Security notes:
 - Avoid logging real passwords. Prefer Dagger secrets or key-based auth where possible.
 - The module disables strict host key checking; consider overriding if you require stronger host verification.
+
+## Tests
+
+Run `make tests module ssh` from the repository root.
 
 ## License
 See the repository root LICENSE file.

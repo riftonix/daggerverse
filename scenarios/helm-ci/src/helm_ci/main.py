@@ -70,14 +70,14 @@ class HelmCi:
         helm_image_tag: Annotated[str | None, Doc("Helm image tag")] = DEFAULT_HELM_IMAGE_TAG,
         helm_container_user_id: Annotated[str | None, Doc("Helm container user")] = DEFAULT_HELM_CONTAINER_USER_ID,
         git_image_registry: Annotated[
-            str | None, Doc("Git image registry for changed-chart detection")
+            str | None, Doc("Git image registry for release tagging")
         ] = DEFAULT_GIT_IMAGE_REGISTRY,
         git_image_repository: Annotated[
-            str | None, Doc("Git image repository for changed-chart detection")
+            str | None, Doc("Git image repository for release tagging")
         ] = DEFAULT_GIT_IMAGE_REPOSITORY,
-        git_image_tag: Annotated[str | None, Doc("Git image tag for changed-chart detection")] = DEFAULT_GIT_IMAGE_TAG,
+        git_image_tag: Annotated[str | None, Doc("Git image tag for release tagging")] = DEFAULT_GIT_IMAGE_TAG,
         git_container_user_id: Annotated[
-            str | None, Doc("Git container user for changed-chart detection")
+            str | None, Doc("Git container user for release tagging")
         ] = DEFAULT_GIT_CONTAINER_USER_ID,
         helm_unittest_image_registry: Annotated[
             str | None, Doc("Helm unittest image registry")
@@ -158,7 +158,7 @@ class HelmCi:
             image_registry=self.git_image_registry,
             image_repository=self.git_image_repository,
             image_tag=self.git_image_tag,
-            user_id=self.git_container_user_id,
+            container_user_id=self.git_container_user_id,
         )
         if git_token:
             git = git.with_https_token_auth(

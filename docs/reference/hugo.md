@@ -4,14 +4,18 @@
 
 ## Defaults
 
-- Image: `ghcr.io/riftonix/container-images/hugo-autoprefixer:0.165.0-10.5.5`
-- Container user: `65532`
+- Image: `ghcr.io/riftonix/container-images/hugo-autoprefixer:0.165.0-10.7.0`
+- `container_user_id`: `65532`
 - Workdir: `/tmp/hugo/site`
 - npm registry: npm default
 
 The image supplies Hugo, Autoprefixer, Sass, and the other global build tools. A site does not need to declare `sass-embedded` when it intentionally relies on this pinned image.
 
 The site must contain `package.json` and `package-lock.json`. Build and validation run `npm ci --ignore-scripts` before Hugo. Downloads use the shared `hugo-npm-cache` Dagger cache. Set `npm_registry` to an npm-compatible proxy when required.
+
+The optional `container_user_id` controls Hugo's execution UID and ownership of
+the mounted site and npm cache. When migrating from `modules/hugo/v0.4.0`, use
+`--container-user-id` in place of `--user-id` in direct Hugo module calls.
 
 ## Site Configuration
 
@@ -48,7 +52,7 @@ Do not add `go.mod`, `go.sum`, or `module.imports` for the theme.
 ```bash
 dagger -m ./modules/hugo call \
   --source=./site \
-  --image-tag=0.165.0-10.5.5 \
+  --image-tag=0.165.0-10.7.0 \
   build \
   --site-base-url=https://example.com/ \
   --output=./public
@@ -57,7 +61,7 @@ dagger -m ./modules/hugo call \
 ```bash
 dagger -m ./modules/hugo call \
   --source=./site \
-  --image-tag=0.165.0-10.5.5 \
+  --image-tag=0.165.0-10.7.0 \
   validate \
   --site-base-url=https://example.com/
 ```

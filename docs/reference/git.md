@@ -12,9 +12,15 @@ Defaults:
 
 - `image_registry`: `docker.io`
 - `image_repository`: `alpine/git`
-- `image_tag`: `2.52.0`
-- `user_id`: `65532`
+- `image_tag`: `v2.54.1`
+- `container_user_id`: `65532`
 - `source`: current directory
+
+`container_user_id` controls the Git process and the ownership of repository
+and authentication files. When upgrading from `modules/git/v1.0.4`, replace
+`--user-id` with `--container-user-id` (`user_id` with `container_user_id` in Python).
+Git tagger identity (`user_name`, `user_email`) and authentication usernames
+are unchanged.
 
 ## Core Functions
 

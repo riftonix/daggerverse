@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from dagger import dag
-
 from .fixtures import SyntheticGitRepos
 
 
@@ -14,7 +12,7 @@ class FilesAtRefTests(SyntheticGitRepos):
 
     async def has_file_at_ref_for_existing_and_missing_files(self) -> None:
         """Return whether files exist at a ref."""
-        git = dag.git(source=self.repo_on_main_branch())
+        git = self.git(self.repo_on_main_branch())
 
         has_readme = await git.has_file_at_ref(ref="HEAD", path="README.md")
         has_missing_file = await git.has_file_at_ref(ref="HEAD", path="missing.txt")
@@ -27,7 +25,7 @@ class FilesAtRefTests(SyntheticGitRepos):
 
     async def get_file_contents_at_ref_for_non_head_ref(self) -> None:
         """Read file contents from a non-HEAD ref."""
-        git = dag.git(source=self.repo_with_file_versions_at_refs())
+        git = self.git(self.repo_with_file_versions_at_refs())
 
         old_contents = await git.get_file_contents_at_ref(ref="old-version", path="version.txt")
         head_contents = await git.get_file_contents_at_ref(ref="HEAD", path="version.txt")

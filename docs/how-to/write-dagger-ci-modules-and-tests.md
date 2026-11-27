@@ -85,7 +85,11 @@ The usual pattern is:
 4. Set a stable workdir.
 5. Use `with_exec(...)` in public functions.
 
-Keep image registry, repository, tag, and user configurable when that helps tests or downstream users. Use conservative defaults that work without external credentials. Define runtime image defaults with the constants and Renovate annotation convention from [Runtime image input conventions](../reference/runtime-images.md).
+Keep image registry, repository, and tag configurable. Expose optional
+`container_user_id` only when the module uses it for the execution UID, file
+ownership, or home directory setup. Use defaults that work without external
+credentials and follow the constants and Renovate annotation convention in
+[Runtime image input conventions](../reference/runtime-images.md).
 
 Avoid relying on host tools. Dagger functions should run inside Dagger containers unless the function is only assembling Dagger objects.
 

@@ -255,14 +255,14 @@ Helm operations use these constructor inputs:
 
 - `helm_image_registry`: `docker.io`
 - `helm_image_repository`: `alpine/helm`
-- `helm_image_tag`: `3.18.6`
+- `helm_image_tag`: `4.3.2`
 - `helm_container_user_id`: `65532`
 
-Changed-chart operations also use Git runtime inputs:
+Chart publication also uses Git runtime inputs for release tagging:
 
 - `git_image_registry`: `docker.io`
 - `git_image_repository`: `alpine/git`
-- `git_image_tag`: `2.52.0`
+- `git_image_tag`: `v2.54.1`
 - `git_container_user_id`: `65532`
 
 Helm unittest operations use these constructor inputs:
@@ -283,8 +283,18 @@ Chart sync operations use these constructor inputs:
 resolved chart directory for Helm operations and scenario-level `source` as the
 Git repository for release tag operations.
 
+The scenario passes `helm_container_user_id` and `git_container_user_id` to
+their modules as `container_user_id`. The public scenario flags stay unchanged.
+
 Because these inputs are part of the public scenario API, release changes to
 them under a new scenario tag.
+
+## Tests
+
+Run `make tests scenario helm-ci` from the repository root. The verification
+and publication tests accept `--helm-image-*`, `--git-image-*`, and
+`--helm-unittest-image-*` overrides (registry, repository, or tag) and the
+matching `--*-container-user-id` flags on `dagger -m ./scenarios/helm-ci/tests call`.
 
 ## License
 
