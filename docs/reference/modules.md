@@ -122,6 +122,19 @@ Talos-oriented module, with its own public contract.
 
 Ready-to-run CI jobs are scenarios, not reusable modules.
 
+## go-ci scenario
+
+Checks formatting, runs the root Go module's tests, and compiles one selected
+application. Pass the Go module directory before `verify-app` and the package
+directory relative to that module after it. The call returns a text summary.
+
+```bash
+dagger -m ./scenarios/go-ci call --source=../my-app verify-app --package=./cmd/my-app
+```
+
+See the [Go CI scenario README](../../scenarios/go-ci/README.md) for runtime
+overrides and the scenario test command.
+
 ## helm-ci scenario
 
 Composes the reusable Helm, Git, and Updatecli modules into portable Helm chart

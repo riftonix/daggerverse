@@ -14,11 +14,11 @@ The pull request workflows in `riftonix/kelm` and `riftonix/kafgres` currently r
 
 - Add `scenarios/go-ci` with one public workflow, `verify-app`, for formatting checks, tests, and compilation of a caller-selected Go application.
 - Add Dagger-native tests and a scenario README with call examples for both consumers.
-- Replace the placeholder pull request checks in `kelm` and `kafgres` with calls to the same versioned scenario, and configure Renovate to keep those scenario pins up to date.
+- Open pull requests in `kelm` and `kafgres` that replace the placeholder checks with calls to the scenario pinned by commit SHA and prepare the Renovate regex for versioned references.
 
 ### Non-Goals
 
-- Publish binaries or OCI images, create release tags, or select a release version. A future change will cover both publication outputs and the migration from `ko` to [Cloud Native Buildpacks](https://buildpacks.io/).
+- Publish binaries or OCI images, create release tags, or merge the consumer workflows. Scenario release and final adoption move to `extract-go-module`. Publication outputs and the migration from `ko` to [Cloud Native Buildpacks](https://buildpacks.io/) remain separate.
 - Add Updatecli, component discovery, changed-path filtering, or monorepo matrix orchestration.
 - Add Helm checks for Kelm or start external services for Kafgres integration tests.
 
@@ -26,7 +26,7 @@ The pull request workflows in `riftonix/kelm` and `riftonix/kafgres` currently r
 
 ### New Capabilities
 
-- `go-ci-scenario`: Verify one Go application from one root module and define how the first two GitHub Actions consumers adopt and update the scenario pin.
+- `go-ci-scenario`: Verify one Go application from one root module.
 
 ### Modified Capabilities
 
@@ -36,7 +36,7 @@ None.
 
 ### Users and Business Processes
 
-- Pull requests to `master` in `riftonix/kelm` and `riftonix/kafgres` use the shared verification entrypoint instead of an unconditional success check.
+- The open consumer pull requests exercise the shared verification entrypoint ahead of adoption on `master`.
 
 ### Systems and Components
 
