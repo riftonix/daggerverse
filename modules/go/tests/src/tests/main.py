@@ -39,6 +39,15 @@ class Tests:
         )
         nested = dag.directory().with_directory("nested", source)
         await _assert_failure(dag.go(source=nested).validate_package(package="./nested"), "missing root go.mod")
+        await _assert_failure(
+            dag.go(source=nested.with_new_directory("go.mod")).validate_package(package="./nested"),
+            "missing root go.mod",
+        )
+        await _assert_failure(
+            dag.go(source=source.with_directory("nested", source)).validate_package(package="./nested"),
+            "package",
+            "./nested",
+        )
         await _assert_failure(dag.go(source=nested).test(), "missing root go.mod")
         await _assert_failure(dag.go(source=nested).build(package="./nested"), "missing root go.mod")
 
