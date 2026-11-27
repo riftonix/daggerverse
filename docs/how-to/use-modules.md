@@ -61,10 +61,10 @@ dagger -m ./scenarios/static-site call \
 The Hugo site must commit `package.json` and `package-lock.json`. Configure
 Docsy as `@docsy/theme` with `themesDir: node_modules`; no `go.mod` is needed.
 
-Image-backed modules use `image_registry`, `image_repository`, `image_tag`, and
-`container_user_id` for their execution container. Scenarios that compose image-backed
-modules prefix those fields with the tool name, such as `hugo_image_tag`,
-`helm_image_tag`, or `git_image_tag`. See
+Image-backed modules use `image_registry`, `image_repository`, and `image_tag`
+to select their image. Where supported, `container_user_id` optionally overrides
+the execution UID. Scenarios prefix inputs with the tool name, such as
+`hugo_image_tag` and `hugo_container_user_id`. See
 [Runtime image input conventions](../reference/runtime-images.md).
 
 ## Use Local Module Dependencies

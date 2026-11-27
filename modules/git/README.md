@@ -19,6 +19,16 @@ dagger -m ./modules/git call ensure-pushed-tag \
   --tag=v1.2.3
 ```
 
+## Container User Migration
+
+Set `--container-user-id` (Python: `container_user_id`) to override the default
+UID `65532`. When upgrading from `modules/git/v1.0.4`, replace `--user-id` or
+`user_id` in direct module calls.
+
+Run `make tests module git` from the repository root. For mirrored images, run
+`dagger -m ./modules/git/tests call --image-registry=<mirror> all`. The test
+module also accepts `--image-repository`, `--image-tag`, and `--container-user-id`.
+
 ## Documentation Path
 
 Use this README only as the local module entry point. The main documentation lives under `docs/`:

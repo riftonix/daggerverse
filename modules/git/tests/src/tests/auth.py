@@ -8,14 +8,14 @@ from .fixtures import SyntheticGitRepos
 class AuthTests(SyntheticGitRepos):
     """Authentication behavior tests."""
 
-    async def all(self) -> None:
+    async def all(self, container_user_id: str) -> None:
         await self.with_https_token_auth_configures_git_without_exposing_token()
-        await self.with_ssh_key_auth_configures_git_without_exposing_key_material()
+        await self.with_ssh_key_auth_configures_git_without_exposing_key_material(container_user_id)
 
     async def with_https_token_auth_configures_git_without_exposing_token(self) -> None:
         """Configure HTTPS token auth without writing the token to git config."""
         token_text = "sensitive-token-value"
-        git = dag.git(source=self.repo_with_local_tag()).with_https_token_auth(
+        git = self.git(self.repo_with_local_tag()).with_https_token_auth(
             host="https://git.example.local/org/repo.git",
             token=dag.set_secret("GIT_TEST_TOKEN", token_text),
             username="ci-user",
@@ -51,11 +51,11 @@ class AuthTests(SyntheticGitRepos):
         )
         test_case.assertNotIn(token_text, config)
 
-    async def with_ssh_key_auth_configures_git_without_exposing_key_material(self) -> None:
+    async def with_ssh_key_auth_configures_git_without_exposing_key_material(self, container_user_id: str) -> None:
         """Configure SSH key auth with strict permissions and no key material in output."""
         private_key_text = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-private-key\n-----END OPENSSH PRIVATE KEY-----"
         known_hosts_text = "git.example.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKnownHost"
-        git = dag.git(source=self.repo_with_local_tag()).with_ssh_key_auth(
+        git = self.git(self.repo_with_local_tag(), container_user_id=container_user_id).with_ssh_key_auth(
             private_key=dag.set_secret("GIT_TEST_SSH_KEY", private_key_text),
             known_hosts=dag.set_secret("GIT_TEST_KNOWN_HOSTS", known_hosts_text),
             host="git@git.example.local:org/repo.git",
@@ -74,9 +74,17 @@ class AuthTests(SyntheticGitRepos):
             .stdout()
         )
 
+        uid = (await git.container().with_exec(["id", "-u"]).stdout()).strip()
+        owners = (
+            await git.container()
+            .with_exec(["stat", "-c", "%u", ".git", "/home/git/.ssh/id_ed25519", "/home/git/.ssh/known_hosts"])
+            .stdout()
+        )
         combined_output = "\n".join([ssh_command, config])
 
         test_case = TestCase()
+        test_case.assertEqual(container_user_id, uid)
+        test_case.assertEqual([uid, uid, uid], owners.splitlines())
         test_case.assertEqual("600", key_permissions.strip())
         test_case.assertEqual("644", known_hosts_permissions.strip())
         test_case.assertEqual("600", config_permissions.strip())

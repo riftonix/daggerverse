@@ -13,14 +13,14 @@ class GitCli:
         image_registry: str,
         image_repository: str,
         image_tag: str,
-        user_id: str,
+        container_user_id: str,
         container_: dagger.Container | None = None,
     ) -> None:
         self.source = source
         self.image_registry = image_registry
         self.image_repository = image_repository
         self.image_tag = image_tag
-        self.user_id = user_id
+        self.container_user_id = container_user_id
         self.container_ = container_
 
     def container(self) -> dagger.Container:
@@ -31,7 +31,7 @@ class GitCli:
         self.container_ = (
             dag.container()
             .from_(address=f"{self.image_registry}/{self.image_repository}:{self.image_tag}")
-            .with_env_variable("USER_ID", self.user_id)
+            .with_env_variable("USER_ID", self.container_user_id)
             .with_env_variable("USER_NAME", "git")
             .with_user("0")
             .with_exec(
@@ -50,11 +50,11 @@ class GitCli:
                 ],
                 expand=True,
             )
-            .with_user(self.user_id)
+            .with_user(self.container_user_id)
             .with_env_variable("HOME", "/home/git")
             .with_env_variable("GIT_REPO_PATH", "/tmp/git/repo")
             .with_exec(["mkdir", "-p", "-m", "770", "$GIT_REPO_PATH"], expand=True)
-            .with_directory("$GIT_REPO_PATH", self.source, owner=self.user_id, expand=True)
+            .with_directory("$GIT_REPO_PATH", self.source, owner=self.container_user_id, expand=True)
             .with_workdir("$GIT_REPO_PATH", expand=True)
             .with_exec(
                 [

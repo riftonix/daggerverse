@@ -1,15 +1,24 @@
+from collections.abc import Callable
+
 import dagger
 from dagger import dag
+
+# renovate: datasource=docker depName=alpine/git
+DEFAULT_FIXTURE_IMAGE_TAG = "v2.54.1"
 
 
 class SyntheticGitRepos:
     """Synthetic Git repository fixtures shared by Git module tests."""
 
+    def __init__(self, git: Callable[..., dagger.Git], fixture_image: str) -> None:
+        self.git = git
+        self.fixture_image = fixture_image
+
     def repo_with_local_tag(self) -> dagger.Directory:
         """Return a git repo with a local tag."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -23,7 +32,7 @@ class SyntheticGitRepos:
         """Return a git repo with HEAD attached to the main branch."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -36,7 +45,7 @@ class SyntheticGitRepos:
         """Return a git repo with HEAD detached at the current commit."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -50,7 +59,7 @@ class SyntheticGitRepos:
         """Return a git repo with a local bare origin whose default branch is main."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -71,7 +80,7 @@ class SyntheticGitRepos:
         """Return a git repo with modified tracked and untracked files."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -85,7 +94,7 @@ class SyntheticGitRepos:
         """Return a git repo with different file contents on HEAD and a tag."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -104,7 +113,7 @@ class SyntheticGitRepos:
         """Return a git repo with tags that sort differently by version and refname."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -134,7 +143,7 @@ class SyntheticGitRepos:
         """Return a git repo with tags pointing at HEAD and a non-HEAD ref."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -152,7 +161,7 @@ class SyntheticGitRepos:
         """Return a git repo whose local bare remote contains a tag missing locally."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -170,7 +179,7 @@ class SyntheticGitRepos:
         """Return a git repo whose local bare remote contains a missing branch."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -192,7 +201,7 @@ class SyntheticGitRepos:
         """Return a shallow clone with a local bare remote that has full history."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/source")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -214,7 +223,7 @@ class SyntheticGitRepos:
         """Return a git repo with base and feature branches diverged from one commit."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -232,7 +241,7 @@ class SyntheticGitRepos:
         """Return a git repo with practical diff status coverage."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -275,7 +284,7 @@ class SyntheticGitRepos:
         """Return a git repo shaped like a pull request branch from an older base."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -319,7 +328,7 @@ class SyntheticGitRepos:
         """Return a monorepo-shaped pull request branch with base branch drift."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -368,7 +377,7 @@ class SyntheticGitRepos:
         """Return a monorepo with explicit and pattern-discovered components."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -396,7 +405,7 @@ class SyntheticGitRepos:
         """Return a monorepo with changed and unchanged component roots."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -434,7 +443,7 @@ class SyntheticGitRepos:
         """Return a monorepo where only a shared path changed."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])
@@ -467,7 +476,7 @@ class SyntheticGitRepos:
         """Return a single-component repo with matching and non-matching changed paths."""
         return (
             dag.container()
-            .from_("docker.io/alpine/git:2.52.0")
+            .from_(self.fixture_image)
             .with_workdir("/work/repo")
             .with_exec(["git", "init", "--initial-branch", "main", "."])
             .with_exec(["git", "config", "user.name", "Dagger Test"])

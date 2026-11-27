@@ -43,6 +43,14 @@ them to the Hugo module:
 - `hugo_container_user_id`: `65532`
 - `npm_registry`: optional npm registry or caching proxy URL
 
+The scenario passes `hugo_container_user_id` through to Hugo as
+`container_user_id`. The public scenario flag stays `--hugo-container-user-id`.
+
+Run `make tests scenario static-site` from the repository root. For mirrored
+runtimes, the test module accepts `--hugo-image-registry`,
+`--hugo-image-repository`, `--hugo-image-tag`, `--hugo-container-user-id`,
+and `--npm-registry` before `all`.
+
 Hugo-backed operations require `package.json` and `package-lock.json` and run
 `npm ci --ignore-scripts` before Hugo. External content is supplied through
 aligned source, source path, target path, and contributor arrays and composed by

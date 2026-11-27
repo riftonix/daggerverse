@@ -27,7 +27,7 @@ class Hugo:
     image_registry: str
     image_repository: str
     image_tag: str
-    user_id: str
+    container_user_id: str
     npm_registry: str | None
     container_: dagger.Container | None
 
@@ -42,16 +42,16 @@ class Hugo:
         image_registry: Annotated[str | None, Doc("Hugo image registry")] = DEFAULT_IMAGE_REGISTRY,
         image_repository: Annotated[str | None, Doc("Hugo image repository")] = DEFAULT_IMAGE_REPOSITORY,
         image_tag: Annotated[str | None, Doc("Hugo image tag")] = DEFAULT_IMAGE_TAG,
-        user_id: Annotated[str | None, Doc("Hugo image user")] = DEFAULT_CONTAINER_USER_ID,
+        container_user_id: Annotated[str | None, Doc("Hugo container user ID")] = DEFAULT_CONTAINER_USER_ID,
         npm_registry: Annotated[str | None, Doc("Optional npm registry or proxy URL")] = None,
     ):
         """Constructor"""
         return cls(
             source=source,
-            image_registry=image_registry,
-            image_repository=image_repository,
-            image_tag=image_tag,
-            user_id=user_id,
+            image_registry=image_registry or DEFAULT_IMAGE_REGISTRY,
+            image_repository=image_repository or DEFAULT_IMAGE_REPOSITORY,
+            image_tag=image_tag or DEFAULT_IMAGE_TAG,
+            container_user_id=container_user_id or DEFAULT_CONTAINER_USER_ID,
             npm_registry=normalize_npm_registry(npm_registry),
             container_=None,
         )
@@ -61,16 +61,20 @@ class Hugo:
         """Creates container with configured Hugo"""
         if self.container_:
             return self.container_
+        # Cache ownership is set only when the cache is first created.
+        cache_name = "hugo-npm-cache"
+        if self.container_user_id != DEFAULT_CONTAINER_USER_ID:
+            cache_name = f"{cache_name}-{self.container_user_id}"
         container = (
             dag.container()
             .from_(address=f"{self.image_registry}/{self.image_repository}:{self.image_tag}")
-            .with_user(self.user_id)
+            .with_user(self.container_user_id)
             .with_env_variable("NODE_PATH", "/usr/local/lib/node_modules")
             .with_env_variable("NPM_CONFIG_CACHE", "/tmp/npm-cache")
             .with_env_variable("NPM_CONFIG_USERCONFIG", "/tmp/.npmrc")
-            .with_mounted_cache("/tmp/npm-cache", dag.cache_volume("hugo-npm-cache"), owner=self.user_id)
+            .with_mounted_cache("/tmp/npm-cache", dag.cache_volume(cache_name), owner=self.container_user_id)
             .with_exec(["mkdir", "-p", "-m", "770", "/tmp/hugo/site"])
-            .with_directory("/tmp/hugo/site", self.source, owner=self.user_id)
+            .with_directory("/tmp/hugo/site", self.source, owner=self.container_user_id)
             .with_workdir("/tmp/hugo/site")
             .with_exposed_port(1313)
         )

@@ -9,19 +9,20 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
 - Linting through `fmt -recursive -check -diff`
 - Initialization and validation steps combined into a single call
 - Configurable executor binary (e.g., `tofu` or `terraform`)
-- Split runtime image inputs (`image_registry`, `image_repository`, `image_tag`, `user_id`) so callers can pin or mirror the runtime image
+- Split runtime image inputs (`image_registry`, `image_repository`, `image_tag`) so callers can pin or mirror the runtime image
+- Optional `container_user_id` to configure the execution UID independently
 
 ## Defaults
 - image_registry: `ghcr.io`
 - image_repository: `opentofu/opentofu`
 - image_tag: `latest`
-- user_id: `65532`
+- container_user_id: `65532`
 - executor: `tofu`
 - Sets `TF_CLI_CONFIG_FILE=/src/.tf.rc` inside the container
 
 ## API
 
-- create(image_registry, image_repository, image_tag, user_id, executor)
+- create(image_registry, image_repository, image_tag, container_user_id, executor)
   - Returns a configured Opentofu module instance. The runtime image is built from `image_registry`, `image_repository`, and `image_tag`; `executor` selects the IaC command run inside that image and does not change image identity.
 
 - container() -> dagger.Container
@@ -33,6 +34,12 @@ For full repository documentation, see [../../docs/README.md](../../docs/README.
     - `<executor> init`
     - `<executor> validate -no-color`
   - Returns combined stdout from the sequence.
+
+## Migration from `user_id`
+
+When upgrading a pinned revision that exposed `user_id`, use
+`container_user_id` (`--container-user-id` on the CLI) instead. The default UID
+is still `65532`; image selection and `executor` are unchanged.
 
 ## Migration from `container_image`
 
@@ -81,6 +88,10 @@ dagger -m ./modules/opentofu call \
 Notes:
 - Ensure that your IaC directory contains the necessary provider and backend configuration for `init` to succeed.
 - You can override `image_tag` (or any other runtime image input) to a version-pinned or mirrored image for reproducibility or offline runs.
+
+## Tests
+
+Run `make tests module opentofu` from the repository root.
 
 ## License
 See the repository root LICENSE file.

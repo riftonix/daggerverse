@@ -101,7 +101,7 @@ class StaticSite:
             image_registry=self.hugo_image_registry,
             image_repository=self.hugo_image_repository,
             image_tag=self.hugo_image_tag,
-            user_id=self.hugo_container_user_id,
+            container_user_id=self.hugo_container_user_id,
             npm_registry=self.npm_registry,
         )
 

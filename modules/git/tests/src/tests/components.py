@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from dagger import dag
-
 from .fixtures import SyntheticGitRepos
 
 
@@ -17,7 +15,7 @@ class ComponentTests(SyntheticGitRepos):
 
     async def components_from_explicit_roots(self) -> None:
         """Return existing explicit component roots in stable sorted order."""
-        git = dag.git(source=self.repo_with_components().directory("/work/repo"))
+        git = self.git(self.repo_with_components().directory("/work/repo"))
 
         components = await git.get_components(
             component_roots=[
@@ -34,7 +32,7 @@ class ComponentTests(SyntheticGitRepos):
 
     async def components_from_glob_like_roots(self) -> None:
         """Return component roots discovered from glob-like patterns."""
-        git = dag.git(source=self.repo_with_components().directory("/work/repo"))
+        git = self.git(self.repo_with_components().directory("/work/repo"))
 
         components = await git.get_components(component_roots=["services/*", "packages/*", "deploy/*"])
         nested_components = await git.get_components(component_roots=["environments/*/apps/*"])
@@ -45,7 +43,7 @@ class ComponentTests(SyntheticGitRepos):
 
     async def changed_components_from_component_roots(self) -> None:
         """Return discovered components whose files changed between refs."""
-        git = dag.git(source=self.repo_with_changed_components().directory("/work/repo"))
+        git = self.git(self.repo_with_changed_components().directory("/work/repo"))
 
         explicit_components = await git.get_changed_components(
             base_ref="main",
@@ -70,7 +68,7 @@ class ComponentTests(SyntheticGitRepos):
 
     async def shared_path_change_returns_all_components(self) -> None:
         """Return all discovered components when a shared path changes."""
-        git = dag.git(source=self.repo_with_shared_path_change().directory("/work/repo"))
+        git = self.git(self.repo_with_shared_path_change().directory("/work/repo"))
 
         components = await git.get_changed_components(
             base_ref="main",
@@ -91,7 +89,7 @@ class ComponentTests(SyntheticGitRepos):
 
     async def single_component_change_returns_repository_root(self) -> None:
         """Return the repository root component when matching files change in single-component mode."""
-        git = dag.git(source=self.repo_with_single_component_changes().directory("/work/repo"))
+        git = self.git(self.repo_with_single_component_changes().directory("/work/repo"))
 
         source_components = await git.get_changed_components(
             base_ref="main",

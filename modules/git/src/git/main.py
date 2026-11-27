@@ -25,7 +25,7 @@ class Git:
     image_registry: str
     image_repository: str
     image_tag: str
-    user_id: str
+    container_user_id: str
     container_: dagger.Container | None
 
     def _git(self) -> GitCli:
@@ -34,7 +34,7 @@ class Git:
             image_registry=self.image_registry,
             image_repository=self.image_repository,
             image_tag=self.image_tag,
-            user_id=self.user_id,
+            container_user_id=self.container_user_id,
             container_=self.container_,
         )
 
@@ -45,15 +45,15 @@ class Git:
         image_registry: Annotated[str | None, Doc("Git image registry")] = DEFAULT_IMAGE_REGISTRY,
         image_repository: Annotated[str | None, Doc("Git image repositroy")] = DEFAULT_IMAGE_REPOSITORY,
         image_tag: Annotated[str | None, Doc("Git image tag")] = DEFAULT_IMAGE_TAG,
-        user_id: Annotated[str | None, Doc("Git image user")] = DEFAULT_CONTAINER_USER_ID,
+        container_user_id: Annotated[str | None, Doc("Git container user ID")] = DEFAULT_CONTAINER_USER_ID,
     ):
         """Constructor"""
         return cls(
             source=source,
-            image_registry=image_registry,
-            image_repository=image_repository,
-            image_tag=image_tag,
-            user_id=user_id,
+            image_registry=image_registry or DEFAULT_IMAGE_REGISTRY,
+            image_repository=image_repository or DEFAULT_IMAGE_REPOSITORY,
+            image_tag=image_tag or DEFAULT_IMAGE_TAG,
+            container_user_id=container_user_id or DEFAULT_CONTAINER_USER_ID,
             container_=None,
         )
 

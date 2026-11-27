@@ -1,18 +1,42 @@
 ## 1. Container User API Audit
 
-- [ ] 1.1 Audit all public module, scenario, and test module inputs named `user_id` or related to container users.
-- [ ] 1.2 Classify each user-like input as container execution user, registry username, SSH login user, Git identity, provider actor, or unrelated domain user.
-- [ ] 1.3 Record released modules/scenarios affected by `user_id` to `container_user_id` renames and the tags consumers must upgrade from.
-- [ ] 1.4 Confirm which modules/scenarios do not need any container user input.
+- [x] 1.1 Audit all public module, scenario, and test module inputs named `user_id` or related to container users.
+- [x] 1.2 Classify each user-like input as container execution user, registry username, SSH login user, Git identity, provider actor, or unrelated domain user.
+- [x] 1.3 Record released modules/scenarios affected by `user_id` to `container_user_id` renames and the tags consumers must upgrade from.
+- [x] 1.4 Confirm which modules/scenarios do not need any container user input.
+
+The audit found that `user_id` controlled container execution in Git, Hugo, SSH,
+and OpenTofu. OpenTofu is included because it passes the value to `.with_user()`.
+Docker and Container Images do not need a container user input. Registry and Git
+HTTPS usernames, SSH login (`ssh_user`), and Git tagger identity (`user_name`,
+`user_email`) are separate from container execution.
+
+### Release migration inventory
+
+These are the latest component tags on `origin` and the API at each tag. Keep
+existing pins until replacement tags are published; do not move existing tags.
+
+| Component | Upgrade from | Migration |
+| --- | --- | --- |
+| Git | `modules/git/v1.0.4` | Publish a new module tag after the rename. Direct callers replace `user_id` (`--user-id`) with `container_user_id` (`--container-user-id`). |
+| Helm | `modules/helm/v1.3.1` | The tag still exposes `user_id`. Publish a new module tag for the already-renamed API. Direct callers replace `user_id` (`--user-id`) with `container_user_id` (`--container-user-id`). |
+| Hugo | `modules/hugo/v0.4.0` | Publish a new module tag after the rename. Direct callers replace `user_id` (`--user-id`) with `container_user_id` (`--container-user-id`). |
+| SSH | `ssh/v0.1.0` | The legacy release uses the `ssh/` module path and `container_user` (`--container-user`). Publish the first `modules/ssh/*` tag after the rename. Legacy callers switch to `modules/ssh` and `container_user_id` (`--container-user-id`); consumers pinned to a newer commit may currently use `user_id`. |
+| OpenTofu | No dedicated release tag | Callers pinned to a commit that accepts `user_id` switch to `container_user_id` (`--container-user-id`) when upgrading. Publish the first `modules/opentofu/*` tag for tagged consumers. |
+| Helm CI | `scenarios/helm-ci/v1.4.0` | Publish a new scenario tag after updating its local Git constructor call. Callers keep `helm_container_user_id` and `git_container_user_id`. |
+| Static Site | `scenarios/static-site/v0.4.0` | Publish a new scenario tag after updating its local Hugo constructor call. Callers keep `hugo_container_user_id`. |
+
+The removed Kind wrapper has no dedicated release tag on `origin` and has no
+replacement in this change.
 
 ## 2. Git Module And Tests
 
-- [ ] 2.1 Rename Git module public constructor input `user_id` to `container_user_id`.
-- [ ] 2.2 Update Git internal field names, Git CLI helper usage, file ownership, and secret ownership to use `container_user_id`.
-- [ ] 2.3 Update Git module tests in the same change for the new public input name and any offline runtime override behavior.
-- [ ] 2.4 Keep Git-domain inputs such as `user_name` and `user_email` unchanged.
-- [ ] 2.5 Update Git README/reference docs and migration notes.
-- [ ] 2.6 Hand off `make tests module git` for the user to run after the Git changes.
+- [x] 2.1 Rename Git module public constructor input `user_id` to `container_user_id`.
+- [x] 2.2 Update Git internal field names, Git CLI helper usage, file ownership, and secret ownership to use `container_user_id`.
+- [x] 2.3 Update Git module tests in the same change for the new public input name and any offline runtime override behavior.
+- [x] 2.4 Keep Git-domain inputs such as `user_name` and `user_email` unchanged.
+- [x] 2.5 Update Git README/reference docs and migration notes.
+- [x] 2.6 Hand off `make tests module git` for the user to run after the Git changes.
 
 ## 3. Helm Module And Tests
 
@@ -25,29 +49,33 @@
 
 ## 4. Hugo Module And Tests
 
-- [ ] 4.1 Rename Hugo module public constructor input `user_id` to `container_user_id`.
-- [ ] 4.2 Update Hugo internal field names, container user, and site source ownership to use `container_user_id`.
-- [ ] 4.3 Update Hugo module tests in the same change for the new public input name and offline runtime overrides.
-- [ ] 4.4 Update Hugo README/reference docs and migration notes.
-- [ ] 4.5 Hand off `make tests module hugo` for the user to run after the Hugo changes.
+- [x] 4.1 Rename Hugo module public constructor input `user_id` to `container_user_id`.
+- [x] 4.2 Update Hugo internal field names, container user, and site source ownership to use `container_user_id`.
+- [x] 4.3 Update Hugo module tests in the same change for the new public input name and offline runtime overrides.
+- [x] 4.4 Update Hugo README/reference docs and migration notes.
+- [x] 4.5 Hand off `make tests module hugo` for the user to run after the Hugo changes.
 
 ## 5. SSH Module
 
-- [ ] 5.1 Rename SSH module public constructor input `user_id` to `container_user_id`.
-- [ ] 5.2 Update SSH internal field names, container user/home setup, key ownership, and mounted secret ownership to use `container_user_id`.
-- [ ] 5.3 Keep remote login `ssh_user` unchanged.
-- [ ] 5.4 Update SSH README/reference docs and migration notes.
-- [ ] 5.5 Hand off SSH module tests for the user to run if a test module exists, or document the gap if it does not.
+- [x] 5.1 Rename SSH module public constructor input `user_id` to `container_user_id`.
+- [x] 5.2 Update SSH internal field names, container user/home setup, key ownership, and mounted secret ownership to use `container_user_id`.
+- [x] 5.3 Keep remote login `ssh_user` unchanged.
+- [x] 5.4 Update SSH README/reference docs and migration notes.
+- [x] 5.5 Hand off SSH module tests for the user to run if a test module exists, or document the gap if it does not.
 
 ## 6. Scenarios And Scenario Tests
 
-- [ ] 6.1 Add `hugo_container_user_id` to `scenarios/static-site` and pass it to the Hugo module.
-- [ ] 6.2 Update static-site scenario tests in the same change for `hugo_container_user_id` pass-through and offline runtime overrides.
-- [ ] 6.3 Add `helm_container_user_id` and `git_container_user_id` to `scenarios/helm-ci` and pass them to the Helm and Git modules.
-- [ ] 6.4 Update Helm CI scenario tests in the same change for Helm/Git container user pass-through and offline runtime overrides.
-- [ ] 6.5 Confirm scenarios do not expose generic `user_id`.
-- [ ] 6.6 Hand off `make tests scenario static-site` for the user to run after the static-site changes.
-- [ ] 6.7 Hand off `make tests scenario helm-ci` for the user to run after the Helm CI changes.
+- [x] 6.1 Add `hugo_container_user_id` to `scenarios/static-site` and pass it to the Hugo module.
+- [x] 6.2 Update static-site scenario tests in the same change for `hugo_container_user_id` pass-through and offline runtime overrides.
+- [x] 6.3 Add `helm_container_user_id` and `git_container_user_id` to `scenarios/helm-ci` and pass them to the Helm and Git modules.
+- [x] 6.4 Update Helm CI scenario tests in the same change for Helm/Git container user pass-through and offline runtime overrides.
+- [x] 6.5 Confirm scenarios do not expose generic `user_id`.
+- [x] 6.6 Hand off `make tests scenario static-site` for the user to run after the static-site changes.
+- [x] 6.7 Hand off `make tests scenario helm-ci` for the user to run after the Helm CI changes.
+
+Static Site and Helm CI pass their existing prefixed public inputs to Hugo, Helm,
+and Git as `container_user_id`. Helm CI uses Git for release tagging in
+`publish-chart`.
 
 ## 7. Remove Kind Module
 
@@ -58,17 +86,24 @@
 
 ## 8. Repository Documentation
 
-- [ ] 8.1 Document `container_user_id` as optional container execution user configuration, separate from runtime image identity.
-- [ ] 8.2 Document when modules/scenarios should not expose `container_user_id`.
-- [ ] 8.3 Document prefixed scenario/test names such as `hugo_container_user_id`, `helm_container_user_id`, and `git_container_user_id`.
-- [ ] 8.4 Document breaking release tag requirements for changed modules and scenarios.
+- [x] 8.1 Document `container_user_id` as optional container execution user configuration, separate from runtime image identity.
+- [x] 8.2 Document when modules/scenarios should not expose `container_user_id`.
+- [x] 8.3 Document prefixed scenario/test names such as `hugo_container_user_id`, `helm_container_user_id`, and `git_container_user_id`.
+- [x] 8.4 Document breaking release tag requirements for changed modules and scenarios.
 
-## 9. User-Run Final Verification
+## 9. Final Verification
 
-- [ ] 9.1 Hand off `make format-check` for the user to run.
-- [ ] 9.2 Hand off affected `make lint-check module <name>` and `make lint-check scenario <name>` commands for the user to run.
-- [ ] 9.3 Hand off `openspec validate standardize-container-user-inputs --strict` for the user to run.
+- [x] 9.1 Leave `make format-check` to CI.
+- [x] 9.2 Leave lint checks for the affected modules and scenarios to CI.
+- [x] 9.3 Run `openspec validate standardize-container-user-inputs --strict`.
 
 ## 10. Archive
 
 - [ ] 10.1 After implementation, archive the change and update baseline specs under `openspec/specs/`.
+
+## 11. OpenTofu Module And Tests
+
+- [x] 11.1 Rename the OpenTofu constructor input and execution user to `container_user_id`, preserving the default UID and independent `executor` input.
+- [x] 11.2 Update the OpenTofu module test to cover the renamed input.
+- [x] 11.3 Update the OpenTofu README and migration notes.
+- [x] 11.4 Hand off `make tests module opentofu` for the user to run.
