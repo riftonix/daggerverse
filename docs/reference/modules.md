@@ -56,6 +56,16 @@ Provides Dagger-native Docker and OCI image primitives for CI workflows, includi
 - Typical command: `dagger -m ./modules/docker call build --source=. --context-path=modules/docker/tests/fixtures/basic-image container`
 - CI use cases: daemonless explicit or Bake-driven image builds, image smoke checks, registry-authenticated publish, and reusable primitives for higher-level container image scenarios.
 
+## go
+
+Provides standalone Go package validation, formatting checks, tests, and
+executable compilation. The module owns the Go image, execution user, and
+separate caches for downloaded modules and build output.
+
+- Path: `modules/go`
+- Typical command: `dagger -m ./modules/go call --source=../my-app test`
+- See the [Go module README](../../modules/go/README.md) for all operations and runtime inputs.
+
 ## helm
 
 Runs Helm operations in a containerized environment.
@@ -125,7 +135,7 @@ Ready-to-run CI jobs are scenarios, not reusable modules.
 
 ## go-ci scenario
 
-Checks formatting, runs the root Go module's tests, and compiles one selected
+Uses the [Go module](#go) to check formatting, run the root Go module's tests, and compile one selected
 application. Pass the Go module directory before `verify-app` and the package
 directory relative to that module after it. The call returns a text summary.
 
@@ -134,7 +144,7 @@ dagger -m ./scenarios/go-ci call --source=../my-app verify-app --package=./cmd/m
 ```
 
 See the [Go CI scenario README](../../scenarios/go-ci/README.md) for runtime
-overrides and the scenario test command.
+overrides, including `--go-container-user-id`, and the scenario test command.
 
 ## helm-ci scenario
 
