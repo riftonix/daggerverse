@@ -24,6 +24,7 @@ class Tests:
         await self.verify_formatting()
         await self.report_test_and_build_failures()
         await self.verify_toolchain_override()
+        await self.verify_container_user()
 
     @function
     async def verify_embedded_app(self) -> None:
@@ -99,6 +100,17 @@ class Tests:
         await _assert_failure(
             older.verify_app(package=APP_PACKAGE), "go.mod requires go >= 1.26.0", "GOTOOLCHAIN=local"
         )
+
+    @function
+    async def verify_container_user(self) -> None:
+        """Pass the default UID and a distinct numeric UID to the Go module."""
+        fixture = await dag.current_module().source().file("fixtures/user_test.go").contents()
+        source = _app_fixture()
+        default = source.with_new_file("cmd/app/user_test.go", fixture)
+        await dag.go_ci(source=default).verify_app(package=APP_PACKAGE)
+
+        custom = source.with_new_file("cmd/app/user_test.go", fixture.replace("65532", "12345"))
+        await dag.go_ci(source=custom, go_container_user_id="12345").verify_app(package=APP_PACKAGE)
 
 
 def _app_fixture() -> Directory:

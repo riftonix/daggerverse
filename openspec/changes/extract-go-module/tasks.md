@@ -2,11 +2,11 @@
 
 - [ ] 1.1 Add the Python SDK module under `modules/go` with repository-aligned metadata, a Renovate-managed image, and a `container_user_id` override. Verify separate writable caches and temporary paths with the default and a distinct numeric UID, and verify a compatible image override and a below-minimum toolchain diagnostic.
 - [ ] 1.2 Extract `validate-package`, `check-format`, `test`, and `build`. Exercise each through `modules/go/tests`: package and manifest errors, formatting diagnostics and exclusions, failure in a sibling package's tests, an embedded build input, and a link failure after successful tests.
-- [ ] 1.3 Document standalone Go module calls and runtime inputs in `modules/go/README.md`; verify the examples use the public module API.
+- [x] 1.3 Document standalone Go module calls and runtime inputs in `modules/go/README.md`; verify the examples use the public module API.
 
 ## 2. Compose Go CI
 
-- [ ] 2.1 Add the local Go dependency to `scenarios/go-ci` and delegate the checks in order. Verify that `verify-app` remains the only public workflow and preserves the existing source, package, diagnostics, and summary contract.
+- [x] 2.1 Add the local Go dependency to `scenarios/go-ci` and delegate the checks in order. Verify that `verify-app` remains the only public workflow and preserves the existing source, package, diagnostics, and summary contract.
 - [ ] 2.2 Expose `go_container_user_id` and pass it to the module with the existing Go image inputs. Verify the default and overridden UID through the scenario API and update the scenario README.
 - [ ] 2.3 Run `make tests module go`, `make tests scenario go-ci`, and the repository's quality checks. Obtain authorization for Dagger runs when required; verify both components are discovered by normal repository CI.
 
