@@ -28,7 +28,7 @@ DEFAULT_HELM_UNITTEST_CONTAINER_USER_ID = "65532"
 DEFAULT_UPDATECLI_IMAGE_REGISTRY = "ghcr.io"
 DEFAULT_UPDATECLI_IMAGE_REPOSITORY = "riftonix/container-images/updatecli-python-nodejs"
 # renovate: datasource=docker depName=ghcr.io/riftonix/container-images/updatecli-python-nodejs versioning=regex:^py(?<compatibility>\d+\.\d+-node\d+)-updatecli(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-pyyaml\d+\.\d+\.\d+-helm(?<build>\d+)\.(?<revision>\d+)\.\d+$
-DEFAULT_UPDATECLI_IMAGE_TAG = "py3.14-node26-updatecli0.124.0-pyyaml6.0.3-helm4.3.2"
+DEFAULT_UPDATECLI_IMAGE_TAG = "py3.14-node26-updatecli0.125.0-pyyaml6.0.4-helm4.3.2"
 DEFAULT_UPDATECLI_CONTAINER_USER_ID = "65532"
 
 DEFAULT_CHART_SYNC_CONFIG_PATH = "updatecli/values.yaml"
